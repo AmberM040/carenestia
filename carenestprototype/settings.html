@@ -1,0 +1,198 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Settings • CareNest</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="title">
+      <h1>Settings</h1>
+      <p id="childSummary" class="muted"></p>
+    </div>
+    <div class="row-actions">
+      <select id="childSwitcher" class="input" style="width:auto; min-width:140px;"></select>
+      <a class="btn btn-ghost" href="more.html">← Back</a>
+    </div>
+    <div class="user-actions">
+    <button id="logoutBtn" class="logout-btn">Log out</button>
+  </div>
+  </header>
+
+  <main class="container">
+
+    <!-- CHILD LIST -->
+    <section class="card">
+      <div class="card-head">
+        <h2>Child Profiles</h2>
+        <button id="btnAddChild" class="btn btn-primary">+ Add Child</button>
+      </div>
+      <ul id="childList" class="list"></ul>
+    </section>
+
+    <!-- EDIT ACTIVE CHILD -->
+    <section class="card">
+      <div class="card-head">
+        <h2>Edit Active Child</h2>
+      </div>
+
+      <label class="label">Name</label>
+      <input id="childName" class="input" placeholder="Child name" />
+
+      <label class="label">Age</label>
+      <input id="childAge" class="input" type="number" min="0" placeholder="Age" />
+
+      <label class="label">Diagnoses</label>
+      <div id="diagnosisChecks" class="grid"></div>
+
+      <label class="label">Add custom diagnosis</label>
+      <div class="row">
+        <input id="customDiagnosisInput" class="input" placeholder="Type custom diagnosis" />
+        <button id="btnAddDiagnosis" class="btn">+ Add</button>
+      </div>
+
+      <div id="diagnosisChips" class="list" style="margin-top:10px;"></div>
+
+      <label class="label">Allergies</label>
+      <textarea id="childAllergies" class="input" rows="2" placeholder="Medication, food, latex, adhesive..."></textarea>
+
+      <label class="label">Selected Specialties</label>
+      <div id="specialtyChecks" class="grid"></div>
+      <p class="muted tiny">These control which sections show up throughout the app.</p>
+
+      <label class="label">Devices</label>
+      <div class="list">
+        <label class="item" style="cursor:pointer;">
+          <div class="left">
+            <input id="hasTrach" type="checkbox" />
+            <div>
+              <div class="strong">Tracheostomy</div>
+              <div class="muted tiny">Show trach-related info later</div>
+            </div>
+          </div>
+        </label>
+
+        <label class="item" style="cursor:pointer;">
+          <div class="left">
+            <input id="onVent" type="checkbox" />
+            <div>
+              <div class="strong">Ventilator</div>
+              <div class="muted tiny">Show vent settings later</div>
+            </div>
+          </div>
+        </label>
+
+        <label class="item" style="cursor:pointer;">
+          <div class="left">
+            <input id="hasGTube" type="checkbox" />
+            <div>
+              <div class="strong">G-tube</div>
+              <div class="muted tiny">Enable feeding-related sections later</div>
+            </div>
+          </div>
+        </label>
+
+        <label class="item" style="cursor:pointer;">
+          <div class="left">
+            <input id="hasOxygen" type="checkbox" />
+            <div>
+              <div class="strong">Oxygen</div>
+              <div class="muted tiny">Enable oxygen-related sections later</div>
+            </div>
+          </div>
+        </label>
+      </div>
+
+      <div class="modal-actions">
+        <button id="btnSaveChild" class="btn btn-primary">Save Child Profile</button>
+      </div>
+    </section>
+
+    <div class="spacer"></div>
+  </main>
+
+  <!-- ADD CHILD MODAL -->
+  <div id="addChildModal" class="modal hidden">
+    <div class="modal-content">
+      <div class="modal-head">
+        <h3>Add Child</h3>
+        <button id="btnCloseAddChildModal" class="btn btn-ghost">✕</button>
+      </div>
+
+      <label class="label">Name</label>
+      <input id="newChildName" class="input" placeholder="Child name" />
+
+      <label class="label">Age</label>
+      <input id="newChildAge" class="input" type="number" min="0" placeholder="Age" />
+
+      <label class="label">Diagnoses</label>
+      <div id="newDiagnosisChecks" class="grid"></div>
+
+      <label class="label">Add custom diagnosis</label>
+      <div class="row">
+        <input id="newCustomDiagnosisInput" class="input" placeholder="Type custom diagnosis" />
+        <button id="btnAddNewDiagnosis" class="btn">+ Add</button>
+      </div>
+
+      <div id="newDiagnosisChips" class="list" style="margin-top:10px;"></div>
+
+      <label class="label">Allergies</label>
+      <textarea id="newChildAllergies" class="input" rows="2" placeholder="Allergies"></textarea>
+
+      <label class="label">Selected Specialties</label>
+      <div id="newChildSpecialtyChecks" class="grid"></div>
+
+      <label class="label">Devices</label>
+      <div class="list">
+        <label class="item" style="cursor:pointer;">
+          <div class="left">
+            <input id="newHasTrach" type="checkbox" />
+            <div class="strong">Tracheostomy</div>
+          </div>
+        </label>
+
+        <label class="item" style="cursor:pointer;">
+          <div class="left">
+            <input id="newOnVent" type="checkbox" />
+            <div class="strong">Ventilator</div>
+          </div>
+        </label>
+
+        <label class="item" style="cursor:pointer;">
+          <div class="left">
+            <input id="newHasGTube" type="checkbox" />
+            <div class="strong">G-tube</div>
+          </div>
+        </label>
+
+        <label class="item" style="cursor:pointer;">
+          <div class="left">
+            <input id="newHasOxygen" type="checkbox" />
+            <div class="strong">Oxygen</div>
+          </div>
+        </label>
+      </div>
+
+      <div class="modal-actions">
+        <button id="btnCreateChild" class="btn btn-primary">Create Child</button>
+      </div>
+    </div>
+  </div>
+
+ <nav class="bottom-nav">
+    <a class="nav-link active" href="index.html">Home</a>
+    <a class="nav-link" href="carelog.html">Care Log</a>
+    <a class="nav-link" href="meds.html">Meds</a>
+    <a class="nav-link" href="schedule.html">Schedule</a>
+    <a class="nav-link" href="more.html">More</a>
+  </nav>
+
+  <button class="emergency-btn hidden" type="button">Emergency</button>
+
+  <script src="storage.js"></script>
+  <script src="settings.js"></script>
+  <script src="auth.js"></script>
+</body>
+</html>

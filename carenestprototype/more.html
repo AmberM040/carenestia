@@ -1,0 +1,140 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>More • CareNest</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+
+<body>
+
+  <header class="topbar">
+    <div class="container">
+      <div class="topbar-left">
+        <h1>CareNest</h1>
+        <p>More</p>
+      </div>
+
+      <div class="topbar-right">
+        <select id="childSwitcher" class="child-switcher"></select>
+        <button id="logoutBtn" class="btn btn-ghost" type="button">Log out</button>
+      </div>
+    </div>
+  </header>
+
+  <main class="page">
+
+    <div class="welcome-row">
+      <h1>More</h1>
+      <div id="childSummary" class="badge"></div>
+    </div>
+
+    <section class="card">
+      <div class="section-head">
+        <h2>Medical Binder</h2>
+      </div>
+
+      <div class="simple-list">
+        <a class="simple-item" href="binder.html">
+          <div>
+            <div class="strong">Binder</div>
+            <div class="muted tiny">Medical records and important info</div>
+          </div>
+        </a>
+
+        <a class="simple-item" href="emergency.html">
+          <div>
+            <div class="strong">Emergency Sheet</div>
+            <div class="muted tiny">Critical information for EMS</div>
+          </div>
+        </a>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="section-head">
+        <h2>Care Tools</h2>
+      </div>
+
+      <div class="simple-list">
+        <a class="simple-item" href="inventory.html">
+          <div>
+            <div class="strong">Inventory</div>
+            <div class="muted tiny">Track medical supplies</div>
+          </div>
+        </a>
+
+        <a class="simple-item" href="vitals.html">
+          <div>
+            <div class="strong">Vitals</div>
+            <div class="muted tiny">View and log vitals history</div>
+          </div>
+        </a>
+
+        <a class="simple-item" href="schoolnurse.html">
+          <div>
+            <div class="strong">School Nurse Log</div>
+            <div class="muted tiny">Daily logs from school</div>
+          </div>
+        </a>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="section-head">
+        <h2>Reports</h2>
+      </div>
+
+      <div class="simple-list">
+        <a class="simple-item" href="visitprep.html">
+          <div>
+            <div class="strong">Visit Prep</div>
+            <div class="muted tiny">Prepare summaries for appointments</div>
+          </div>
+        </a>
+
+        <a class="simple-item" href="export.html">
+          <div>
+            <div class="strong">Export Reports</div>
+            <div class="muted tiny">Download care summaries</div>
+          </div>
+        </a>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="section-head">
+        <h2>Settings</h2>
+      </div>
+
+      <div class="simple-list">
+        <a class="simple-item" href="settings.html">
+          <div>
+            <div class="strong">App Settings</div>
+            <div class="muted tiny">Profile, preferences, children</div>
+          </div>
+        </a>
+      </div>
+    </section>
+
+  </main>
+
+  <nav class="bottom-nav">
+    <div class="bottom-nav-inner">
+      <a class="nav-link" href="index.html">Home</a>
+      <a class="nav-link" href="carelog.html">Care Log</a>
+      <a class="nav-link" href="meds.html">Meds</a>
+      <a class="nav-link" href="schedule.html">Schedule</a>
+      <a class="nav-link active" href="more.html">More</a>
+    </div>
+  </nav>
+
+  <button class="emergency-btn hidden" type="button">Emergency</button>
+
+  <script src="storage.js"></script>
+  <script src="auth.js"></script>
+  <script src="more.js"></script>
+
+</body>
+</html>

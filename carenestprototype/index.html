@@ -1,0 +1,248 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>CareNest Dashboard</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+
+  <header class="topbar">
+    <div class="container">
+      <div class="topbar-left">
+        <h1>CareNest</h1>
+        <p id="welcomeText">Welcome back</p>
+      </div>
+
+      <div class="topbar-right">
+        <select id="childSwitcher" class="child-switcher" style="max-width:220px;"></select>
+        <button id="logoutBtn" class="btn btn-ghost" type="button">Log out</button>
+      </div>
+    </div>
+  </header>
+
+  <main class="page">
+    <section class="card">
+      <div class="summary-main">
+        <div>
+          <h2 id="childName">Child</h2>
+          <div class="summary-meta">
+            <div id="childSummary">Age —</div>
+            <div><strong>Care Needs:</strong> Daily meds, feeds, therapy support</div>
+          </div>
+          <div class="pill-row" id="diagnosisPills"></div>
+        </div>
+
+        <div>
+          <button class="btn btn-soft" type="button">Edit Child Profile</button>
+        </div>
+      </div>
+    </section>
+
+    <div class="grid-2">
+      <section class="card">
+        <div class="section-head">
+          <h2>Today</h2>
+          <a class="btn btn-ghost" href="schedule.html">View Full Schedule</a>
+        </div>
+        <ul id="todayList" class="list"></ul>
+      </section>
+
+      <section class="card">
+        <div class="section-head">
+          <h2>Upcoming Schedule</h2>
+          <a class="btn btn-ghost" href="schedule.html">Open Schedule</a>
+        </div>
+        <div id="homeScheduleList" class="list"></div>
+      </section>
+    </div>
+
+    <section id="lastVitalsCard" class="card hidden">
+      <div class="section-head">
+        <h2>Last Known Vitals</h2>
+        <div style="display:flex; gap:8px; flex-wrap:wrap;">
+          <button class="btn btn-ghost" type="button" data-quick-vital="full">Quick Log</button>
+          <a class="btn" href="vitals.html">View History</a>
+        </div>
+      </div>
+      <div id="lastVitalsContent"></div>
+    </section>
+
+    <section id="lowSupplyCard" class="card hidden">
+      <div class="section-head">
+        <h2>Inventory Reminders</h2>
+        <a class="btn btn-ghost" href="inventory.html">View Inventory</a>
+      </div>
+      <div id="lowSupplySummary" class="alert-box alert-danger" style="margin-bottom:12px;"></div>
+      <div id="lowSupplyDashboardList" class="list"></div>
+    </section>
+
+    <div class="grid-2">
+      <section class="card">
+        <div class="section-head">
+          <h2>Recent Care Log</h2>
+          <a class="btn btn-ghost" href="carelog.html">Open Care Log</a>
+        </div>
+        <ul id="careLogList" class="list"></ul>
+      </section>
+
+      <section class="card">
+        <div class="section-head">
+          <h2>Quick Log</h2>
+          <span class="muted">Fast daily updates</span>
+        </div>
+
+        <div class="quick-actions">
+          <button class="quick-btn" type="button" data-category="note">+ Note<span>Add general care note</span></button>
+          <button class="quick-btn" type="button" data-category="med">+ Medication<span>Record medication note</span></button>
+          <button class="quick-btn" type="button" data-category="symptom">+ Symptom<span>Track symptoms or concerns</span></button>
+          <button class="quick-btn" type="button" data-category="question">+ Question<span>Save a question for visits</span></button>
+          <button class="quick-btn" type="button" data-quick-vital="o2">+ O2<span>Log oxygen saturation</span></button>
+          <button class="quick-btn" type="button" data-quick-vital="temp">+ Temp<span>Log temperature</span></button>
+          <button class="quick-btn" type="button" data-quick-vital="bp">+ BP<span>Log blood pressure</span></button>
+          <button class="quick-btn" type="button" data-quick-vital="hr">+ HR<span>Log heart rate</span></button>
+          <button class="quick-btn" type="button" data-quick-vital="rr">+ RR<span>Log respiratory rate</span></button>
+        </div>
+      </section>
+    </div>
+
+    <section id="lastSymptomCard" class="card hidden">
+      <div class="section-head">
+        <h2>Last Symptom</h2>
+        <a class="btn btn-ghost" href="carelog.html">View Symptoms</a>
+      </div>
+      <div id="lastSymptomContent"></div>
+    </section>
+
+    <section class="card">
+      <div class="section-head">
+        <h2>Emergency Sheet</h2>
+        <button id="btnEmergency" class="btn" type="button">Open</button>
+      </div>
+      <p class="muted">
+        Quick access to diagnoses, medications, contacts, allergies, and emergency instructions.
+      </p>
+    </section>
+  </main>
+
+  <nav class="bottom-nav">
+    <div class="bottom-nav-inner">
+      <a class="nav-link active" href="index.html">Home</a>
+      <a class="nav-link" href="carelog.html">Care Log</a>
+      <a class="nav-link" href="meds.html">Meds</a>
+      <a class="nav-link" href="schedule.html">Schedule</a>
+      <a class="nav-link" href="more.html">More</a>
+    </div>
+  </nav>
+
+  <button class="emergency-btn hidden" type="button">Emergency</button>
+
+  <!-- Quick care log modal -->
+  <div id="modal" class="modal hidden">
+    <div class="modal-card">
+      <div class="section-head">
+        <h2>Quick Log</h2>
+        <button id="btnCloseModal" class="btn btn-ghost" type="button">Close</button>
+      </div>
+
+      <div class="form-grid">
+        <div class="field">
+          <label for="categorySelect">Category</label>
+          <select id="categorySelect" class="input">
+            <option value="note">Care Note</option>
+            <option value="med">Medication</option>
+            <option value="symptom">Symptom</option>
+            <option value="question">Question</option>
+          </select>
+        </div>
+
+        <div class="field">
+          <label for="authorInput">Author</label>
+          <input id="authorInput" class="input" type="text" placeholder="Mom" />
+        </div>
+      </div>
+
+      <div class="field mt-12">
+        <label>Specialties</label>
+        <div id="specialtyChecks" class="chip-row"></div>
+      </div>
+
+      <div class="field mt-12">
+        <label for="noteInput">Note</label>
+        <textarea id="noteInput" class="input" placeholder="Type note here"></textarea>
+      </div>
+
+      <div class="modal-actions">
+        <button id="btnSave" class="btn" type="button">Save</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Quick vitals modal -->
+  <div id="vitalsModal" class="modal hidden">
+    <div class="modal-card">
+      <div class="section-head">
+        <h2>Quick Vitals</h2>
+        <button id="btnCloseVitalsModal" class="btn btn-ghost" type="button">Close</button>
+      </div>
+
+      <div class="form-grid">
+        <div class="field" id="wrapO2">
+          <label for="quickO2">O₂ Saturation</label>
+          <input id="quickO2" class="input" type="number" step="1" placeholder="97" />
+        </div>
+
+        <div class="field" id="wrapTemp">
+          <label for="quickTemp">Temperature</label>
+          <input id="quickTemp" class="input" type="number" step="0.1" placeholder="99.1" />
+        </div>
+
+        <div class="field" id="wrapBpSys">
+          <label for="quickBpSys">BP Systolic</label>
+          <input id="quickBpSys" class="input" type="number" step="1" placeholder="102" />
+        </div>
+
+        <div class="field" id="wrapBpDia">
+          <label for="quickBpDia">BP Diastolic</label>
+          <input id="quickBpDia" class="input" type="number" step="1" placeholder="64" />
+        </div>
+
+        <div class="field" id="wrapHr">
+          <label for="quickHr">Heart Rate</label>
+          <input id="quickHr" class="input" type="number" step="1" placeholder="102" />
+        </div>
+
+        <div class="field" id="wrapRr">
+          <label for="quickRr">Respiratory Rate</label>
+          <input id="quickRr" class="input" type="number" step="1" placeholder="22" />
+        </div>
+      </div>
+
+      <div class="field mt-12">
+        <label for="quickVitalNotes">Notes</label>
+        <textarea id="quickVitalNotes" class="input" placeholder="Optional note"></textarea>
+      </div>
+
+      <div class="modal-actions">
+        <button id="btnSaveQuickVitals" class="btn" type="button">Save Vitals</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Emergency modal -->
+  <div id="emergencyModal" class="modal hidden">
+    <div class="modal-card">
+      <div class="section-head">
+        <h2>Emergency Sheet</h2>
+        <button id="btnCloseEmergency" class="btn btn-ghost" type="button">Close</button>
+      </div>
+      <div id="emergencyBody" style="display:grid; gap:12px;"></div>
+    </div>
+  </div>
+
+  <script src="storage.js"></script>
+  <script src="auth.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

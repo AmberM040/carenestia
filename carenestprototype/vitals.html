@@ -1,0 +1,180 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Vitals • CareNest</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+
+<header class="topbar">
+  <div class="topbar-inner">
+    <div class="brand">
+      <div class="brand-logo">💙</div>
+      <div class="brand-text">CareNest</div>
+    </div>
+
+    <div class="topbar-actions">
+      <select id="childSwitcher" class="child-switcher"></select>
+      <a class="btn btn-ghost" href="more.html">← Back</a>
+    </div>
+
+    <div class="user-actions">
+    <button id="logoutBtn" class="logout-btn">Log out</button>
+  </div>
+  </div>
+</header>
+
+<main class="page">
+  <div class="welcome-row">
+    <h1>Vitals</h1>
+    <div id="childSummary" class="login-badge"></div>
+  </div>
+
+  <section class="dashboard-grid">
+
+    <section class="card">
+      <div class="section-head">
+        <h2>Log Vitals</h2>
+      </div>
+
+      <div class="form-grid">
+        <div class="field">
+          <label for="vO2">O2 Saturation (%)</label>
+          <input id="vO2" class="input" type="number" min="0" max="100" />
+        </div>
+
+        <div class="field">
+          <label for="vTemp">Temperature (°F)</label>
+          <input id="vTemp" class="input" type="number" step="0.1" />
+        </div>
+
+        <div class="field">
+          <label for="vBpSys">Systolic BP</label>
+          <input id="vBpSys" class="input" type="number" />
+        </div>
+
+        <div class="field">
+          <label for="vBpDia">Diastolic BP</label>
+          <input id="vBpDia" class="input" type="number" />
+        </div>
+
+        <div class="field">
+          <label for="vHr">Heart Rate</label>
+          <input id="vHr" class="input" type="number" />
+        </div>
+
+        <div class="field">
+          <label for="vRr">Respiratory Rate</label>
+          <input id="vRr" class="input" type="number" />
+        </div>
+      </div>
+
+      <div class="field mt-16">
+        <label for="vNotes">Notes</label>
+        <input id="vNotes" class="input" placeholder="Optional note" />
+      </div>
+
+      <div class="modal-actions">
+        <button id="btnSaveVitals" class="btn btn-primary">Save Vitals</button>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="section-head">
+        <h2>Thresholds</h2>
+      </div>
+
+      <div class="form-grid">
+        <div class="field">
+          <label for="tO2Min">O2 Min</label>
+          <input id="tO2Min" class="input" type="number" />
+        </div>
+
+        <div class="field">
+          <label for="tTempMin">Temp Min</label>
+          <input id="tTempMin" class="input" type="number" step="0.1" />
+        </div>
+
+        <div class="field">
+          <label for="tTempMax">Temp Max</label>
+          <input id="tTempMax" class="input" type="number" step="0.1" />
+        </div>
+
+        <div class="field">
+          <label for="tBpSysMin">BP Systolic Min</label>
+          <input id="tBpSysMin" class="input" type="number" />
+        </div>
+
+        <div class="field">
+          <label for="tBpSysMax">BP Systolic Max</label>
+          <input id="tBpSysMax" class="input" type="number" />
+        </div>
+
+        <div class="field">
+          <label for="tBpDiaMin">BP Diastolic Min</label>
+          <input id="tBpDiaMin" class="input" type="number" />
+        </div>
+
+        <div class="field">
+          <label for="tBpDiaMax">BP Diastolic Max</label>
+          <input id="tBpDiaMax" class="input" type="number" />
+        </div>
+
+        <div class="field">
+          <label for="tHrMin">Heart Rate Min</label>
+          <input id="tHrMin" class="input" type="number" />
+        </div>
+
+        <div class="field">
+          <label for="tHrMax">Heart Rate Max</label>
+          <input id="tHrMax" class="input" type="number" />
+        </div>
+
+        <div class="field">
+          <label for="tRrMin">Respiratory Rate Min</label>
+          <input id="tRrMin" class="input" type="number" />
+        </div>
+
+        <div class="field">
+          <label for="tRrMax">Respiratory Rate Max</label>
+          <input id="tRrMax" class="input" type="number" />
+        </div>
+      </div>
+
+      <div class="modal-actions">
+        <button id="btnSaveThresholds" class="btn">Save Thresholds</button>
+      </div>
+    </section>
+
+  </section>
+
+  <section class="card">
+    <div class="section-head">
+      <h2>Recent Vitals</h2>
+    </div>
+
+    <div id="vitalsEmpty" class="empty-state hidden">
+      No vitals logged yet.
+    </div>
+
+    <div id="vitalsHistory" class="stack"></div>
+  </section>
+</main>
+
+ <nav class="bottom-nav">
+    <a class="nav-link active" href="index.html">Home</a>
+    <a class="nav-link" href="carelog.html">Care Log</a>
+    <a class="nav-link" href="meds.html">Meds</a>
+    <a class="nav-link" href="schedule.html">Schedule</a>
+    <a class="nav-link" href="more.html">More</a>
+  </nav>
+
+  <button class="emergency-btn hidden" type="button">Emergency</button>
+
+<script src="storage.js"></script>
+<script src="vitals.js"></script>
+<script src="auth.js"></script>
+</body>
+</html>

@@ -1,0 +1,241 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>CareNest • Schedule</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+
+  <header class="topbar">
+    <div class="container">
+      <div class="topbar-left">
+        <h1>CareNest</h1>
+        <p>Schedule</p>
+      </div>
+
+      <div class="topbar-right">
+        <select id="childSwitcher" class="child-switcher"></select>
+        <button id="logoutBtn" class="btn btn-ghost" type="button">Log out</button>
+      </div>
+    </div>
+  </header>
+
+  <main class="page">
+
+    <div class="welcome-row">
+      <h1>Schedule</h1>
+      <div id="childSummary" class="badge"></div>
+    </div>
+
+    <section class="card soft">
+      <div class="filter-bar">
+        <div class="segmented" id="scheduleViewTabs">
+          <button type="button" class="active" data-view="today">Today</button>
+          <button type="button" data-view="week">Week</button>
+          <button type="button" data-view="month">Month</button>
+        </div>
+
+        <div class="row">
+          <select id="scheduleCategoryFilter" class="input" style="width:auto; min-width:160px;">
+            <option value="all">All Categories</option>
+            <option value="Medication">Medication</option>
+            <option value="Feeding">Feeding</option>
+            <option value="Therapy">Therapy</option>
+            <option value="Symptom Check">Symptom Check</option>
+            <option value="Respiratory Care">Respiratory Care</option>
+            <option value="Equipment">Equipment</option>
+            <option value="Hygiene">Hygiene</option>
+            <option value="Appointment">Appointment</option>
+            <option value="Other">Other</option>
+          </select>
+
+          <button id="btnClearScheduleFilters" class="btn btn-ghost" type="button">Clear</button>
+          <button id="btnAddTask" class="quick-btn med" type="button">Add Task</button>
+        </div>
+      </div>
+    </section>
+
+    <section id="todayView">
+      <div class="section-head">
+        <h2>Due Now</h2>
+      </div>
+      <section id="dueNowList" class="log-list"></section>
+
+      <div class="section-head">
+        <h2>Up Next</h2>
+      </div>
+      <section id="upNextList" class="log-list"></section>
+
+      <div class="section-head">
+        <h2>Completed</h2>
+      </div>
+      <section id="completedList" class="log-list"></section>
+    </section>
+
+    <section id="weekView" class="hidden">
+      <div class="section-head">
+        <h2>This Week</h2>
+      </div>
+      <section id="weekList" class="simple-list"></section>
+    </section>
+
+    <section id="monthView" class="hidden">
+      <div class="section-head">
+        <h2>This Month</h2>
+      </div>
+      <section id="monthList" class="simple-list"></section>
+    </section>
+
+    <section id="scheduleEmptyState" class="empty-state hidden">
+      No schedule items yet.
+    </section>
+
+  </main>
+
+  <div id="taskModal" class="modal hidden">
+    <div class="modal-card">
+
+      <div class="modal-head">
+        <h3>Add Schedule Task</h3>
+        <button id="btnCloseTaskModal" class="btn btn-ghost" type="button">✕</button>
+      </div>
+
+      <div class="form-grid">
+        <div class="field">
+          <label for="taskTitle">Task Name</label>
+          <input id="taskTitle" class="input" placeholder="Keppra, Feed, Vest therapy..." />
+        </div>
+
+        <div class="field">
+          <label for="taskCategory">Category</label>
+          <select id="taskCategory" class="input">
+            <option value="Medication">Medication</option>
+            <option value="Feeding">Feeding</option>
+            <option value="Therapy">Therapy</option>
+            <option value="Symptom Check">Symptom Check</option>
+            <option value="Respiratory Care">Respiratory Care</option>
+            <option value="Equipment">Equipment</option>
+            <option value="Hygiene">Hygiene</option>
+            <option value="Appointment">Appointment</option>
+            <option value="Other">Other</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="form-grid mt-16">
+        <div class="field">
+          <label for="taskDate">Start Date</label>
+          <input id="taskDate" type="date" class="input" />
+        </div>
+
+        <div class="field">
+          <label for="taskTime">Time</label>
+          <input id="taskTime" type="time" class="input" />
+        </div>
+      </div>
+
+      <div class="form-grid mt-16">
+        <div class="field">
+          <label for="taskFrequency">Frequency</label>
+          <select id="taskFrequency" class="input">
+            <option value="daily">Daily</option>
+            <option value="weekly">Weekly</option>
+            <option value="monthly">Monthly</option>
+            <option value="once">One Time</option>
+          </select>
+        </div>
+
+        <div class="field">
+          <label for="taskAssignedTo">Assigned To</label>
+          <input id="taskAssignedTo" class="input" placeholder="Mom / Dad / Nurse / Aide" />
+        </div>
+      </div>
+
+      <div class="field mt-16">
+        <label>Days of Week (for weekly tasks)</label>
+        <div id="taskDaysOfWeek" class="chip-row">
+          <label class="chip"><input type="checkbox" value="0" /> <span>Sun</span></label>
+          <label class="chip"><input type="checkbox" value="1" /> <span>Mon</span></label>
+          <label class="chip"><input type="checkbox" value="2" /> <span>Tue</span></label>
+          <label class="chip"><input type="checkbox" value="3" /> <span>Wed</span></label>
+          <label class="chip"><input type="checkbox" value="4" /> <span>Thu</span></label>
+          <label class="chip"><input type="checkbox" value="5" /> <span>Fri</span></label>
+          <label class="chip"><input type="checkbox" value="6" /> <span>Sat</span></label>
+        </div>
+      </div>
+
+      <div class="form-grid mt-16">
+        <div class="field">
+          <label for="taskDuration">Duration (minutes)</label>
+          <input id="taskDuration" type="number" min="0" class="input" placeholder="20" />
+        </div>
+
+        <div class="field">
+          <label for="taskReminder">Reminder Before</label>
+          <select id="taskReminder" class="input">
+            <option value="0">At time of task</option>
+            <option value="5">5 minutes before</option>
+            <option value="10">10 minutes before</option>
+            <option value="15">15 minutes before</option>
+            <option value="30">30 minutes before</option>
+            <option value="60">1 hour before</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="field mt-16">
+        <label for="taskInstructions">Instructions / Notes</label>
+        <textarea id="taskInstructions" class="input" rows="4" placeholder="Dose, steps, care instructions, reminders..."></textarea>
+      </div>
+
+      <div class="field mt-16">
+        <label for="taskShareable">Sharing</label>
+        <select id="taskShareable" class="input">
+          <option value="yes">Shared with caregivers</option>
+          <option value="no">Only visible here for now</option>
+        </select>
+      </div>
+
+      <div class="modal-actions mt-16">
+        <button id="btnSaveTask" class="btn" type="button">Save Task</button>
+      </div>
+
+      <div id="taskSaveStatus" class="muted">Ready to save.</div>
+
+    </div>
+  </div>
+
+  <div id="emergencyModal" class="modal hidden">
+    <div class="modal-card">
+      <div class="modal-head">
+        <h3>Emergency Info</h3>
+        <button id="btnCloseEmergency" class="btn btn-ghost" type="button">✕</button>
+      </div>
+
+      <div id="emergencyBody" style="display:flex;flex-direction:column;gap:10px;margin-top:10px;"></div>
+
+      <div class="modal-actions">
+        <button class="btn" type="button" onclick="window.print()">Print / Show</button>
+      </div>
+    </div>
+  </div>
+
+  <nav class="bottom-nav">
+    <div class="bottom-nav-inner">
+      <a class="nav-link" href="index.html">Home</a>
+      <a class="nav-link" href="carelog.html">Care Log</a>
+      <a class="nav-link" href="meds.html">Meds</a>
+      <a class="nav-link active" href="schedule.html">Schedule</a>
+      <a class="nav-link" href="more.html">More</a>
+    </div>
+  </nav>
+
+  <button class="emergency-btn hidden" type="button">Emergency</button>
+
+  <script src="storage.js"></script>
+  <script src="schedule.js"></script>
+  <script src="auth.js"></script>
+</body>
+</html>

@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>CareNest • Emergency Info</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+
+<header class="topbar">
+  <div class="topbar-inner">
+    <div class="brand">
+      <div class="brand-logo">💙</div>
+      <div class="brand-text">CareNest</div>
+    </div>
+    <div class="topbar-actions">
+      <select id="childSwitcher" class="child-switcher"></select>
+    </div>
+
+    <div class="user-actions">
+    <button id="logoutBtn" class="logout-btn">Log out</button>
+  </div>
+  </div>
+</header>
+
+<main class="page">
+  <div class="welcome-row">
+    <h1>Emergency Info</h1>
+    <div id="childSummary" class="login-badge"></div>
+  </div>
+
+  <section class="card">
+    <div class="section-head">
+      <h2>Emergency Snapshot</h2>
+    </div>
+    <div id="emergencyPageBody" class="simple-list"></div>
+  </section>
+</main>
+
+ <nav class="bottom-nav">
+    <a class="nav-link active" href="index.html">Home</a>
+    <a class="nav-link" href="carelog.html">Care Log</a>
+    <a class="nav-link" href="meds.html">Meds</a>
+    <a class="nav-link" href="schedule.html">Schedule</a>
+    <a class="nav-link" href="more.html">More</a>
+  </nav>
+
+  <button class="emergency-btn hidden" type="button">Emergency</button>
+
+<script src="storage.js"></script>
+<script src="emergency.js"></script>
+<script src="auth.js"></script>
+</body>
+</html>

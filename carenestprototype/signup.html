@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Sign Up • CareNest</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <main class="auth-wrap">
+    <section class="auth-card">
+      <h1>Create account</h1>
+      <p>Set up your CareNest parent account to manage care information and daily logs.</p>
+      
+      <div id="errorMsg" class="error-msg"></div>
+
+      <form id="signupForm">
+        <label>Parent name
+          <input id="signupName" type="text" placeholder="Your name" required />
+        </label>
+
+        <label>Child name
+          <input id="signupChildName" type="text" placeholder="Child name" required />
+        </label>
+
+        <label>Email
+          <input id="signupEmail" type="email" placeholder="you@example.com" required />
+        </label>
+
+        <label>Password
+          <input id="signupPassword" type="password" placeholder="Create password" required />
+        </label>
+
+        <label>Confirm password
+          <input id="signupConfirmPassword" type="password" placeholder="Confirm password" required />
+        </label>
+
+        <button type="submit">Create Account</button>
+      </form>
+
+      <div class="auth-footer">
+        Already have an account? <a href="login.html">Log in</a>
+      </div>
+    </section>
+  </main>
+
+  <script src="storage.js"></script>
+  <script src="auth.js"></script>
+</body>
+</html>

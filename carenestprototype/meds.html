@@ -1,0 +1,184 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Medications • CareNest</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+
+<body class="med-page">
+
+  <header class="topbar">
+    <div class="container">
+      <div class="topbar-left">
+        <h1>CareNest</h1>
+        <p>Medications</p>
+      </div>
+
+      <div class="topbar-right">
+        <select id="childSwitcher" class="child-switcher"></select>
+        <button id="logoutBtn" class="btn btn-ghost" type="button">Log out</button>
+      </div>
+    </div>
+  </header>
+
+  <main class="page">
+
+    <div class="welcome-row">
+      <h1>Medications</h1>
+      <div id="childSummary" class="badge"></div>
+    </div>
+
+    <section class="card">
+      <div class="section-head">
+        <h2>Today's Medication Schedule</h2>
+        <div class="toolbar">
+          <button type="button" id="refreshBtn" class="btn btn-ghost">Refresh Status</button>
+          <button type="button" id="showArchivedBtn" class="btn btn-ghost">Show Archived</button>
+          <button type="button" id="addMedBtn" class="btn">+ Add Medication</button>
+          <button type="button" id="exportReportBtn" class="btn btn-ghost">Export Report</button>
+        </div>
+      </div>
+      <div id="todayMeds"></div>
+    </section>
+
+    <section class="card">
+      <div class="section-head">
+        <h2>All Medications</h2>
+      </div>
+      <div id="medList"></div>
+    </section>
+
+    <section id="medFormCard" class="card hidden">
+      <div class="section-head">
+        <h2 id="formTitle">Add Medication</h2>
+      </div>
+
+      <div class="grid-2">
+        <div class="field">
+          <label for="medName">Medication Name</label>
+          <input id="medName" class="input" placeholder="Keppra" />
+        </div>
+
+        <div class="field">
+          <label for="medDose">Dose</label>
+          <input id="medDose" class="input" placeholder="500 mg / 5 mL" />
+        </div>
+
+        <div class="field">
+          <label for="medRoute">Route</label>
+          <input id="medRoute" class="input" placeholder="PO / G-tube / IV" />
+        </div>
+
+        <div class="field">
+          <label for="medType">Type</label>
+          <select id="medType" class="input">
+            <option value="scheduled">Scheduled</option>
+            <option value="prn">PRN</option>
+          </select>
+        </div>
+
+        <div class="field">
+          <label for="medScheduleMode">Schedule Mode</label>
+          <select id="medScheduleMode" class="input">
+            <option value="standard">Standard Ongoing</option>
+            <option value="temporary">Temporary Course</option>
+            <option value="wean">Weaning / Taper</option>
+          </select>
+        </div>
+
+        <div class="field">
+          <label for="medFreq">Frequency</label>
+          <input id="medFreq" class="input" placeholder="BID / Daily / q8h / PRN for seizures" />
+        </div>
+
+        <div class="field js-times-row">
+          <label for="medTimes">Scheduled Times</label>
+          <input id="medTimes" class="input" placeholder="08:00, 20:00" />
+          <div class="muted tiny">Use 24-hour times separated by commas.</div>
+        </div>
+
+        <div class="field">
+          <label for="medMinGap">Minimum Hours Between Doses</label>
+          <input id="medMinGap" class="input" type="number" min="0" step="0.5" placeholder="4" />
+        </div>
+
+        <div class="field">
+          <label for="medStartDate">Start Date</label>
+          <input id="medStartDate" class="input" type="date" />
+        </div>
+
+        <div class="field js-end-date-row hidden">
+          <label for="medEndDate">End Date</label>
+          <input id="medEndDate" class="input" type="date" />
+        </div>
+      </div>
+
+      <section id="weanBuilder" class="card hidden mt-12" style="background:#f9fafb;">
+        <div class="section-head">
+          <h3>Weaning Schedule</h3>
+          <button type="button" id="addWeanStepBtn" class="btn btn-ghost">+ Add Step</button>
+        </div>
+
+        <div id="weanStepsList"></div>
+
+        <div class="muted tiny">
+          Add each taper step with its own date range, dose, and times.
+        </div>
+      </section>
+
+      <div class="field mt-16">
+        <label for="medNotes">Notes</label>
+        <textarea id="medNotes" class="input" placeholder="Take with food, hold if vomiting, seizure rescue instructions, taper directions, etc."></textarea>
+      </div>
+
+      <div class="modal-actions">
+        <button type="button" id="saveMedBtn" class="btn">Save Medication</button>
+        <button type="button" id="cancelMedBtn" class="btn btn-ghost">Cancel</button>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="section-head">
+        <h2>Dose Timeline</h2>
+      </div>
+      <div id="timeline"></div>
+    </section>
+
+    <section class="card">
+      <div class="section-head">
+        <h2>Medication Change History</h2>
+      </div>
+      <div id="changeHistory"></div>
+    </section>
+
+    <section id="reportCard" class="card hidden">
+      <div class="section-head">
+        <h2>Doctor Visit Report</h2>
+        <div class="toolbar">
+          <button type="button" id="copyReportBtn" class="btn btn-ghost">Copy</button>
+        </div>
+      </div>
+      <pre id="reportOutput" class="report-box"></pre>
+    </section>
+
+  </main>
+
+  <nav class="bottom-nav">
+    <div class="bottom-nav-inner">
+      <a class="nav-link" href="index.html">Home</a>
+      <a class="nav-link" href="carelog.html">Care Log</a>
+      <a class="nav-link active" href="meds.html">Meds</a>
+      <a class="nav-link" href="schedule.html">Schedule</a>
+      <a class="nav-link" href="more.html">More</a>
+    </div>
+  </nav>
+
+  <button class="emergency-btn hidden" type="button">Emergency</button>
+
+  <script src="storage.js"></script>
+  <script src="meds.js"></script>
+  <script src="auth.js"></script>
+</body>
+</html>

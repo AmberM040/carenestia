@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Doctor Visit Prep • CareNest</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="title">
+      <h1>Doctor Visit Prep</h1>
+      <p class="muted" id="childSummary"></p>
+    </div>
+    <div class="user-actions">
+    <button id="logoutBtn" class="logout-btn">Log out</button>
+  </div>
+    <button id="btnPrint" class="btn btn-primary">Print / PDF</button>
+  </header>
+
+  <main class="container" id="printArea">
+
+    <!-- FILTERS -->
+    <section class="card">
+      <div class="card-head">
+        <h2>Filters</h2>
+      </div>
+
+      <label class="label">Specialty</label>
+      <select id="vpSpecialty" class="input"></select>
+      <p class="muted tiny">Choose a specialty to only show relevant info. “General” entries are included automatically.</p>
+
+      <label class="label" style="margin-top:10px;">Date Range</label>
+      <select id="vpDays" class="input">
+        <option value="7">Last 7 days</option>
+        <option value="30">Last 30 days</option>
+        <option value="90">Last 90 days</option>
+        <option value="all">All time</option>
+      </select>
+
+      <label class="label" style="margin-top:10px;">Include PRN administrations</label>
+      <select id="vpIncludePRN" class="input">
+        <option value="yes">Yes (track rescue / pain / pulmonary patterns)</option>
+        <option value="no">No</option>
+      </select>
+    </section>
+
+    <!-- AT A GLANCE -->
+    <section class="card">
+      <div class="card-head">
+        <h2>At-a-Glance</h2>
+      </div>
+      <div class="row">
+        <div>
+          <div class="strong" id="rangeLabel"></div>
+          <div class="muted tiny" id="statsLabel"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- MED CHANGES -->
+    <section class="card">
+      <div class="card-head">
+        <h2>Medication Changes (recent)</h2>
+      </div>
+      <ul id="medChangeList" class="list"></ul>
+      <p class="muted tiny">Includes edits, discontinuations, and reactivations.</p>
+    </section>
+
+    <!-- MED ADMINISTRATIONS -->
+    <section class="card">
+      <div class="card-head">
+        <h2>Medication Administrations (recent)</h2>
+      </div>
+      <ul id="medAdminList" class="list"></ul>
+      <p class="muted tiny">Missed doses always appear. PRN administrations show only if enabled.</p>
+    </section>
+
+    <!-- SYMPTOMS -->
+    <section class="card">
+      <div class="card-head">
+        <h2>Symptoms (recent)</h2>
+      </div>
+      <ul id="symptomList" class="list"></ul>
+    </section>
+
+    <!-- QUESTIONS -->
+    <section class="card">
+      <div class="card-head">
+        <h2>Questions for the Doctor</h2>
+      </div>
+
+      <label class="label">Add a question</label>
+      <input id="questionInput" class="input" placeholder="Type a question…" />
+      <div class="modal-actions" style="margin-top:10px;">
+        <button id="btnAddQuestion" class="btn btn-primary">Add Question</button>
+      </div>
+
+      <ul id="questionList" class="list" style="margin-top:12px;"></ul>
+      <p class="muted tiny">Tip: Keep questions short. This page is meant to be printed or shown during the visit.</p>
+    </section>
+
+    <!-- OTHER NOTES -->
+    <section class="card">
+      <div class="card-head">
+        <h2>Other Notes (recent)</h2>
+      </div>
+      <ul id="noteList" class="list"></ul>
+    </section>
+
+  </main>
+
+ <nav class="bottom-nav">
+    <a class="nav-link active" href="index.html">Home</a>
+    <a class="nav-link" href="carelog.html">Care Log</a>
+    <a class="nav-link" href="meds.html">Meds</a>
+    <a class="nav-link" href="schedule.html">Schedule</a>
+    <a class="nav-link" href="more.html">More</a>
+  </nav>
+
+  <button class="emergency-btn hidden" type="button">Emergency</button>
+
+  <script src="storage.js"></script>
+  <script src="visitprep.js"></script>
+  <script src="auth.js"></script>
+</body>
+</html>

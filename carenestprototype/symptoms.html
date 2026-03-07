@@ -1,0 +1,129 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Symptoms • CareNest</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+
+  <header class="topbar">
+    <div class="container">
+      <div class="topbar-left">
+        <h1>CareNest</h1>
+        <p>Symptoms</p>
+      </div>
+
+      <div class="topbar-right">
+        <select id="childSwitcher" class="child-switcher"></select>
+        <a class="btn btn-ghost" href="more.html">← Back</a>
+        <button id="logoutBtn" class="btn btn-ghost" type="button">Log out</button>
+      </div>
+    </div>
+  </header>
+
+  <main class="page">
+    <div class="welcome-row">
+      <h1>Symptoms</h1>
+      <div id="childSummary" class="badge"></div>
+    </div>
+
+    <section class="dashboard-grid">
+
+      <section class="card">
+        <div class="section-head">
+          <h2>Log Symptom</h2>
+        </div>
+
+        <div class="form-grid">
+          <div class="field">
+            <label for="symptomName">Symptom</label>
+            <input id="symptomName" class="input" placeholder="Ex: Fever, cough, increased secretions" />
+          </div>
+
+          <div class="field">
+            <label for="symptomSeverity">Severity</label>
+            <select id="symptomSeverity" class="input">
+              <option value="Mild">Mild</option>
+              <option value="Moderate">Moderate</option>
+              <option value="Severe">Severe</option>
+            </select>
+          </div>
+
+          <div class="field">
+            <label for="symptomSpecialty">Specialty</label>
+            <select id="symptomSpecialty" class="input"></select>
+          </div>
+
+          <div class="field">
+            <label for="symptomWhen">When</label>
+            <input id="symptomWhen" class="input" type="datetime-local" />
+          </div>
+        </div>
+
+        <div class="field mt-16">
+          <label for="symptomNote">Notes</label>
+          <textarea id="symptomNote" class="input" placeholder="Optional details, trigger, duration, response..."></textarea>
+        </div>
+
+        <div class="modal-actions">
+          <button id="btnSaveSymptom" class="btn" type="button">Save Symptom</button>
+        </div>
+      </section>
+
+      <section class="card">
+        <div class="section-head">
+          <h2>At a Glance</h2>
+        </div>
+
+        <div class="stack">
+          <div class="simple-item">
+            <div class="strong" id="symptomCountToday">0 today</div>
+            <div class="muted tiny">Symptoms logged today</div>
+          </div>
+
+          <div class="simple-item">
+            <div class="strong" id="symptomMostRecent">No recent symptom</div>
+            <div class="muted tiny">Most recent symptom</div>
+          </div>
+
+          <div class="simple-item">
+            <div class="strong" id="symptomSeveritySummary">No severity data</div>
+            <div class="muted tiny">Recent severity summary</div>
+          </div>
+        </div>
+      </section>
+
+    </section>
+
+    <section class="card">
+      <div class="section-head">
+        <h2>Recent Symptoms</h2>
+      </div>
+
+      <div id="symptomsEmpty" class="empty-state hidden">
+        No symptoms logged yet.
+      </div>
+
+      <div id="symptomsHistory" class="stack"></div>
+    </section>
+  </main>
+
+  <nav class="bottom-nav">
+    <div class="bottom-nav-inner">
+      <a class="nav-link" href="index.html">Home</a>
+      <a class="nav-link" href="carelog.html">Care Log</a>
+      <a class="nav-link" href="meds.html">Meds</a>
+      <a class="nav-link" href="schedule.html">Schedule</a>
+      <a class="nav-link active" href="more.html">More</a>
+    </div>
+  </nav>
+
+  <button class="emergency-btn hidden" type="button">Emergency</button>
+
+  <script src="storage.js"></script>
+  <script src="symptoms.js"></script>
+  <script src="auth.js"></script>
+</body>
+</html>

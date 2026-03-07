@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>CareNest • Medical Binder</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+
+<header class="topbar">
+  <div class="topbar-inner">
+    <div class="brand">
+      <div class="brand-logo">💙</div>
+      <div class="brand-text">CareNest</div>
+    </div>
+    <div class="topbar-actions">
+      <select id="childSwitcher" class="child-switcher"></select>
+    </div>
+    <div class="user-actions">
+    <button id="logoutBtn" class="logout-btn">Log out</button>
+  </div>
+  </div>
+</header>
+
+<main class="page">
+  <div class="welcome-row">
+    <h1>Medical Binder</h1>
+    <div id="childSummary" class="login-badge"></div>
+  </div>
+
+  <section class="card soft">
+    <div class="section-head">
+      <h2>Binder Sections</h2>
+    </div>
+
+    <div class="binder-grid">
+      <div class="binder-tile">
+        <div class="binder-icon">🩺</div>
+        <h3>Diagnoses</h3>
+        <p id="binderDiagnoses">Coming soon.</p>
+      </div>
+
+      <div class="binder-tile">
+        <div class="binder-icon">👩‍⚕️</div>
+        <h3>Specialists</h3>
+        <p>Coming soon.</p>
+      </div>
+
+      <div class="binder-tile">
+        <div class="binder-icon">💊</div>
+        <h3>Medications</h3>
+        <p>Coming soon.</p>
+      </div>
+
+      <div class="binder-tile">
+        <div class="binder-icon">🧰</div>
+        <h3>Equipment</h3>
+        <p>Coming soon.</p>
+      </div>
+
+      <div class="binder-tile">
+        <div class="binder-icon">📄</div>
+        <h3>Care Plans</h3>
+        <p>Coming soon.</p>
+      </div>
+
+      <div class="binder-tile">
+        <div class="binder-icon">🏥</div>
+        <h3>Hospital History</h3>
+        <p>Coming soon.</p>
+      </div>
+    </div>
+  </section>
+</main>
+
+<nav class="bottom-nav">
+  <div class="bottom-nav-inner">
+    <div class="nav-links">
+      <a class="nav-item" href="index.html"><span class="nav-icon">🏠</span><span>Home</span></a>
+      <a class="nav-item" href="schedule.html"><span class="nav-icon">📅</span><span>Schedule</span></a>
+      <a class="nav-item" href="carelog.html"><span class="nav-icon">📝</span><span>Care Log</span></a>
+      <a class="nav-item" href="meds.html"><span class="nav-icon">💊</span><span>Meds</span></a>
+      <a class="nav-item active" href="more.html"><span class="nav-icon">☰</span><span>More</span></a>
+    </div>
+    <button class="emergency-btn" type="button">EMERGENCY INFO</button>
+  </div>
+</nav>
+
+<script src="storage.js"></script>
+<script src="binder.js"></script>
+<script src="auth.js"></script>
+
+</body>
+</html>

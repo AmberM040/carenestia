@@ -1,0 +1,145 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>CareNest • Care Log</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+
+<body>
+
+  <header class="topbar">
+    <div class="container">
+      <div class="topbar-left">
+        <h1>CareNest</h1>
+        <p>Care Log</p>
+      </div>
+
+      <div class="topbar-right">
+        <select id="childSwitcher" class="child-switcher"></select>
+        <button id="logoutBtn" class="btn btn-ghost" type="button">Log out</button>
+      </div>
+    </div>
+  </header>
+
+  <main class="page">
+
+    <div class="welcome-row">
+      <h1>Care Log</h1>
+      <div id="childSummary" class="badge"></div>
+    </div>
+
+    <section class="card soft">
+      <div class="filter-bar">
+
+        <input
+          id="searchInput"
+          class="input"
+          placeholder="Search notes..."
+          style="flex:1"
+        />
+
+        <select id="specialtyFilter" class="input">
+          <option value="all">All Specialties</option>
+        </select>
+
+        <select id="daysFilter" class="input">
+          <option value="all">All Time</option>
+          <option value="1">Today</option>
+          <option value="7">Last 7 Days</option>
+          <option value="30">Last 30 Days</option>
+        </select>
+
+        <button id="btnClearFilters" class="btn btn-ghost" type="button">Clear</button>
+
+        <button id="btnAddLog" class="quick-btn med" type="button">Add Log</button>
+
+      </div>
+    </section>
+
+    <section class="section-head">
+      <h2>Entries</h2>
+    </section>
+
+    <section id="timeline" class="log-list"></section>
+
+    <section id="emptyState" class="empty-state hidden">
+      No care log entries yet.
+    </section>
+
+  </main>
+
+  <div id="modal" class="modal hidden">
+    <div class="modal-card">
+
+      <div class="modal-head">
+        <h3>Add Care Log Entry</h3>
+        <button id="btnCloseModal" class="btn btn-ghost" type="button">✕</button>
+      </div>
+
+      <div class="form-grid">
+        <div class="field">
+          <label>Category</label>
+          <select id="category" class="input">
+            <option value="note">Care Note</option>
+            <option value="symptom">Symptom</option>
+            <option value="question">Question</option>
+            <option value="med">Medication</option>
+          </select>
+        </div>
+
+        <div class="field">
+          <label>Date</label>
+          <input id="logDate" type="date" class="input" />
+        </div>
+      </div>
+
+      <div class="form-grid mt-16">
+        <div class="field">
+          <label>Time</label>
+          <input id="logTime" type="time" class="input" />
+        </div>
+
+        <div class="field">
+          <label>Author</label>
+          <input id="author" class="input" value="Mom" />
+        </div>
+      </div>
+
+      <div class="field mt-16">
+        <label>Note</label>
+        <textarea id="note" class="input" rows="4"></textarea>
+      </div>
+
+      <div class="field mt-16">
+        <label>Specialties</label>
+        <div id="carelogSpecialtyChecks" class="chip-row"></div>
+      </div>
+
+      <div class="modal-actions">
+        <button id="saveBtn" class="btn" type="button">Save Entry</button>
+      </div>
+
+      <div id="saveStatus" class="muted tiny">Ready</div>
+    </div>
+  </div>
+
+  <nav class="bottom-nav">
+    <div class="bottom-nav-inner">
+      <a class="nav-link" href="index.html">Home</a>
+      <a class="nav-link active" href="carelog.html">Care Log</a>
+      <a class="nav-link" href="meds.html">Meds</a>
+      <a class="nav-link" href="schedule.html">Schedule</a>
+      <a class="nav-link" href="more.html">More</a>
+    </div>
+  </nav>
+
+  <button class="emergency-btn hidden" type="button">Emergency</button>
+
+  <script src="storage.js"></script>
+  <script src="carelog.js"></script>
+  <script src="auth.js"></script>
+
+</body>
+</html>
