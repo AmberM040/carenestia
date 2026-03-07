@@ -5,46 +5,112 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Sign Up • CareNest</title>
   <link rel="stylesheet" href="styles.css" />
+  <style>
+    .auth-wrap {
+      min-height: 100vh;
+      display: grid;
+      place-items: center;
+      padding: 20px;
+      background-color: #f4f7fb;
+    }
+    .auth-card {
+      width: 100%;
+      max-width: 400px;
+      background: #fff;
+      border-radius: 12px;
+      padding: 30px;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+      border: 1px solid #e4e8f0;
+    }
+    .auth-card h1 {
+      margin-bottom: 20px;
+      font-size: 26px;
+      text-align: center;
+    }
+    .auth-card p {
+      text-align: center;
+      margin-bottom: 20px;
+      color: #666;
+    }
+    .auth-form {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+    .auth-form input {
+      padding: 12px;
+      border-radius: 6px;
+      border: 1px solid #e4e8f0;
+      font-size: 16px;
+      width: 100%;
+      box-sizing: border-box;
+    }
+    .btn {
+      background-color: #4a90e2;
+      color: white;
+      padding: 12px;
+      border-radius: 6px;
+      font-size: 16px;
+      cursor: pointer;
+      border: none;
+      width: 100%;
+    }
+    .btn:hover {
+      background-color: #0062cc;
+    }
+    .error-msg {
+      display: none;
+      background-color: #fce4e4;
+      color: #b42318;
+      padding: 10px;
+      border-radius: 6px;
+      margin-bottom: 20px;
+    }
+    .success-msg {
+      display: none;
+      background-color: #e7f6ec;
+      color: #137333;
+      padding: 10px;
+      border-radius: 6px;
+      margin-bottom: 20px;
+    }
+    .auth-footer {
+      text-align: center;
+      margin-top: 12px;
+      font-size: 14px;
+    }
+  </style>
 </head>
 <body>
-  <main class="auth-wrap">
+  <div class="auth-wrap">
     <section class="auth-card">
-      <h1>Create account</h1>
-      <p>Set up your CareNest parent account to manage care information and daily logs.</p>
-      
+      <h1>Create Account</h1>
+      <p>Set up your CareNest account to begin managing care in one place.</p>
+
       <div id="errorMsg" class="error-msg"></div>
+      <div id="successMsg" class="success-msg"></div>
 
-      <form id="signupForm">
-        <label>Parent name
-          <input id="signupName" type="text" placeholder="Your name" required />
-        </label>
+      <form id="signupForm" class="auth-form">
+        <label for="signupEmail">Email</label>
+        <input id="signupEmail" type="email" placeholder="you@example.com" required />
 
-        <label>Child name
-          <input id="signupChildName" type="text" placeholder="Child name" required />
-        </label>
+        <label for="signupPassword">Password</label>
+        <input id="signupPassword" type="password" placeholder="Create a password" required />
 
-        <label>Email
-          <input id="signupEmail" type="email" placeholder="you@example.com" required />
-        </label>
+        <label for="signupConfirmPassword">Confirm Password</label>
+        <input id="signupConfirmPassword" type="password" placeholder="Confirm your password" required />
 
-        <label>Password
-          <input id="signupPassword" type="password" placeholder="Create password" required />
-        </label>
-
-        <label>Confirm password
-          <input id="signupConfirmPassword" type="password" placeholder="Confirm password" required />
-        </label>
-
-        <button type="submit">Create Account</button>
+        <button type="submit" class="btn">Create Account</button>
       </form>
 
       <div class="auth-footer">
         Already have an account? <a href="login.html">Log in</a>
       </div>
     </section>
-  </main>
+  </div>
 
-  <script src="storage.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="supabase.js"></script>
   <script src="auth.js"></script>
 </body>
 </html>
