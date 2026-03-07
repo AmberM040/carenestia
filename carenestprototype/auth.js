@@ -1,163 +1,192 @@
+/* ------------------------------------------------
+   CareNest Auth System (Supabase)
+------------------------------------------------ */
+
 document.addEventListener("DOMContentLoaded", () => {
-  // Make sure DB exists and demo user is present
-  let db = loadDB();
-  seedDemoUser();
-  db = loadDB();
+
+  const errorMsg = document.getElementById("errorMsg");
+  const successMsg = document.getElementById("successMsg");
+
+  function showError(msg) {
+    if (!errorMsg) return;
+    errorMsg.textContent = msg;
+    errorMsg.style.display = "block";
+    if (successMsg) successMsg.style.display = "none";
+  }
+
+  function showSuccess(msg) {
+    if (!successMsg) return;
+    successMsg.textContent = msg;
+    successMsg.style.display = "block";
+    if (errorMsg) errorMsg.style.display = "none";
+  }
+
+  function clearMessages() {
+    if (errorMsg) {
+      errorMsg.textContent = "";
+      errorMsg.style.display = "none";
+    }
+    if (successMsg) {
+      successMsg.textContent = "";
+      successMsg.style.display = "none";
+    }
+  }
+
+  /* ------------------------------------------------
+     LOGIN
+  ------------------------------------------------ */
 
   const loginForm = document.getElementById("loginForm");
-  const errorMsg = document.getElementById("errorMsg");
-  const demoLoginBtn = document.getElementById("demoLoginBtn");
-  const logoutBtn = document.getElementById("logoutBtn");
-
-  const currentPage = getCurrentPage();
-  const isLoginPage = currentPage === "login.html";
-
-  function showError(message) {
-    if (!errorMsg) return;
-    errorMsg.textContent = message;
-    errorMsg.style.display = "block";
-  }
-
-  function clearError() {
-    if (!errorMsg) return;
-    errorMsg.textContent = "";
-    errorMsg.style.display = "none";
-  }
-
-  if (demoLoginBtn) {
-    demoLoginBtn.addEventListener("click", () => {
-      clearError();
-
-      const user = findUserByEmail("parent@example.com");
-      if (!user) {
-        showError("Demo account not found.");
-        return;
-      }
-
-      setSession(user.id);
-      goToAppForRole(user.role);
-    });
-  }
 
   if (loginForm) {
-    loginForm.addEventListener("submit", (e) => {
+    loginForm.addEventListener("submit", async (e) => {
       e.preventDefault();
-      clearError();
+      clearMessages();
 
-      const emailInput = document.getElementById("loginEmail");
-      const passwordInput = document.getElementById("loginPassword");
+      const email = document.getElementById("loginEmail").value.trim();
+      const password = document.getElementById("loginPassword").value;
 
-      const email = (emailInput?.value || "").trim().toLowerCase();
-      const password = passwordInput?.value || "";
+      const { data, error } = await supabaseClient.auth.signInWithPassword({
+        email,
+        password
+      });
 
-      if (!email || !password) {
-        showError("Please enter both email and password.");
+      if (error) {
+        showError(error.message);
         return;
       }
 
-      if (!validateEmail(email)) {
-        showError("Please enter a valid email address.");
-        return;
-      }
+      showSuccess("Login successful!");
 
-      const user = findUserByEmail(email);
-      if (!user || user.password !== password) {
-        showError("Invalid email or password.");
-        return;
-      }
-
-      setSession(user.id);
-      goToAppForRole(user.role);
+      setTimeout(() => {
+        window.location.href = "index.html";
+      }, 800);
     });
   }
+
+  /* ------------------------------------------------
+     SIGNUP
+  ------------------------------------------------ */
+
+  const signupForm = document.getElementById("signupForm");
+
+  if (signupForm) {
+    signupForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      clearMessages();
+
+      const email = document.getElementById("signupEmail").value.trim();
+      const password = document.getElementById("signupPassword").value;
+
+      const { data, error } = await supabaseClient.auth.signUp({
+        email,
+        password
+      });
+
+      if (error) {
+        showError(error.message);
+        return;
+      }
+
+      showSuccess("Account created! Check your email for confirmation.");
+    });
+  }
+
+  /* ------------------------------------------------
+     FORGOT PASSWORD
+  ------------------------------------------------ */
+
+  const forgotForm = document.getElementById("forgotPasswordForm");
+
+  if (forgotForm) {
+    forgotForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      clearMessages();
+
+      const email = document.getElementById("resetEmail").value.trim();
+
+      const { data, error } = await supabaseClient.auth.resetPasswordForEmail(email, {
+        redirectTo: window.location.origin + "/reset-password.html"
+      });
+
+      if (error) {
+        showError(error.message);
+        return;
+      }
+
+      showSuccess("Password reset email sent.");
+    });
+  }
+
+  /* ------------------------------------------------
+     RESET PASSWORD PAGE
+  ------------------------------------------------ */
+
+  const resetForm = document.getElementById("resetPasswordForm");
+
+  if (resetForm) {
+    resetForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      clearMessages();
+
+      const newPassword = document.getElementById("newPassword").value;
+
+      const { data, error } = await supabaseClient.auth.updateUser({
+        password: newPassword
+      });
+
+      if (error) {
+        showError(error.message);
+        return;
+      }
+
+      showSuccess("Password updated successfully!");
+
+      setTimeout(() => {
+        window.location.href = "login.html";
+      }, 1500);
+    });
+  }
+
+  /* ------------------------------------------------
+     LOGOUT BUTTON
+  ------------------------------------------------ */
+
+  const logoutBtn = document.getElementById("logoutBtn");
 
   if (logoutBtn) {
-    logoutBtn.addEventListener("click", () => {
-      logout();
+    logoutBtn.addEventListener("click", async () => {
+      await supabaseClient.auth.signOut();
+      window.location.href = "login.html";
     });
   }
 
-  const currentUser = requireAuth();
-
-  if (!currentUser && !isLoginPage) {
-    window.location.href = "login.html";
-    return;
-  }
-
-  if (currentUser && isLoginPage) {
-    goToAppForRole(currentUser.role);
-  }
 });
 
-function getCurrentPage() {
-  const path = window.location.pathname;
-  const page = path.split("/").pop();
-  return page || "index.html";
-}
 
-function validateEmail(email) {
-  const emailPattern = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[A-Za-z]{2,}$/;
-  return emailPattern.test(email);
-}
+/* ------------------------------------------------
+   SESSION CHECK (Protect pages)
+------------------------------------------------ */
 
-function findUserByEmail(email) {
-  const db = loadDB();
-  return (db.users || []).find(
-    (u) => (u.email || "").toLowerCase() === email.toLowerCase()
-  ) || null;
-}
+async function requireAuth() {
 
-function setSession(userId) {
-  const db = loadDB();
-  db.session.userId = userId;
-  saveDB(db);
-}
+  const { data: { session } } = await supabaseClient.auth.getSession();
 
-function clearSession() {
-  const db = loadDB();
-  db.session.userId = null;
-  saveDB(db);
-}
-
-function logout() {
-  clearSession();
-  window.location.href = "login.html";
-}
-
-function requireAuth() {
-  const db = loadDB();
-  const userId = db?.session?.userId;
-  if (!userId) return null;
-
-  return (db.users || []).find((u) => u.id === userId) || null;
-}
-
-function goToAppForRole(role) {
-  if (role === "nurse") {
-    window.location.href = "schoolnurse.html";
-  } else {
-    window.location.href = "index.html";
+  if (!session) {
+    window.location.href = "login.html";
   }
+
 }
 
-function seedDemoUser() {
-  const db = loadDB();
 
-  const existing = (db.users || []).find(
-    (u) => (u.email || "").toLowerCase() === "parent@example.com"
-  );
-  if (existing) return;
+/* ------------------------------------------------
+   GET CURRENT USER
+------------------------------------------------ */
 
-  const childId = db.children?.[0]?.id || "child1";
+async function getCurrentUser() {
 
-  db.users.push({
-    id: "u1",
-    role: "parent",
-    name: "Demo Parent",
-    email: "parent@example.com",
-    password: "demo123",
-    childIds: [childId]
-  });
+  const { data: { user } } = await supabaseClient.auth.getUser();
 
-  saveDB(db);
+  return user;
+
 }
