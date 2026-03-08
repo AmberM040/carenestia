@@ -23,24 +23,28 @@
   </header>
 
   <main class="page">
+
     <section class="card">
       <div class="summary-main">
         <div>
           <h2 id="childName">Child</h2>
+
           <div class="summary-meta">
             <div id="childSummary">Age —</div>
             <div><strong>Care Needs:</strong> Daily meds, feeds, therapy support</div>
           </div>
+
           <div class="pill-row" id="diagnosisPills"></div>
         </div>
 
         <div>
-          <button class="btn btn-soft" type="button">Edit Child Profile</button>
+          <a class="btn btn-soft" href="careplan.html">Edit Child Profile</a>
         </div>
       </div>
     </section>
 
     <div class="grid-2">
+
       <section class="card">
         <div class="section-head">
           <h2>Today</h2>
@@ -56,16 +60,22 @@
         </div>
         <div id="homeScheduleList" class="list"></div>
       </section>
+
     </div>
 
     <section id="lastVitalsCard" class="card hidden">
       <div class="section-head">
         <h2>Last Known Vitals</h2>
+
         <div style="display:flex; gap:8px; flex-wrap:wrap;">
-          <button class="btn btn-ghost" type="button" data-quick-vital="full">Quick Log</button>
+          <button class="btn btn-ghost" type="button" data-quick-vital="full">
+            Quick Log
+          </button>
+
           <a class="btn" href="vitals.html">View History</a>
         </div>
       </div>
+
       <div id="lastVitalsContent"></div>
     </section>
 
@@ -74,37 +84,84 @@
         <h2>Inventory Reminders</h2>
         <a class="btn btn-ghost" href="inventory.html">View Inventory</a>
       </div>
-      <div id="lowSupplySummary" class="alert-box alert-danger" style="margin-bottom:12px;"></div>
+
+      <div
+        id="lowSupplySummary"
+        class="alert-box alert-danger"
+        style="margin-bottom:12px;"
+      ></div>
+
       <div id="lowSupplyDashboardList" class="list"></div>
     </section>
 
     <div class="grid-2">
+
       <section class="card">
         <div class="section-head">
           <h2>Recent Care Log</h2>
           <a class="btn btn-ghost" href="carelog.html">Open Care Log</a>
         </div>
+
         <ul id="careLogList" class="list"></ul>
       </section>
 
       <section class="card">
+
         <div class="section-head">
           <h2>Quick Log</h2>
           <span class="muted">Fast daily updates</span>
         </div>
 
         <div class="quick-actions">
-          <button class="quick-btn" type="button" data-category="note">+ Note<span>Add general care note</span></button>
-          <button class="quick-btn" type="button" data-category="med">+ Medication<span>Record medication note</span></button>
-          <button class="quick-btn" type="button" data-category="symptom">+ Symptom<span>Track symptoms or concerns</span></button>
-          <button class="quick-btn" type="button" data-category="question">+ Question<span>Save a question for visits</span></button>
-          <button class="quick-btn" type="button" data-quick-vital="o2">+ O2<span>Log oxygen saturation</span></button>
-          <button class="quick-btn" type="button" data-quick-vital="temp">+ Temp<span>Log temperature</span></button>
-          <button class="quick-btn" type="button" data-quick-vital="bp">+ BP<span>Log blood pressure</span></button>
-          <button class="quick-btn" type="button" data-quick-vital="hr">+ HR<span>Log heart rate</span></button>
-          <button class="quick-btn" type="button" data-quick-vital="rr">+ RR<span>Log respiratory rate</span></button>
+
+          <button class="quick-btn" type="button" data-category="note">
+            + Note
+            <span>Add general care note</span>
+          </button>
+
+          <button class="quick-btn" type="button" data-category="med">
+            + Medication
+            <span>Record medication note</span>
+          </button>
+
+          <button class="quick-btn" type="button" data-category="symptom">
+            + Symptom
+            <span>Track symptoms or concerns</span>
+          </button>
+
+          <button class="quick-btn" type="button" data-category="question">
+            + Question
+            <span>Save a question for visits</span>
+          </button>
+
+          <button class="quick-btn" type="button" data-quick-vital="o2">
+            + O2
+            <span>Log oxygen saturation</span>
+          </button>
+
+          <button class="quick-btn" type="button" data-quick-vital="temp">
+            + Temp
+            <span>Log temperature</span>
+          </button>
+
+          <button class="quick-btn" type="button" data-quick-vital="bp">
+            + BP
+            <span>Log blood pressure</span>
+          </button>
+
+          <button class="quick-btn" type="button" data-quick-vital="hr">
+            + HR
+            <span>Log heart rate</span>
+          </button>
+
+          <button class="quick-btn" type="button" data-quick-vital="rr">
+            + RR
+            <span>Log respiratory rate</span>
+          </button>
+
         </div>
       </section>
+
     </div>
 
     <section id="lastSymptomCard" class="card hidden">
@@ -112,18 +169,27 @@
         <h2>Last Symptom</h2>
         <a class="btn btn-ghost" href="carelog.html">View Symptoms</a>
       </div>
+
       <div id="lastSymptomContent"></div>
     </section>
 
     <section class="card">
+
       <div class="section-head">
         <h2>Emergency Sheet</h2>
-        <button id="btnEmergency" class="btn" type="button">Open</button>
+
+        <div style="display:flex; gap:8px; flex-wrap:wrap;">
+          <button id="btnEmergency" class="btn" type="button">Open</button>
+          <a class="btn btn-ghost" href="crisis.html">Crisis Mode</a>
+        </div>
       </div>
+
       <p class="muted">
         Quick access to diagnoses, medications, contacts, allergies, and emergency instructions.
       </p>
+
     </section>
+
   </main>
 
   <nav class="bottom-nav">
@@ -140,15 +206,19 @@
 
   <!-- Quick care log modal -->
   <div id="modal" class="modal hidden">
+
     <div class="modal-card">
+
       <div class="section-head">
         <h2>Quick Log</h2>
         <button id="btnCloseModal" class="btn btn-ghost" type="button">Close</button>
       </div>
 
       <div class="form-grid">
+
         <div class="field">
           <label for="categorySelect">Category</label>
+
           <select id="categorySelect" class="input">
             <option value="note">Care Note</option>
             <option value="med">Medication</option>
@@ -161,6 +231,7 @@
           <label for="authorInput">Author</label>
           <input id="authorInput" class="input" type="text" placeholder="Mom" />
         </div>
+
       </div>
 
       <div class="field mt-12">
@@ -176,18 +247,22 @@
       <div class="modal-actions">
         <button id="btnSave" class="btn" type="button">Save</button>
       </div>
+
     </div>
   </div>
 
   <!-- Quick vitals modal -->
   <div id="vitalsModal" class="modal hidden">
+
     <div class="modal-card">
+
       <div class="section-head">
         <h2>Quick Vitals</h2>
         <button id="btnCloseVitalsModal" class="btn btn-ghost" type="button">Close</button>
       </div>
 
       <div class="form-grid">
+
         <div class="field" id="wrapO2">
           <label for="quickO2">O₂ Saturation</label>
           <input id="quickO2" class="input" type="number" step="1" placeholder="97" />
@@ -217,6 +292,7 @@
           <label for="quickRr">Respiratory Rate</label>
           <input id="quickRr" class="input" type="number" step="1" placeholder="22" />
         </div>
+
       </div>
 
       <div class="field mt-12">
@@ -227,17 +303,22 @@
       <div class="modal-actions">
         <button id="btnSaveQuickVitals" class="btn" type="button">Save Vitals</button>
       </div>
+
     </div>
   </div>
 
   <!-- Emergency modal -->
   <div id="emergencyModal" class="modal hidden">
+
     <div class="modal-card">
+
       <div class="section-head">
         <h2>Emergency Sheet</h2>
         <button id="btnCloseEmergency" class="btn btn-ghost" type="button">Close</button>
       </div>
+
       <div id="emergencyBody" style="display:grid; gap:12px;"></div>
+
     </div>
   </div>
 
@@ -245,7 +326,6 @@
   <script src="supabase.js"></script>
   <script src="auth.js"></script>
   <script src="app.js"></script>
+
 </body>
-
 </html>
-
