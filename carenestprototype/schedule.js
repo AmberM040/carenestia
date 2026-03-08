@@ -92,6 +92,47 @@ document.addEventListener("DOMContentLoaded", () => {
     return;
   }
 
+  function getSupabaseClient() {
+    if (window.supabaseClient) return window.supabaseClient;
+    if (window.supabase?.from) return window.supabase;
+    return null;
+  }
+
+  async function fetchUser() {
+    const supabase = getSupabaseClient();
+    if (!supabase?.auth) return null;
+
+    const { data, error } = await supabase.auth.getUser();
+    if (error) {
+      console.warn("Could not get user:", error.message);
+      return null;
+    }
+
+    return data?.user || null;
+  }
+
+  async function fetchChildrenForUser(userId) {
+    const supabase = getSupabaseClient();
+    if (!supabase || !userId) return [];
+
+    const { data, error } = await supabase
+      .from("children")
+      .select("*")
+      .eq("parent_id", userId)
+      .order("created_at", { ascending: true });
+
+    if (error) {
+      console.warn("Could not load children:", error.message);
+      return [];
+    }
+
+    return (data || []).map((child) => ({
+      ...child,
+      diagnoses: normalizeDiagnoses(child.diagnoses),
+      age: child.age ?? getAgeFromBirthdate(child.birthdate)
+    }));
+  }
+
   function escapeHtml(str = "") {
     return String(str)
       .replaceAll("&", "&amp;")
@@ -1088,7 +1129,6 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   function renderAll() {
-    db = ensureDB(loadDB());
     fillChildSwitcher();
     updateChildSummary();
     renderEmergencySheet();
@@ -1162,7 +1202,33 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   });
 
-  setDefaultTaskDateTime();
-  renderAll();
-  setActiveView("today");
+  async function init() {
+    db = ensureDB(loadDB());
+
+    const currentUser = await fetchUser();
+
+    if (currentUser?.id) {
+      const fetchedChildren = await fetchChildrenForUser(currentUser.id);
+
+      if (fetchedChildren.length) {
+        db.children = fetchedChildren;
+
+        const savedActiveId = db.activeChildId;
+        const validActive =
+          fetchedChildren.find((child) => String(child.id) === String(savedActiveId)) ||
+          fetchedChildren[0] ||
+          null;
+
+        db.activeChildId = validActive ? validActive.id : null;
+        db.currentChildId = db.activeChildId;
+        saveDB(db);
+      }
+    }
+
+    setDefaultTaskDateTime();
+    renderAll();
+    setActiveView("today");
+  }
+
+  init();
 });
