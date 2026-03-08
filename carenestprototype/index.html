@@ -377,41 +377,6 @@
   <script src="auth.js"></script>
   <script src="app.js"></script>
 
-  <script>
-    // Mirror desktop-controlled child summary into mobile fallback IDs if app.js does not target them directly
-    const syncMobileSummary = () => {
-      const childName = document.getElementById("childName");
-      const childSummary = document.getElementById("childSummary");
-      const diagnosisPills = document.getElementById("diagnosisPills");
-
-      const childNameMobile = document.getElementById("childNameMobile");
-      const childSummaryMobile = document.getElementById("childSummaryMobile");
-      const diagnosisPillsMobile = document.getElementById("diagnosisPillsMobile");
-
-      const childSwitcher = document.getElementById("childSwitcher");
-      const childSwitcherMobile = document.getElementById("childSwitcherMobile");
-      const logoutBtn = document.getElementById("logoutBtn");
-      const logoutBtnMobile = document.getElementById("logoutBtnMobile");
-
-      if (childName && childNameMobile) childNameMobile.textContent = childName.textContent;
-      if (childSummary && childSummaryMobile) childSummaryMobile.textContent = childSummary.textContent;
-      if (diagnosisPills && diagnosisPillsMobile) diagnosisPillsMobile.innerHTML = diagnosisPills.innerHTML;
-      if (childSwitcher && childSwitcherMobile) childSwitcherMobile.innerHTML = childSwitcher.innerHTML;
-
-      if (childSwitcherMobile && childSwitcher) {
-        childSwitcherMobile.onchange = (e) => {
-          childSwitcher.value = e.target.value;
-          childSwitcher.dispatchEvent(new Event("change", { bubbles: true }));
-        };
-      }
-
-      if (logoutBtnMobile && logoutBtn) {
-        logoutBtnMobile.onclick = () => logoutBtn.click();
-      }
-    };
-
-    setInterval(syncMobileSummary, 500);
-    window.addEventListener("load", syncMobileSummary);
-  </script>
 </body>
 </html>
+
