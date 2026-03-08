@@ -2,9 +2,6 @@ document.addEventListener("DOMContentLoaded", async () => {
   const LOCAL_DB_KEY = "carenest_prototype_v1";
   const ACTIVE_CHILD_KEY = "carenest_active_child_id";
 
-  // -----------------------------
-  // DOM refs
-  // -----------------------------
   const welcomeText = document.getElementById("welcomeText");
   const childSwitcher = document.getElementById("childSwitcher");
   const logoutBtn = document.getElementById("logoutBtn");
@@ -62,17 +59,11 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   const quickCategoryButtons = document.querySelectorAll("[data-category]");
 
-  // -----------------------------
-  // State
-  // -----------------------------
   let currentUser = null;
   let children = [];
   let activeChild = null;
   let currentQuickVitalMode = "full";
 
-  // -----------------------------
-  // Helpers
-  // -----------------------------
   function show(el) {
     el?.classList.remove("hidden");
   }
@@ -92,6 +83,33 @@ document.addEventListener("DOMContentLoaded", async () => {
       .replaceAll(">", "&gt;")
       .replaceAll('"', "&quot;")
       .replaceAll("'", "&#039;");
+  }
+
+  function normalizeDiagnoses(value) {
+    if (Array.isArray(value)) return value.filter(Boolean);
+    if (typeof value === "string" && value.trim()) {
+      return value
+        .split(",")
+        .map((item) => item.trim())
+        .filter(Boolean);
+    }
+    return [];
+  }
+
+  function getAgeFromBirthdate(birthdate) {
+    if (!birthdate) return "";
+    const dob = new Date(birthdate);
+    if (Number.isNaN(dob.getTime())) return "";
+
+    const now = new Date();
+    let age = now.getFullYear() - dob.getFullYear();
+    const monthDiff = now.getMonth() - dob.getMonth();
+
+    if (monthDiff < 0 || (monthDiff === 0 && now.getDate() < dob.getDate())) {
+      age--;
+    }
+
+    return age;
   }
 
   function formatDateTime(value) {
@@ -133,12 +151,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     } catch (err) {
       console.error("Failed to save local DB:", err);
     }
-  }
-
-  function getSelectedSpecialties() {
-    return [...specialtyChecks.querySelectorAll('input[type="checkbox"]:checked')].map(
-      (input) => input.value
-    );
   }
 
   function setActiveChildId(id) {
@@ -223,9 +235,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     });
   }
 
-  // -----------------------------
-  // Supabase fetch helpers
-  // -----------------------------
   async function fetchUser() {
     const supabase = getSupabaseClient();
     if (!supabase?.auth) return null;
@@ -241,12 +250,12 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   async function fetchChildren(userId) {
     const supabase = getSupabaseClient();
-    if (!supabase) return [];
+    if (!supabase || !userId) return [];
 
     const { data, error } = await supabase
       .from("children")
       .select("*")
-      .eq("parent_user_id", userId)
+      .eq("parent_id", userId)
       .order("created_at", { ascending: true });
 
     if (error) {
@@ -254,7 +263,11 @@ document.addEventListener("DOMContentLoaded", async () => {
       return [];
     }
 
-    return data || [];
+    return (data || []).map((child) => ({
+      ...child,
+      diagnoses: normalizeDiagnoses(child.diagnoses),
+      age: child.age ?? getAgeFromBirthdate(child.birthdate),
+    }));
   }
 
   async function fetchMedications(childId) {
@@ -395,9 +408,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     return data || null;
   }
 
-  // -----------------------------
-  // Render helpers
-  // -----------------------------
   function renderChildSwitcher() {
     childSwitcher.innerHTML = "";
 
@@ -430,15 +440,16 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     childName.textContent = child.name || "Child";
 
+    const childAge = child.age ?? getAgeFromBirthdate(child.birthdate);
     const ageText =
-      child.age !== null && child.age !== undefined && child.age !== ""
-        ? `Age ${child.age}`
+      childAge !== null && childAge !== undefined && childAge !== ""
+        ? `Age ${childAge}`
         : "Age —";
 
     childSummary.textContent = ageText;
 
     diagnosisPills.innerHTML = "";
-    const diagnoses = safeArray(child.diagnoses);
+    const diagnoses = normalizeDiagnoses(child.diagnoses);
 
     if (!diagnoses.length) {
       diagnosisPills.innerHTML = `<span class="pill">No diagnoses added</span>`;
@@ -645,9 +656,11 @@ document.addEventListener("DOMContentLoaded", async () => {
       return;
     }
 
-    const diagnoses = safeArray(child.diagnoses).length
-      ? safeArray(child.diagnoses).join(", ")
+    const diagnoses = normalizeDiagnoses(child.diagnoses).length
+      ? normalizeDiagnoses(child.diagnoses).join(", ")
       : "None listed";
+
+    const childAge = child.age ?? getAgeFromBirthdate(child.birthdate);
 
     const medList = meds.length
       ? meds
@@ -677,7 +690,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     emergencyBody.innerHTML = `
       ${buildEmergencySection("Child", `
         <div><strong>Name:</strong> ${escapeHtml(child.name || "—")}</div>
-        <div><strong>Age:</strong> ${escapeHtml(child.age ?? "—")}</div>
+        <div><strong>Age:</strong> ${escapeHtml(childAge || "—")}</div>
         <div><strong>Diagnoses:</strong> ${escapeHtml(diagnoses)}</div>
       `)}
       ${buildEmergencySection("Allergies", escapeHtml(carePlan?.allergies || child.allergies || "None listed"))}
@@ -720,19 +733,28 @@ document.addEventListener("DOMContentLoaded", async () => {
     `;
   }
 
-  // -----------------------------
-  // Local fallbacks
-  // -----------------------------
   function getLocalChildrenFallback() {
     const db = getLocalDB();
+
+    if (Array.isArray(db.children) && db.children.length) {
+      return db.children.map((child) => ({
+        ...child,
+        diagnoses: normalizeDiagnoses(child.diagnoses),
+        age: child.age ?? getAgeFromBirthdate(child.birthdate),
+      }));
+    }
+
     const child = db.child || null;
     if (!child) return [];
+
     return [
       {
-        id: "local-child-1",
+        id: db.activeChildId || "local-child-1",
         name: child.name || "Test Child",
         age: child.age ?? "",
-        diagnoses: safeArray(child.diagnoses),
+        birthdate: child.birthdate || null,
+        diagnoses: normalizeDiagnoses(child.diagnoses),
+        allergies: child.allergies || "",
       },
     ];
   }
@@ -776,9 +798,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     return plans[childId] || null;
   }
 
-  // -----------------------------
-  // Save actions
-  // -----------------------------
   async function saveCareLog() {
     if (!activeChild) {
       alert("No child selected.");
@@ -877,9 +896,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     await loadDashboard();
   }
 
-  // -----------------------------
-  // Main loader
-  // -----------------------------
   async function loadDashboard() {
     if (!activeChild) {
       renderChildSummaryCard(null);
@@ -952,9 +968,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     renderEmergencySheet(activeChild, carePlan || localCarePlan, medicationsRaw);
   }
 
-  // -----------------------------
-  // Init
-  // -----------------------------
   async function init() {
     const supabase = getSupabaseClient();
 
