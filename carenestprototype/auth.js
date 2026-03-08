@@ -2,6 +2,10 @@ document.addEventListener("DOMContentLoaded", () => {
   const errorMsg = document.getElementById("errorMsg");
   const successMsg = document.getElementById("successMsg");
 
+  function getSupabase() {
+    return window.supabaseClient || null;
+  }
+
   function showError(message) {
     if (!errorMsg) return;
     errorMsg.textContent = message;
@@ -28,16 +32,19 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   async function getPostLoginDestination() {
+    const supabase = getSupabase();
+    if (!supabase?.auth) return "login.html";
+
     const {
       data: { user },
-      error: userError,
-    } = await supabaseClient.auth.getUser();
+      error: userError
+    } = await supabase.auth.getUser();
 
     if (userError || !user) {
       return "login.html";
     }
 
-    const { data: children, error: childrenError } = await supabaseClient
+    const { data: children, error: childrenError } = await supabase
       .from("children")
       .select("id")
       .eq("parent_id", user.id)
@@ -56,7 +63,10 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   async function redirectIfLoggedIn() {
-    const { data, error } = await supabaseClient.auth.getSession();
+    const supabase = getSupabase();
+    if (!supabase?.auth) return;
+
+    const { data, error } = await supabase.auth.getSession();
     if (error || !data.session) return;
 
     const currentPage = window.location.pathname.split("/").pop();
@@ -66,7 +76,7 @@ document.addEventListener("DOMContentLoaded", () => {
       "login.html",
       "signup.html",
       "forgot-password.html",
-      "reset-password.html",
+      "reset-password.html"
     ];
 
     if (publicPages.includes(currentPage)) {
@@ -83,6 +93,12 @@ document.addEventListener("DOMContentLoaded", () => {
       e.preventDefault();
       clearMessages();
 
+      const supabase = getSupabase();
+      if (!supabase?.auth) {
+        showError("Login is not available right now. Supabase is not loaded.");
+        return;
+      }
+
       const email = document.getElementById("loginEmail").value.trim();
       const password = document.getElementById("loginPassword").value;
 
@@ -91,9 +107,9 @@ document.addEventListener("DOMContentLoaded", () => {
         return;
       }
 
-      const { error } = await supabaseClient.auth.signInWithPassword({
+      const { error } = await supabase.auth.signInWithPassword({
         email,
-        password,
+        password
       });
 
       if (error) {
@@ -117,6 +133,12 @@ document.addEventListener("DOMContentLoaded", () => {
       e.preventDefault();
       clearMessages();
 
+      const supabase = getSupabase();
+      if (!supabase?.auth) {
+        showError("Signup is not available right now. Supabase is not loaded.");
+        return;
+      }
+
       const email = document.getElementById("signupEmail").value.trim();
       const password = document.getElementById("signupPassword").value;
       const confirmPassword = document.getElementById("signupConfirmPassword").value;
@@ -136,9 +158,9 @@ document.addEventListener("DOMContentLoaded", () => {
         return;
       }
 
-      const { error } = await supabaseClient.auth.signUp({
+      const { error } = await supabase.auth.signUp({
         email,
-        password,
+        password
       });
 
       if (error) {
@@ -157,6 +179,12 @@ document.addEventListener("DOMContentLoaded", () => {
       e.preventDefault();
       clearMessages();
 
+      const supabase = getSupabase();
+      if (!supabase?.auth) {
+        showError("Password reset is not available right now. Supabase is not loaded.");
+        return;
+      }
+
       const email = document.getElementById("resetEmail").value.trim();
 
       if (!email) {
@@ -164,8 +192,8 @@ document.addEventListener("DOMContentLoaded", () => {
         return;
       }
 
-      const { error } = await supabaseClient.auth.resetPasswordForEmail(email, {
-        redirectTo: `${window.location.origin}/reset-password.html`,
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/reset-password.html`
       });
 
       if (error) {
@@ -182,6 +210,12 @@ document.addEventListener("DOMContentLoaded", () => {
     resetPasswordForm.addEventListener("submit", async (e) => {
       e.preventDefault();
       clearMessages();
+
+      const supabase = getSupabase();
+      if (!supabase?.auth) {
+        showError("Password reset is not available right now. Supabase is not loaded.");
+        return;
+      }
 
       const newPassword = document.getElementById("newPassword").value;
       const confirmNewPassword = document.getElementById("confirmNewPassword").value;
@@ -201,8 +235,8 @@ document.addEventListener("DOMContentLoaded", () => {
         return;
       }
 
-      const { error } = await supabaseClient.auth.updateUser({
-        password: newPassword,
+      const { error } = await supabase.auth.updateUser({
+        password: newPassword
       });
 
       if (error) {
@@ -224,8 +258,14 @@ document.addEventListener("click", async (e) => {
 
   e.preventDefault();
 
+  const supabase = window.supabaseClient || null;
+  if (!supabase?.auth) {
+    window.location.replace("login.html");
+    return;
+  }
+
   try {
-    const { error } = await supabaseClient.auth.signOut();
+    const { error } = await supabase.auth.signOut();
 
     if (error) {
       console.error("Logout error:", error);
@@ -241,14 +281,23 @@ document.addEventListener("click", async (e) => {
 });
 
 async function requireAuth() {
-  const { data, error } = await supabaseClient.auth.getSession();
+  const supabase = window.supabaseClient || null;
+  if (!supabase?.auth) {
+    window.location.href = "login.html";
+    return;
+  }
+
+  const { data, error } = await supabase.auth.getSession();
   if (error || !data.session) {
     window.location.href = "login.html";
   }
 }
 
 async function getCurrentUser() {
-  const { data, error } = await supabaseClient.auth.getUser();
+  const supabase = window.supabaseClient || null;
+  if (!supabase?.auth) return null;
+
+  const { data, error } = await supabase.auth.getUser();
   if (error) return null;
   return data.user;
 }
