@@ -10,11 +10,14 @@
 
   <div class="app-shell">
 
-    <!-- Desktop Sidebar -->
     <aside class="app-sidebar desktop-only">
       <div class="sidebar-brand">
         <div class="sidebar-brand-logo">
-          <img src="logo.png" alt="CareNest logo" onerror="this.style.display='none'; this.parentNode.innerHTML='💙'; this.parentNode.style.display='grid'; this.parentNode.style.placeItems='center'; this.parentNode.style.background='linear-gradient(90deg, var(--primary), var(--primary-2))'; this.parentNode.style.color='#fff'; this.parentNode.style.fontSize='1.4rem';">
+          <img
+            src="logo.png"
+            alt="CareNest logo"
+            onerror="this.style.display='none'; this.parentNode.innerHTML='💙'; this.parentNode.style.display='grid'; this.parentNode.style.placeItems='center'; this.parentNode.style.background='linear-gradient(90deg, var(--primary), var(--primary-2))'; this.parentNode.style.color='#fff'; this.parentNode.style.fontSize='1.4rem';"
+          >
         </div>
         <div class="sidebar-brand-name">CareNestia</div>
       </div>
@@ -45,14 +48,16 @@
       </div>
     </aside>
 
-    <!-- Main App Area -->
     <div class="app-main">
 
-      <!-- Desktop App Topbar -->
       <header class="app-topbar desktop-only">
         <div style="display:flex; align-items:center; gap:14px; min-width:0;">
           <div style="width:52px; height:52px; border-radius:50%; background:#dfe9f8; flex:0 0 auto; overflow:hidden;">
-            <img src="child-avatar.jpg" alt="" onerror="this.style.display='none'; this.parentNode.style.background='linear-gradient(180deg,#dce8fb,#eef4fd)';">
+            <img
+              src="child-avatar.jpg"
+              alt=""
+              onerror="this.style.display='none'; this.parentNode.style.background='linear-gradient(180deg,#dce8fb,#eef4fd)';"
+            >
           </div>
 
           <div style="min-width:0;">
@@ -72,46 +77,10 @@
         </div>
       </header>
 
-      <!-- Mobile Topbar -->
-      <header class="topbar mobile-only">
-        <div class="container">
-          <div class="topbar-left">
-            <h1>CareNestia</h1>
-            <p id="welcomeText">Welcome back</p>
-          </div>
-
-          <div class="topbar-right">
-            <select id="childSwitcherMobile" class="child-switcher" style="max-width:220px;"></select>
-            <button id="logoutBtnMobile" class="btn btn-ghost" type="button">Log out</button>
-          </div>
-        </div>
-      </header>
-
-      <!-- Main Content -->
       <main class="app-content">
 
-        <!-- Left/Main Column -->
         <section class="timeline-shell">
 
-          <!-- Mobile child summary card -->
-          <section class="card mobile-only">
-            <div class="summary-main">
-              <div>
-                <h2 id="childNameMobile">Child</h2>
-                <div class="summary-meta">
-                  <div id="childSummaryMobile">Age —</div>
-                  <div><strong>Care Needs:</strong> Daily meds, feeds, therapy support</div>
-                </div>
-                <div class="pill-row" id="diagnosisPillsMobile"></div>
-              </div>
-
-              <div>
-                <a class="btn btn-soft" href="careplan.html">Edit Child Profile</a>
-              </div>
-            </div>
-          </section>
-
-          <!-- Alert / next med strip -->
           <section class="card soft">
             <div class="section-head" style="margin-bottom:0;">
               <div>
@@ -122,7 +91,6 @@
             </div>
           </section>
 
-          <!-- Today timeline -->
           <section class="card">
             <div class="section-head">
               <h2>Today</h2>
@@ -131,7 +99,6 @@
             <ul id="todayList" class="list"></ul>
           </section>
 
-          <!-- Upcoming -->
           <section class="card">
             <div class="section-head">
               <h2>Upcoming Schedule</h2>
@@ -140,7 +107,6 @@
             <div id="homeScheduleList" class="list"></div>
           </section>
 
-          <!-- Last symptom -->
           <section id="lastSymptomCard" class="card hidden">
             <div class="section-head">
               <h2>Last Symptom</h2>
@@ -149,7 +115,6 @@
             <div id="lastSymptomContent"></div>
           </section>
 
-          <!-- Recent care log -->
           <section class="card">
             <div class="section-head">
               <h2>Recent Care Log</h2>
@@ -160,7 +125,6 @@
 
         </section>
 
-        <!-- Right Column -->
         <aside class="stack">
 
           <section id="lastVitalsCard" class="card hidden">
@@ -256,7 +220,6 @@
     </div>
   </div>
 
-  <!-- Mobile bottom nav -->
   <nav class="bottom-nav">
     <div class="bottom-nav-inner">
       <a class="nav-link active" href="index.html">Home</a>
@@ -269,7 +232,6 @@
 
   <button class="emergency-btn hidden" type="button">Emergency</button>
 
-  <!-- Quick care log modal -->
   <div id="modal" class="modal hidden">
     <div class="modal-card">
       <div class="section-head">
@@ -310,7 +272,6 @@
     </div>
   </div>
 
-  <!-- Quick vitals modal -->
   <div id="vitalsModal" class="modal hidden">
     <div class="modal-card">
       <div class="section-head">
@@ -361,7 +322,6 @@
     </div>
   </div>
 
-  <!-- Emergency modal -->
   <div id="emergencyModal" class="modal hidden">
     <div class="modal-card">
       <div class="section-head">
@@ -376,7 +336,5 @@
   <script src="supabase.js"></script>
   <script src="auth.js"></script>
   <script src="app.js"></script>
-
 </body>
 </html>
-
