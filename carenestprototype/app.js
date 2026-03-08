@@ -2,7 +2,6 @@ document.addEventListener("DOMContentLoaded", async () => {
   const LOCAL_DB_KEY = "carenest_prototype_v1";
   const ACTIVE_CHILD_KEY = "carenest_active_child_id";
 
-  const welcomeText = document.getElementById("welcomeText");
   const childSwitcher = document.getElementById("childSwitcher");
   const logoutBtn = document.getElementById("logoutBtn");
 
@@ -11,7 +10,6 @@ document.addEventListener("DOMContentLoaded", async () => {
   const diagnosisPills = document.getElementById("diagnosisPills");
 
   const todayList = document.getElementById("todayList");
-  const homeScheduleList = document.getElementById("homeScheduleList");
   const careLogList = document.getElementById("careLogList");
 
   const lastVitalsCard = document.getElementById("lastVitalsCard");
@@ -458,12 +456,18 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
 
     const childAge = child.age ?? getAgeFromBirthdate(child.birthdate);
-    const ageText =
+    const diagnoses = normalizeDiagnoses(child.diagnoses);
+
+    let summaryText =
       childAge !== null && childAge !== undefined && childAge !== ""
         ? `Age ${childAge}`
         : "Age —";
 
-    if (childSummary) childSummary.textContent = ageText;
+    if (diagnoses.length) {
+      summaryText += ` • ${diagnoses.slice(0, 2).join(" • ")}`;
+    }
+
+    if (childSummary) childSummary.textContent = summaryText;
 
     if (childAvatar) {
       if (child.photo_url) {
@@ -475,15 +479,8 @@ document.addEventListener("DOMContentLoaded", async () => {
       }
     }
 
-    const diagnoses = normalizeDiagnoses(child.diagnoses);
-
     if (diagnosisPills) {
       diagnosisPills.innerHTML = "";
-
-      if (!diagnoses.length) {
-        diagnosisPills.innerHTML = `<span class="pill">No diagnoses added</span>`;
-        return;
-      }
 
       diagnoses.forEach((diagnosis) => {
         const span = document.createElement("span");
@@ -537,37 +534,6 @@ document.addEventListener("DOMContentLoaded", async () => {
         </div>
       `;
       todayList.appendChild(li);
-    });
-  }
-
-  function renderUpcomingSchedule(items = []) {
-    if (!homeScheduleList) return;
-
-    homeScheduleList.innerHTML = "";
-
-    if (!items.length) {
-      homeScheduleList.innerHTML = `<div class="list-item muted">No upcoming schedule items.</div>`;
-      return;
-    }
-
-    items.forEach((item) => {
-      const div = document.createElement("div");
-      div.className = "timeline-card";
-      div.innerHTML = `
-        <div style="display:flex; justify-content:space-between; gap:12px; align-items:flex-start;">
-          <div style="display:flex; gap:12px; align-items:flex-start; min-width:0;">
-            <div class="log-icon" style="width:42px;height:42px;border-radius:14px;font-size:0.95rem;">${escapeHtml(
-              getScheduleIcon(item)
-            )}</div>
-            <div style="min-width:0;">
-              <h3 style="margin:0 0 4px;">${escapeHtml(item.title || item.name || "Untitled")}</h3>
-              <div class="muted">${escapeHtml(item.location || item.type || "")}</div>
-            </div>
-          </div>
-          <div class="muted" style="font-weight:700;">${escapeHtml(item.timeLabel || "—")}</div>
-        </div>
-      `;
-      homeScheduleList.appendChild(div);
     });
   }
 
@@ -978,7 +944,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     if (!activeChild) {
       renderChildSummaryCard(null);
       renderTodayList([]);
-      renderUpcomingSchedule([]);
       renderCareLogs([]);
       hide(lastVitalsCard);
       hide(lowSupplyCard);
@@ -1030,15 +995,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       return false;
     });
 
-    const upcomingItems = scheduleItems
-      .filter((item) => {
-        const d = new Date(item.start_at || item.date || "");
-        return !Number.isNaN(d.getTime()) && d >= new Date();
-      })
-      .slice(0, 5);
-
     renderTodayList(todayItems.length ? todayItems : scheduleItems.slice(0, 5));
-    renderUpcomingSchedule(upcomingItems.length ? upcomingItems : scheduleItems.slice(0, 5));
     renderCareLogs(careLogs.slice(0, 5));
     renderLastVitals(vitals);
     renderInventory(inventory);
@@ -1050,12 +1007,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     const supabase = getSupabaseClient();
 
     currentUser = await fetchUser();
-
-    if (currentUser?.email && welcomeText) {
-      welcomeText.textContent = `Welcome back, ${currentUser.email}`;
-    } else if (welcomeText) {
-      welcomeText.textContent = "Welcome back";
-    }
 
     const localDb = getLocalDB();
     fillSpecialties(safeArray(localDb.specialties));
