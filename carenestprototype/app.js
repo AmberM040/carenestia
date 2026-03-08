@@ -4,8 +4,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // Elements
   const welcomeText = document.getElementById("welcomeText");
-  const logoutBtn = document.getElementById("logoutBtn");
-
   const childName = document.getElementById("childName");
   const childSummary = document.getElementById("childSummary");
   const diagnosisPills = document.getElementById("diagnosisPills");
@@ -80,6 +78,72 @@ document.addEventListener("DOMContentLoaded", () => {
   if (missing.length) {
     alert("Missing elements in index.html: " + missing.join(", "));
     return;
+  }
+
+  function calculateAge(birthdate) {
+    const birth = new Date(birthdate);
+    if (Number.isNaN(birth.getTime())) return "—";
+
+    const today = new Date();
+    let age = today.getFullYear() - birth.getFullYear();
+
+    const hadBirthdayThisYear =
+      today.getMonth() > birth.getMonth() ||
+      (today.getMonth() === birth.getMonth() && today.getDate() >= birth.getDate());
+
+    if (!hadBirthdayThisYear) age -= 1;
+    return age;
+  }
+
+  async function syncChildrenFromSupabase() {
+    const {
+      data: { user },
+      error: userError
+    } = await supabaseClient.auth.getUser();
+
+    if (userError || !user) {
+      window.location.href = "login.html";
+      return false;
+    }
+
+    const { data: children, error } = await supabaseClient
+      .from("children")
+      .select("*")
+      .eq("parent_id", user.id)
+      .order("created_at", { ascending: true });
+
+    if (error) {
+      console.error("Error loading children from Supabase:", error);
+      alert("Could not load child profile from Supabase.");
+      return false;
+    }
+
+    if (!children || children.length === 0) {
+      window.location.href = "onboarding.html";
+      return false;
+    }
+
+    db.children = children.map((child) => ({
+      id: child.id,
+      name: child.name || "Child",
+      age: child.birthdate ? calculateAge(child.birthdate) : "—",
+      diagnoses: child.diagnoses
+        ? child.diagnoses.split(",").map((d) => d.trim()).filter(Boolean)
+        : [],
+      allergies: child.allergies || "",
+      notes: child.notes || "",
+      emergency: {
+        allergies: child.allergies || ""
+      }
+    }));
+
+    if (!db.activeChildId || !db.children.find((c) => c.id === db.activeChildId)) {
+      db.activeChildId = db.children[0].id;
+      db.currentChildId = db.children[0].id;
+    }
+
+    saveDB(db);
+    return true;
   }
 
   function activeChild() {
@@ -620,10 +684,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const child = activeChild();
 
     if (welcomeText) {
-      const currentUser = typeof requireAuth === "function" ? requireAuth() : null;
-      welcomeText.textContent = currentUser?.name
-        ? `Welcome back, ${currentUser.name}`
-        : "Welcome back";
+      welcomeText.textContent = "Welcome back";
     }
 
     if (!child) return;
@@ -1171,10 +1232,6 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   });
 
-  if (logoutBtn && typeof logout === "function") {
-    logoutBtn.addEventListener("click", () => logout());
-  }
-
   btnCloseModal.addEventListener("click", closeModal);
 
   modal.addEventListener("click", (e) => {
@@ -1270,6 +1327,11 @@ document.addEventListener("DOMContentLoaded", () => {
     render();
   });
 
-  fillChildSwitcher();
-  render();
+  (async function initDashboard() {
+    const ok = await syncChildrenFromSupabase();
+    if (!ok) return;
+
+    fillChildSwitcher();
+    render();
+  })();
 });
