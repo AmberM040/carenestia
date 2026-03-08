@@ -17,7 +17,11 @@ saveDB(db);
 /* -----------------------------
    DOM refs
 ----------------------------- */
+const childSwitcher = document.getElementById("childSwitcher");
+const logoutBtn = document.getElementById("logoutBtn");
+const childAvatar = document.getElementById("childAvatar");
 const childSummary = document.getElementById("childSummary");
+
 const todayMeds = document.getElementById("todayMeds");
 const medList = document.getElementById("medList");
 const timeline = document.getElementById("timeline");
@@ -35,6 +39,13 @@ const refreshBtn = document.getElementById("refreshBtn");
 const showArchivedBtn = document.getElementById("showArchivedBtn");
 const exportReportBtn = document.getElementById("exportReportBtn");
 const copyReportBtn = document.getElementById("copyReportBtn");
+
+const addMedBtnSidebar = document.getElementById("addMedBtnSidebar");
+const refreshBtnSidebar = document.getElementById("refreshBtnSidebar");
+const showArchivedBtnSidebar = document.getElementById("showArchivedBtnSidebar");
+const exportReportBtnSidebar = document.getElementById("exportReportBtnSidebar");
+const addMedBtnQuick = document.getElementById("addMedBtnQuick");
+const exportReportBtnQuick = document.getElementById("exportReportBtnQuick");
 
 const medName = document.getElementById("medName");
 const medDose = document.getElementById("medDose");
@@ -74,6 +85,11 @@ function getActiveChildIdSafe() {
   return child ? child.id : null;
 }
 
+function setActiveChildIdSafe(id) {
+  db.activeChildId = id;
+  saveDB(db);
+}
+
 function escapeHtml(str) {
   return String(str || "")
     .replaceAll("&", "&amp;")
@@ -81,6 +97,33 @@ function escapeHtml(str) {
     .replaceAll(">", "&gt;")
     .replaceAll('"', "&quot;")
     .replaceAll("'", "&#039;");
+}
+
+function normalizeDiagnoses(value) {
+  if (Array.isArray(value)) return value.filter(Boolean);
+  if (typeof value === "string" && value.trim()) {
+    return value
+      .split(",")
+      .map((item) => item.trim())
+      .filter(Boolean);
+  }
+  return [];
+}
+
+function getAgeFromBirthdate(birthdate) {
+  if (!birthdate) return "";
+  const dob = new Date(birthdate);
+  if (Number.isNaN(dob.getTime())) return "";
+
+  const now = new Date();
+  let age = now.getFullYear() - dob.getFullYear();
+  const monthDiff = now.getMonth() - dob.getMonth();
+
+  if (monthDiff < 0 || (monthDiff === 0 && now.getDate() < dob.getDate())) {
+    age--;
+  }
+
+  return age;
 }
 
 function formatDateTime(isoString) {
@@ -154,7 +197,7 @@ function parseTimeToTodayDate(timeText) {
 function parseTimesList(text) {
   return String(text || "")
     .split(",")
-    .map(s => s.trim())
+    .map((s) => s.trim())
     .filter(Boolean);
 }
 
@@ -177,22 +220,22 @@ function isSameDay(isoA, dateObj) {
 
 function getMedicationsForActiveChild() {
   const childId = getActiveChildIdSafe();
-  return db.meds.filter(m => m.childId === childId);
+  return db.meds.filter((m) => m.childId === childId);
 }
 
 function getMedicationById(id) {
-  return db.meds.find(m => m.id === id);
+  return db.meds.find((m) => m.id === id);
 }
 
 function getDoseEventsForMedication(id) {
   return db.doseEvents
-    .filter(log => log.medId === id)
+    .filter((log) => log.medId === id)
     .sort((a, b) => new Date(b.time || b.loggedAt) - new Date(a.time || a.loggedAt));
 }
 
 function getTodayLogsForMedication(id) {
   const now = new Date();
-  return getDoseEventsForMedication(id).filter(log => isSameDay(log.time || log.loggedAt, now));
+  return getDoseEventsForMedication(id).filter((log) => isSameDay(log.time || log.loggedAt, now));
 }
 
 function addChangeHistory(medId, action, detail) {
@@ -209,12 +252,12 @@ function addChangeHistory(medId, action, detail) {
 
 function getChangeHistoryForActiveChild() {
   const childId = getActiveChildIdSafe();
-  return db.medicationChangeHistory.filter(item => item.childId === childId);
+  return db.medicationChangeHistory.filter((item) => item.childId === childId);
 }
 
 function getDoseEventsForActiveChild() {
   const childId = getActiveChildIdSafe();
-  return db.doseEvents.filter(item => item.childId === childId);
+  return db.doseEvents.filter((item) => item.childId === childId);
 }
 
 function describeMedication(med) {
@@ -267,6 +310,71 @@ function getMedicationScheduleSummary(med) {
   return `Ongoing • Started ${formatDate(med.startDate)}`;
 }
 
+function renderChildSwitcher() {
+  if (!childSwitcher) return;
+
+  childSwitcher.innerHTML = "";
+  const children = Array.isArray(db.children) ? db.children : [];
+
+  if (!children.length) {
+    const option = document.createElement("option");
+    option.value = "";
+    option.textContent = "No children yet";
+    childSwitcher.appendChild(option);
+    return;
+  }
+
+  const activeChild = getActiveChildSafe();
+
+  children.forEach((child) => {
+    const option = document.createElement("option");
+    option.value = child.id;
+    option.textContent = child.name || "Unnamed Child";
+
+    if (activeChild && String(activeChild.id) === String(child.id)) {
+      option.selected = true;
+    }
+
+    childSwitcher.appendChild(option);
+  });
+}
+
+function renderHeaderChildSummary() {
+  const child = getActiveChildSafe();
+
+  if (!child) {
+    if (childSummary) childSummary.textContent = "Age —";
+    if (childAvatar) childAvatar.innerHTML = "";
+    return;
+  }
+
+  const diagnoses = normalizeDiagnoses(child.diagnoses);
+  const childAge = child.age ?? getAgeFromBirthdate(child.birthdate);
+
+  let summaryText =
+    childAge !== null && childAge !== undefined && childAge !== ""
+      ? `Age ${childAge}`
+      : "Age —";
+
+  if (diagnoses.length) {
+    summaryText += ` • ${diagnoses.slice(0, 2).join(" • ")}`;
+  }
+
+  if (childSummary) {
+    childSummary.textContent = summaryText;
+  }
+
+  if (childAvatar) {
+    if (child.photo_url) {
+      childAvatar.innerHTML = `<img src="${escapeHtml(child.photo_url)}" alt="${escapeHtml(
+        child.name || "Child"
+      )}">`;
+    } else {
+      childAvatar.innerHTML = "";
+    }
+  }
+}
+
 /* -----------------------------
    Wean builder helpers
 ----------------------------- */
@@ -293,42 +401,56 @@ function renderWeanSteps() {
     return;
   }
 
-  weanStepsList.innerHTML = weanStepsDraft.map((step, index) => `
+  weanStepsList.innerHTML = weanStepsDraft
+    .map(
+      (step, index) => `
     <div class="wean-step" data-step-id="${step.id}">
       <div class="wean-step-head">
         <div class="wean-step-title">Step ${index + 1}</div>
         <button type="button" class="btn btn-danger js-remove-wean-step" data-step-id="${step.id}">Remove</button>
       </div>
 
-      <div class="grid-2">
-        <div class="form-row">
+      <div class="form-grid">
+        <div class="field">
           <label>Step Label (optional)</label>
-          <input class="input js-wean-label" data-step-id="${step.id}" value="${escapeHtml(step.label)}" placeholder="Week 1 / Step 1" />
+          <input class="input js-wean-label" data-step-id="${step.id}" value="${escapeHtml(
+            step.label
+          )}" placeholder="Week 1 / Step 1" />
         </div>
 
-        <div class="form-row">
+        <div class="field">
           <label>Dose</label>
-          <input class="input js-wean-dose" data-step-id="${step.id}" value="${escapeHtml(step.dose)}" placeholder="7.5 mL" />
+          <input class="input js-wean-dose" data-step-id="${step.id}" value="${escapeHtml(
+            step.dose
+          )}" placeholder="7.5 mL" />
         </div>
 
-        <div class="form-row">
+        <div class="field">
           <label>Start Date</label>
-          <input class="input js-wean-start" data-step-id="${step.id}" type="date" value="${escapeHtml(step.startDate)}" />
+          <input class="input js-wean-start" data-step-id="${step.id}" type="date" value="${escapeHtml(
+            step.startDate
+          )}" />
         </div>
 
-        <div class="form-row">
+        <div class="field">
           <label>End Date</label>
-          <input class="input js-wean-end" data-step-id="${step.id}" type="date" value="${escapeHtml(step.endDate)}" />
+          <input class="input js-wean-end" data-step-id="${step.id}" type="date" value="${escapeHtml(
+            step.endDate
+          )}" />
         </div>
       </div>
 
-      <div class="form-row">
+      <div class="field mt-12">
         <label>Times</label>
-        <input class="input js-wean-times" data-step-id="${step.id}" value="${escapeHtml(step.times)}" placeholder="08:00, 20:00" />
+        <input class="input js-wean-times" data-step-id="${step.id}" value="${escapeHtml(
+          step.times
+        )}" placeholder="08:00, 20:00" />
         <div class="muted small">Use 24-hour times separated by commas.</div>
       </div>
     </div>
-  `).join("");
+  `
+    )
+    .join("");
 }
 
 function addWeanStep(step = null) {
@@ -337,18 +459,18 @@ function addWeanStep(step = null) {
 }
 
 function updateWeanStep(stepId, key, value) {
-  const step = weanStepsDraft.find(s => s.id === stepId);
+  const step = weanStepsDraft.find((s) => s.id === stepId);
   if (!step) return;
   step[key] = value;
 }
 
 function removeWeanStep(stepId) {
-  weanStepsDraft = weanStepsDraft.filter(s => s.id !== stepId);
+  weanStepsDraft = weanStepsDraft.filter((s) => s.id !== stepId);
   renderWeanSteps();
 }
 
 function collectWeanSteps() {
-  return weanStepsDraft.map(step => ({
+  return weanStepsDraft.map((step) => ({
     label: String(step.label || "").trim(),
     startDate: String(step.startDate || "").trim(),
     endDate: String(step.endDate || "").trim(),
@@ -375,7 +497,7 @@ function validateWeanSteps(steps) {
       return "Each taper step needs a dose.";
     }
 
-    const invalidTime = parseTimesList(step.times).find(t => !parseTimeToTodayDate(t));
+    const invalidTime = parseTimesList(step.times).find((t) => !parseTimeToTodayDate(t));
     if (!step.times || invalidTime) {
       return `Each taper step needs valid scheduled times. Problem: ${invalidTime || "missing times"}`;
     }
@@ -412,7 +534,7 @@ function getDoseStatus(scheduledDate, medication, scheduledTime) {
   const diff = minutesDiff(now, scheduledDate);
   const todayLogs = getTodayLogsForMedication(medication.id);
 
-  const takenMatch = todayLogs.find(log => {
+  const takenMatch = todayLogs.find((log) => {
     if (log.type !== "scheduled") return false;
     if (log.scheduledTime) {
       const scheduledForLog = parseTimeToTodayDate(log.scheduledTime);
@@ -422,7 +544,7 @@ function getDoseStatus(scheduledDate, medication, scheduledTime) {
     return false;
   });
 
-  const skippedMatch = todayLogs.find(log => {
+  const skippedMatch = todayLogs.find((log) => {
     if (log.type !== "skip") return false;
     return log.scheduledTime === scheduledTime;
   });
@@ -459,7 +581,7 @@ function getDoseStatus(scheduledDate, medication, scheduledTime) {
 }
 
 function getRecentDoseSafetyWarning(medication) {
-  const logs = getDoseEventsForMedication(medication.id).filter(log => log.type !== "skip");
+  const logs = getDoseEventsForMedication(medication.id).filter((log) => log.type !== "skip");
   if (!logs.length) return null;
 
   const mostRecent = logs[0];
@@ -477,15 +599,6 @@ function getRecentDoseSafetyWarning(medication) {
 /* -----------------------------
    Render
 ----------------------------- */
-function renderChildSummary() {
-  const child = getActiveChildSafe() || {};
-  const dx = Array.isArray(child.diagnoses) && child.diagnoses.length
-    ? ` • ${child.diagnoses.join(", ")}`
-    : "";
-
-  childSummary.textContent = `${child.name || "Child"}${child.age ? ` • Age ${child.age}` : ""}${dx}`;
-}
-
 function renderTodayMeds() {
   const childId = getActiveChildIdSafe();
   if (!childId) {
@@ -494,7 +607,7 @@ function renderTodayMeds() {
   }
 
   const meds = getMedicationsForActiveChild()
-    .filter(m => showArchived ? true : !m.archived)
+    .filter((m) => (showArchived ? true : !m.archived))
     .map(normalizeMedication)
     .sort((a, b) => (a.name || "").localeCompare(b.name || ""));
 
@@ -507,14 +620,14 @@ function renderTodayMeds() {
   const generatedScheduleItems = generateMedicationScheduleItems(db, childId, today);
   const scheduleByMed = {};
 
-  generatedScheduleItems.forEach(item => {
+  generatedScheduleItems.forEach((item) => {
     if (!scheduleByMed[item.medId]) scheduleByMed[item.medId] = [];
     scheduleByMed[item.medId].push(item);
   });
 
   let html = "";
 
-  meds.forEach(med => {
+  meds.forEach((med) => {
     const todayLogs = getTodayLogsForMedication(med.id);
 
     if (med.type === "prn") {
@@ -534,7 +647,7 @@ function renderTodayMeds() {
               ${med.notes ? `<div class="small" style="margin-top:8px;">${escapeHtml(med.notes)}</div>` : ""}
               <div class="badge-row">
                 <span class="badge info">PRN Medication</span>
-                <span class="badge">${todayLogs.filter(l => l.type === "prn").length} dose(s) today</span>
+                <span class="badge">${todayLogs.filter((l) => l.type === "prn").length} dose(s) today</span>
               </div>
               ${safetyWarning ? `<div class="badge-row"><span class="badge danger">${escapeHtml(safetyWarning)}</span></div>` : ""}
             </div>
@@ -571,43 +684,45 @@ function renderTodayMeds() {
       return;
     }
 
-    const doseRows = medScheduleRows.map(item => {
-      const scheduledDate = parseTimeToTodayDate(item.time);
+    const doseRows = medScheduleRows
+      .map((item) => {
+        const scheduledDate = parseTimeToTodayDate(item.time);
 
-      if (!scheduledDate) {
+        if (!scheduledDate) {
+          return `
+            <div class="summary-card">
+              <strong>${escapeHtml(item.time)}</strong>
+              <div class="badge-row">
+                <span class="badge danger">Invalid time format</span>
+              </div>
+            </div>
+          `;
+        }
+
+        const status = getDoseStatus(scheduledDate, med, item.time);
+
         return `
           <div class="summary-card">
-            <strong>${escapeHtml(item.time)}</strong>
-            <div class="badge-row">
-              <span class="badge danger">Invalid time format</span>
+            <div class="med-top">
+              <div>
+                <strong>${escapeHtml(item.time)}</strong>
+                <div class="muted small" style="margin-top:4px;">
+                  ${escapeHtml(item.instructions || "")}
+                  ${item.stepLabel ? ` • ${escapeHtml(item.stepLabel)}` : ""}
+                </div>
+                <div class="badge-row">
+                  <span class="badge ${status.className}">${escapeHtml(status.label)}</span>
+                </div>
+              </div>
+              <div class="inline-actions">
+                <button class="btn btn-primary js-log-scheduled" data-id="${med.id}" data-time="${escapeHtml(item.time)}">Log Dose</button>
+                <button class="btn btn-ghost js-skip-dose" data-id="${med.id}" data-time="${escapeHtml(item.time)}">Skip</button>
+              </div>
             </div>
           </div>
         `;
-      }
-
-      const status = getDoseStatus(scheduledDate, med, item.time);
-
-      return `
-        <div class="summary-card">
-          <div class="med-top">
-            <div>
-              <strong>${escapeHtml(item.time)}</strong>
-              <div class="muted small" style="margin-top:4px;">
-                ${escapeHtml(item.instructions || "")}
-                ${item.stepLabel ? ` • ${escapeHtml(item.stepLabel)}` : ""}
-              </div>
-              <div class="badge-row">
-                <span class="badge ${status.className}">${escapeHtml(status.label)}</span>
-              </div>
-            </div>
-            <div class="inline-actions">
-              <button class="btn btn-primary js-log-scheduled" data-id="${med.id}" data-time="${escapeHtml(item.time)}">Log Dose</button>
-              <button class="btn btn-ghost js-skip-dose" data-id="${med.id}" data-time="${escapeHtml(item.time)}">Skip</button>
-            </div>
-          </div>
-        </div>
-      `;
-    }).join("");
+      })
+      .join("");
 
     html += `
       <div class="med-card">
@@ -637,7 +752,7 @@ function renderTodayMeds() {
 
 function renderMedList() {
   const meds = getMedicationsForActiveChild()
-    .filter(m => showArchived ? true : !m.archived)
+    .filter((m) => (showArchived ? true : !m.archived))
     .map(normalizeMedication)
     .sort((a, b) => (a.name || "").localeCompare(b.name || ""));
 
@@ -646,26 +761,30 @@ function renderMedList() {
     return;
   }
 
-  medList.innerHTML = meds.map(med => {
-    const logCount = getDoseEventsForMedication(med.id).length;
-    const archivedBadge = med.archived ? `<span class="badge danger">Archived</span>` : "";
-    const typeBadge = med.type === "prn"
-      ? `<span class="badge info">PRN</span>`
-      : `<span class="badge">${escapeHtml(getMedicationDisplayTimesForToday(med) || "Scheduled")}</span>`;
+  medList.innerHTML = meds
+    .map((med) => {
+      const logCount = getDoseEventsForMedication(med.id).length;
+      const archivedBadge = med.archived ? `<span class="badge danger">Archived</span>` : "";
+      const typeBadge =
+        med.type === "prn"
+          ? `<span class="badge info">PRN</span>`
+          : `<span class="badge">${escapeHtml(getMedicationDisplayTimesForToday(med) || "Scheduled")}</span>`;
 
-    const modeBadge = med.scheduleMode === "temporary"
-      ? `<span class="badge warn">Temporary</span>`
-      : med.scheduleMode === "wean"
-      ? `<span class="badge info">Wean / Taper</span>`
-      : `<span class="badge success">Ongoing</span>`;
+      const modeBadge =
+        med.scheduleMode === "temporary"
+          ? `<span class="badge warn">Temporary</span>`
+          : med.scheduleMode === "wean"
+            ? `<span class="badge info">Wean / Taper</span>`
+            : `<span class="badge success">Ongoing</span>`;
 
-    const courseLine = med.scheduleMode === "temporary"
-      ? `<div class="small muted" style="margin-top:6px;">${formatDate(med.startDate)} → ${formatDate(med.endDate)}</div>`
-      : med.scheduleMode === "wean"
-      ? `<div class="small muted" style="margin-top:6px;">${(med.taperSteps || []).length} taper step(s)</div>`
-      : `<div class="small muted" style="margin-top:6px;">Started ${formatDate(med.startDate)}</div>`;
+      const courseLine =
+        med.scheduleMode === "temporary"
+          ? `<div class="small muted" style="margin-top:6px;">${formatDate(med.startDate)} → ${formatDate(med.endDate)}</div>`
+          : med.scheduleMode === "wean"
+            ? `<div class="small muted" style="margin-top:6px;">${(med.taperSteps || []).length} taper step(s)</div>`
+            : `<div class="small muted" style="margin-top:6px;">Started ${formatDate(med.startDate)}</div>`;
 
-    return `
+      return `
       <div class="med-card">
         <div class="med-top">
           <div>
@@ -695,69 +814,79 @@ function renderMedList() {
         </div>
       </div>
     `;
-  }).join("");
+    })
+    .join("");
 }
 
 function renderTimeline() {
-  const logs = [...getDoseEventsForActiveChild()]
-    .sort((a, b) => new Date(b.time || b.loggedAt) - new Date(a.time || a.loggedAt));
+  const logs = [...getDoseEventsForActiveChild()].sort(
+    (a, b) => new Date(b.time || b.loggedAt) - new Date(a.time || a.loggedAt)
+  );
 
   if (!logs.length) {
     timeline.innerHTML = `<div class="muted">No doses logged yet.</div>`;
     return;
   }
 
-  timeline.innerHTML = logs.slice(0, 100).map(log => {
-    const med = getMedicationById(log.medId);
-    const medName = med ? med.name : "Unknown medication";
-    const details = [];
+  timeline.innerHTML = logs
+    .slice(0, 100)
+    .map((log) => {
+      const med = getMedicationById(log.medId);
+      const medName = med ? med.name : "Unknown medication";
+      const details = [];
 
-    if (log.type === "scheduled" && log.scheduledTime) details.push(`Scheduled: ${log.scheduledTime}`);
-    if (log.type === "prn") details.push("PRN");
-    if (log.type === "skip") details.push("Skipped");
-    if (log.note) details.push(log.note);
+      if (log.type === "scheduled" && log.scheduledTime) details.push(`Scheduled: ${log.scheduledTime}`);
+      if (log.type === "prn") details.push("PRN");
+      if (log.type === "skip") details.push("Skipped");
+      if (log.note) details.push(log.note);
 
-    return `
+      return `
       <div class="timeline-item">
         <strong>${escapeHtml(medName)}</strong>
         <div class="muted small">${formatDateTime(log.time || log.loggedAt)}</div>
         <div class="small">${escapeHtml(details.join(" • "))}</div>
       </div>
     `;
-  }).join("");
+    })
+    .join("");
 }
 
 function renderChangeHistory() {
-  const items = [...getChangeHistoryForActiveChild()]
-    .sort((a, b) => new Date(b.changedAt) - new Date(a.changedAt));
+  const items = [...getChangeHistoryForActiveChild()].sort(
+    (a, b) => new Date(b.changedAt) - new Date(a.changedAt)
+  );
 
   if (!items.length) {
     changeHistory.innerHTML = `<div class="muted">No medication changes yet.</div>`;
     return;
   }
 
-  changeHistory.innerHTML = items.slice(0, 100).map(item => {
-    const med = getMedicationById(item.medId);
-    const medName = med ? med.name : "Medication";
+  changeHistory.innerHTML = items
+    .slice(0, 100)
+    .map((item) => {
+      const med = getMedicationById(item.medId);
+      const medName = med ? med.name : "Medication";
 
-    return `
+      return `
       <div class="history-item">
         <strong>${escapeHtml(medName)}</strong>
         <div class="muted small">${formatDateTime(item.changedAt)}</div>
         <div class="small">${escapeHtml(item.action)} • ${escapeHtml(item.detail)}</div>
       </div>
     `;
-  }).join("");
+    })
+    .join("");
 }
 
 function renderAll() {
-  renderChildSummary();
+  renderChildSwitcher();
+  renderHeaderChildSummary();
   renderTodayMeds();
   renderMedList();
   renderTimeline();
   renderChangeHistory();
   updateMedicationFormMode();
-  showArchivedBtn.textContent = showArchived ? "Hide Archived" : "Show Archived";
+  if (showArchivedBtn) showArchivedBtn.textContent = showArchived ? "Hide Archived" : "Show Archived";
 }
 
 /* -----------------------------
@@ -807,7 +936,7 @@ function openForm(editMedication = null) {
   medNotes.value = med.notes || "";
 
   weanStepsDraft = Array.isArray(med.taperSteps)
-    ? med.taperSteps.map(step => ({ ...step, id: uid("step") }))
+    ? med.taperSteps.map((step) => ({ ...step, id: uid("step") }))
     : [];
 
   renderWeanSteps();
@@ -863,7 +992,7 @@ function saveMedication() {
         return;
       }
 
-      const invalidTime = parseTimesList(payload.times).find(t => !parseTimeToTodayDate(t));
+      const invalidTime = parseTimesList(payload.times).find((t) => !parseTimeToTodayDate(t));
       if (invalidTime) {
         alert(`Invalid time format: ${invalidTime}. Use 08:00 or 8:00 AM.`);
         return;
@@ -886,7 +1015,7 @@ function saveMedication() {
         return;
       }
 
-      const invalidTime = parseTimesList(payload.times).find(t => !parseTimeToTodayDate(t));
+      const invalidTime = parseTimesList(payload.times).find((t) => !parseTimeToTodayDate(t));
       if (invalidTime) {
         alert(`Invalid time format: ${invalidTime}. Use 08:00 or 8:00 AM.`);
         return;
@@ -988,8 +1117,8 @@ function deleteMedication(id) {
   const ok = confirm(`Delete ${med.name}?\n\nThis will also remove its dose history for this child.`);
   if (!ok) return;
 
-  db.meds = db.meds.filter(m => m.id !== id);
-  db.doseEvents = db.doseEvents.filter(e => e.medId !== id);
+  db.meds = db.meds.filter((m) => m.id !== id);
+  db.doseEvents = db.doseEvents.filter((e) => e.medId !== id);
   db.medicationChangeHistory.unshift({
     id: uid("change"),
     childId: med.childId,
@@ -1018,11 +1147,15 @@ function logScheduledDose(medicationId, scheduledTime) {
 
   const todayLogs = getTodayLogsForMedication(med.id);
   const existingForTime = todayLogs.find(
-    log => log.scheduledTime === scheduledTime && log.type === "scheduled"
+    (log) => log.scheduledTime === scheduledTime && log.type === "scheduled"
   );
 
   if (existingForTime) {
-    alert(`This ${scheduledTime} dose was already logged at ${formatTimeFromDate(new Date(existingForTime.time || existingForTime.loggedAt))}.`);
+    alert(
+      `This ${scheduledTime} dose was already logged at ${formatTimeFromDate(
+        new Date(existingForTime.time || existingForTime.loggedAt)
+      )}.`
+    );
     return;
   }
 
@@ -1092,7 +1225,7 @@ function skipScheduledDose(medicationId, scheduledTime) {
 ----------------------------- */
 function buildDoctorReport() {
   const child = getActiveChildSafe() || {};
-  const activeMeds = getMedicationsForActiveChild().filter(m => !m.archived);
+  const activeMeds = getMedicationsForActiveChild().filter((m) => !m.archived);
   const recentLogs = [...getDoseEventsForActiveChild()]
     .sort((a, b) => new Date(b.time || b.loggedAt) - new Date(a.time || a.loggedAt))
     .slice(0, 30);
@@ -1102,8 +1235,10 @@ function buildDoctorReport() {
   text += `Generated: ${new Date().toLocaleString()}\n\n`;
 
   text += `Child: ${child.name || "N/A"}\n`;
-  text += `Age: ${child.age || "N/A"}\n`;
-  text += `Diagnoses: ${Array.isArray(child.diagnoses) && child.diagnoses.length ? child.diagnoses.join(", ") : "N/A"}\n\n`;
+  text += `Age: ${child.age || getAgeFromBirthdate(child.birthdate) || "N/A"}\n`;
+  text += `Diagnoses: ${
+    normalizeDiagnoses(child.diagnoses).length ? normalizeDiagnoses(child.diagnoses).join(", ") : "N/A"
+  }\n\n`;
 
   text += `ACTIVE MEDICATIONS\n`;
   text += `------------------\n`;
@@ -1111,7 +1246,7 @@ function buildDoctorReport() {
   if (!activeMeds.length) {
     text += `No active medications listed.\n`;
   } else {
-    activeMeds.forEach(med => {
+    activeMeds.forEach((med) => {
       const safeMed = normalizeMedication(med);
 
       text += `• ${safeMed.name}\n`;
@@ -1140,7 +1275,7 @@ function buildDoctorReport() {
   if (!recentLogs.length) {
     text += `No medication logs yet.\n`;
   } else {
-    recentLogs.forEach(log => {
+    recentLogs.forEach((log) => {
       const med = getMedicationById(log.medId);
       const medName = med ? med.name : "Unknown";
 
@@ -1170,7 +1305,7 @@ function buildDoctorReport() {
   if (!history.length) {
     text += `No medication changes recorded.\n`;
   } else {
-    history.slice(0, 30).forEach(item => {
+    history.slice(0, 30).forEach((item) => {
       text += `• ${formatDateTime(item.changedAt)} — ${item.action} — ${item.detail}\n`;
     });
   }
@@ -1215,24 +1350,35 @@ function exportReport() {
 /* -----------------------------
    Events
 ----------------------------- */
-addMedBtn.addEventListener("click", () => openForm());
+addMedBtn?.addEventListener("click", () => openForm());
 
-cancelMedBtn.addEventListener("click", () => {
+addMedBtnSidebar?.addEventListener("click", () => openForm());
+addMedBtnQuick?.addEventListener("click", () => openForm());
+
+cancelMedBtn?.addEventListener("click", () => {
   closeForm();
   resetForm();
 });
 
-saveMedBtn.addEventListener("click", saveMedication);
-refreshBtn.addEventListener("click", renderAll);
+saveMedBtn?.addEventListener("click", saveMedication);
+refreshBtn?.addEventListener("click", renderAll);
+refreshBtnSidebar?.addEventListener("click", renderAll);
 
-showArchivedBtn.addEventListener("click", () => {
+showArchivedBtn?.addEventListener("click", () => {
   showArchived = !showArchived;
   renderAll();
 });
 
-exportReportBtn.addEventListener("click", exportReport);
+showArchivedBtnSidebar?.addEventListener("click", () => {
+  showArchived = !showArchived;
+  renderAll();
+});
 
-copyReportBtn.addEventListener("click", async () => {
+exportReportBtn?.addEventListener("click", exportReport);
+exportReportBtnSidebar?.addEventListener("click", exportReport);
+exportReportBtnQuick?.addEventListener("click", exportReport);
+
+copyReportBtn?.addEventListener("click", async () => {
   try {
     await navigator.clipboard.writeText(reportOutput.textContent || "");
     alert("Report copied.");
@@ -1303,6 +1449,24 @@ document.addEventListener("click", (e) => {
   if (deleteBtn) {
     deleteMedication(deleteBtn.dataset.id);
   }
+});
+
+childSwitcher?.addEventListener("change", () => {
+  setActiveChildIdSafe(childSwitcher.value);
+  closeForm();
+  resetForm();
+  renderAll();
+});
+
+logoutBtn?.addEventListener("click", async () => {
+  if (window.supabaseClient?.auth) {
+    try {
+      await window.supabaseClient.auth.signOut();
+    } catch (err) {
+      console.warn("Supabase sign out failed:", err);
+    }
+  }
+  window.location.href = "login.html";
 });
 
 /* -----------------------------
