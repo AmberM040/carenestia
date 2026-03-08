@@ -11,7 +11,9 @@ document.addEventListener("DOMContentLoaded", async () => {
   let activeChild = null;
 
   function getSupabaseClient() {
-    return window.supabaseClient || null;
+    if (window.supabaseClient) return window.supabaseClient;
+    if (window.supabase?.from) return window.supabase;
+    return null;
   }
 
   function getActiveChildId() {
@@ -31,20 +33,51 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
   }
 
+  function normalizeDiagnoses(value) {
+    if (Array.isArray(value)) return value.filter(Boolean);
+    if (typeof value === "string" && value.trim()) {
+      return value
+        .split(",")
+        .map((item) => item.trim())
+        .filter(Boolean);
+    }
+    return [];
+  }
+
+  function getAgeFromBirthdate(birthdate) {
+    if (!birthdate) return "";
+    const dob = new Date(birthdate);
+    if (Number.isNaN(dob.getTime())) return "";
+
+    const now = new Date();
+    let age = now.getFullYear() - dob.getFullYear();
+    const monthDiff = now.getMonth() - dob.getMonth();
+
+    if (monthDiff < 0 || (monthDiff === 0 && now.getDate() < dob.getDate())) {
+      age--;
+    }
+
+    return age;
+  }
+
   function getLocalChildrenFallback() {
     const db = getLocalDB();
 
     if (Array.isArray(db.children) && db.children.length) {
-      return db.children;
+      return db.children.map((child) => ({
+        ...child,
+        diagnoses: normalizeDiagnoses(child.diagnoses),
+      }));
     }
 
     if (db.child) {
       return [
         {
-          id: "local-child-1",
+          id: db.activeChildId || "local-child-1",
           name: db.child.name || "Test Child",
           age: db.child.age ?? "",
-          diagnoses: Array.isArray(db.child.diagnoses) ? db.child.diagnoses : [],
+          birthdate: db.child.birthdate || null,
+          diagnoses: normalizeDiagnoses(db.child.diagnoses),
         },
       ];
     }
@@ -72,7 +105,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     const { data, error } = await supabase
       .from("children")
       .select("*")
-      .eq("parent_user_id", userId)
+      .eq("parent_id", userId)
       .order("created_at", { ascending: true });
 
     if (error) {
@@ -80,7 +113,11 @@ document.addEventListener("DOMContentLoaded", async () => {
       return [];
     }
 
-    return data || [];
+    return (data || []).map((child) => ({
+      ...child,
+      diagnoses: normalizeDiagnoses(child.diagnoses),
+      age: child.age ?? getAgeFromBirthdate(child.birthdate),
+    }));
   }
 
   function renderChildSwitcher() {
@@ -115,12 +152,11 @@ document.addEventListener("DOMContentLoaded", async () => {
       return;
     }
 
-    const diagnoses = Array.isArray(activeChild.diagnoses) ? activeChild.diagnoses : [];
+    const diagnoses = normalizeDiagnoses(activeChild.diagnoses);
+    const childAge = activeChild.age ?? getAgeFromBirthdate(activeChild.birthdate);
     const ageText =
-      activeChild.age !== null &&
-      activeChild.age !== undefined &&
-      activeChild.age !== ""
-        ? `Age ${activeChild.age}`
+      childAge !== null && childAge !== undefined && childAge !== ""
+        ? `Age ${childAge}`
         : "Age —";
 
     childSummary.textContent =
