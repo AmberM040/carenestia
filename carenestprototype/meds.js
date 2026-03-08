@@ -1,7 +1,7 @@
 const GRACE_MINUTES = 15;
 const DEFAULT_MIN_GAP_HOURS = 4;
 
-const db = loadDB();
+let db = loadDB();
 
 /* -----------------------------
    DB bootstrap
@@ -76,6 +76,47 @@ function uid(prefix = "id") {
   return `${prefix}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
 }
 
+function getSupabaseClient() {
+  if (window.supabaseClient) return window.supabaseClient;
+  if (window.supabase?.from) return window.supabase;
+  return null;
+}
+
+async function fetchUser() {
+  const supabase = getSupabaseClient();
+  if (!supabase?.auth) return null;
+
+  const { data, error } = await supabase.auth.getUser();
+  if (error) {
+    console.warn("Could not get user:", error.message);
+    return null;
+  }
+
+  return data?.user || null;
+}
+
+async function fetchChildrenForUser(userId) {
+  const supabase = getSupabaseClient();
+  if (!supabase || !userId) return [];
+
+  const { data, error } = await supabase
+    .from("children")
+    .select("*")
+    .eq("parent_id", userId)
+    .order("created_at", { ascending: true });
+
+  if (error) {
+    console.warn("Could not load children:", error.message);
+    return [];
+  }
+
+  return (data || []).map((child) => ({
+    ...child,
+    diagnoses: normalizeDiagnoses(child.diagnoses),
+    age: child.age ?? getAgeFromBirthdate(child.birthdate)
+  }));
+}
+
 function getActiveChildSafe() {
   return getActiveChild(db);
 }
@@ -87,6 +128,7 @@ function getActiveChildIdSafe() {
 
 function setActiveChildIdSafe(id) {
   db.activeChildId = id;
+  db.currentChildId = id;
   saveDB(db);
 }
 
@@ -1472,8 +1514,39 @@ logoutBtn?.addEventListener("click", async () => {
 /* -----------------------------
    Init
 ----------------------------- */
-db.meds = db.meds.map(normalizeMedication);
-saveDB(db);
+async function init() {
+  db = loadDB();
+  ensureDB(db);
 
-resetForm();
-renderAll();
+  if (!Array.isArray(db.meds)) db.meds = [];
+  if (!Array.isArray(db.doseEvents)) db.doseEvents = [];
+  if (!Array.isArray(db.medicationChangeHistory)) db.medicationChangeHistory = [];
+
+  db.meds = db.meds.map(normalizeMedication);
+  saveDB(db);
+
+  const currentUser = await fetchUser();
+
+  if (currentUser?.id) {
+    const fetchedChildren = await fetchChildrenForUser(currentUser.id);
+
+    if (fetchedChildren.length) {
+      db.children = fetchedChildren;
+
+      const savedActiveId = db.activeChildId;
+      const validActive =
+        fetchedChildren.find((child) => String(child.id) === String(savedActiveId)) ||
+        fetchedChildren[0] ||
+        null;
+
+      db.activeChildId = validActive ? validActive.id : null;
+      db.currentChildId = db.activeChildId;
+      saveDB(db);
+    }
+  }
+
+  resetForm();
+  renderAll();
+}
+
+init();
