@@ -169,8 +169,29 @@ document.addEventListener("DOMContentLoaded", () => {
     return age;
   }
 
+  function getChildrenSafe() {
+    return Array.isArray(db.children) ? db.children : [];
+  }
+
   function activeChild() {
-    return getActiveChild(db);
+    const children = getChildrenSafe();
+    if (!children.length) return null;
+
+    const preferredId = db.activeChildId || db.currentChildId || null;
+
+    if (preferredId) {
+      const match = children.find((child) => String(child.id) === String(preferredId));
+      if (match) return match;
+    }
+
+    return children[0] || null;
+  }
+
+  function setActiveChildId(id) {
+    const child = getChildrenSafe().find((entry) => String(entry.id) === String(id));
+    db.activeChildId = child ? child.id : null;
+    db.currentChildId = db.activeChildId;
+    saveDB(db);
   }
 
   function ensureSchedulesForChild(childId) {
@@ -224,7 +245,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   function fillChildSwitcher() {
     childSwitcher.innerHTML = "";
-    const children = Array.isArray(db.children) ? db.children : [];
+    const children = getChildrenSafe();
 
     if (!children.length) {
       const option = document.createElement("option");
@@ -234,14 +255,15 @@ document.addEventListener("DOMContentLoaded", () => {
       return;
     }
 
+    const selectedId = activeChild()?.id || "";
+
     children.forEach((child) => {
       const option = document.createElement("option");
       option.value = child.id;
       option.textContent = child.name || "Unnamed Child";
+      if (String(child.id) === String(selectedId)) option.selected = true;
       childSwitcher.appendChild(option);
     });
-
-    childSwitcher.value = db.activeChildId || children[0]?.id || "";
   }
 
   function updateChildSummary() {
@@ -516,7 +538,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const targetKey = getCompletionKey(date);
 
     return (db.doseEvents || []).find((log) => {
-      if (log.medId !== medId) return false;
+      if (String(log.medId) !== String(medId)) return false;
       if (log.type !== "scheduled" && log.type !== "skip") return false;
       if (log.scheduledTime !== scheduledTime) return false;
 
@@ -731,7 +753,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
     card.innerHTML = `
       <div class="log-icon ${meta.cls}">${meta.icon}</div>
-
       <div class="log-main">
         <h3>
           ${escapeHtml(task.title)}
@@ -754,7 +775,6 @@ document.addEventListener("DOMContentLoaded", () => {
           }
         </p>
       </div>
-
       <div class="log-side">
         <span class="log-tag ${meta.cls}">${escapeHtml(statusLabel)}</span>
       </div>
@@ -763,6 +783,8 @@ document.addEventListener("DOMContentLoaded", () => {
     const buttonRow = document.createElement("div");
     buttonRow.className = "row";
     buttonRow.style.marginTop = "12px";
+    buttonRow.style.flexWrap = "wrap";
+    buttonRow.style.gap = "8px";
 
     if (task.source === "medication") {
       if (medLog?.type === "scheduled") {
@@ -865,12 +887,7 @@ document.addEventListener("DOMContentLoaded", () => {
     medTasks.forEach((task) => {
       const occurrenceDate = getOccurrenceDate(task, now);
 
-      if (isMedicationCompletedOnDate(task, now)) {
-        completed.push({ task, occurrenceDate });
-        return;
-      }
-
-      if (isMedicationSkippedOnDate(task, now)) {
+      if (isMedicationCompletedOnDate(task, now) || isMedicationSkippedOnDate(task, now)) {
         completed.push({ task, occurrenceDate });
         return;
       }
@@ -945,80 +962,10 @@ document.addEventListener("DOMContentLoaded", () => {
     return out;
   }
 
-  function renderWeekView() {
-    weekList.innerHTML = "";
+  function renderGroupedRange(listEl, dates, emptyMessage) {
+    listEl.innerHTML = "";
     const tasks = getTasksForActiveChild().filter(taskMatchesCategory);
-    const weekDates = getDatesForRange(7);
     let hasAnything = false;
-
-    weekDates.forEach((date) => {
-      const dayTasks = [];
-
-      tasks.forEach((task) => {
-        if (!isTaskScheduledOnDate(task, date)) return;
-
-        dayTasks.push({
-          task,
-          occurrenceDate: getOccurrenceDate(task, date),
-          completed: isCompletedOnDate(task, date)
-        });
-      });
-
-      getMedicationScheduleForDate(date)
-        .filter(taskMatchesCategory)
-        .forEach((task) => {
-          dayTasks.push({
-            task,
-            occurrenceDate: getOccurrenceDate(task, date),
-            completed:
-              isMedicationCompletedOnDate(task, date) || isMedicationSkippedOnDate(task, date)
-          });
-        });
-
-      dayTasks.sort((a, b) => a.occurrenceDate - b.occurrenceDate);
-
-      const wrapper = document.createElement("div");
-      wrapper.className = "card";
-      wrapper.style.marginBottom = "16px";
-
-      const title = document.createElement("h3");
-      title.textContent = date.toLocaleDateString([], {
-        weekday: "long",
-        month: "short",
-        day: "numeric"
-      });
-      wrapper.appendChild(title);
-
-      if (!dayTasks.length) {
-        const empty = document.createElement("div");
-        empty.className = "muted";
-        empty.textContent = "No scheduled tasks.";
-        wrapper.appendChild(empty);
-      } else {
-        hasAnything = true;
-        dayTasks.forEach(({ task, occurrenceDate, completed }) => {
-          wrapper.appendChild(makeTaskCard(task, occurrenceDate, completed, false));
-        });
-      }
-
-      weekList.appendChild(wrapper);
-    });
-
-    scheduleEmptyState.classList.toggle("hidden", hasAnything);
-  }
-
-  function renderMonthView() {
-    monthList.innerHTML = "";
-    const tasks = getTasksForActiveChild().filter(taskMatchesCategory);
-    const today = new Date();
-    const dates = [];
-    let hasAnything = false;
-
-    for (let i = 0; i < 31; i++) {
-      const date = new Date(today);
-      date.setDate(today.getDate() + i);
-      dates.push(date);
-    }
 
     dates.forEach((date) => {
       const dayTasks = [];
@@ -1049,63 +996,41 @@ document.addEventListener("DOMContentLoaded", () => {
 
       dayTasks.sort((a, b) => a.occurrenceDate - b.occurrenceDate);
 
-      const wrapper = document.createElement("div");
-      wrapper.className = "simple-item";
+      const group = document.createElement("div");
+      group.className = "stack-list";
+      group.style.marginBottom = "20px";
 
       const heading = document.createElement("div");
-      heading.className = "strong";
-      heading.style.fontWeight = "800";
-      heading.style.marginBottom = "10px";
-      heading.textContent = date.toLocaleDateString([], {
-        weekday: "short",
-        month: "short",
-        day: "numeric"
-      });
-      wrapper.appendChild(heading);
+      heading.className = "section-head";
+      heading.innerHTML = `<h3>${escapeHtml(
+        date.toLocaleDateString([], {
+          weekday: "long",
+          month: "short",
+          day: "numeric"
+        })
+      )}</h3>`;
+      group.appendChild(heading);
 
       dayTasks.forEach(({ task, occurrenceDate, completed }) => {
-        const row = document.createElement("div");
-        row.className = "space-between";
-        row.style.padding = "8px 0";
-        row.style.borderTop = "1px solid var(--border)";
-
-        const medStatus =
-          task.source === "medication"
-            ? isMedicationCompletedOnDate(task, date)
-              ? "Dose Logged"
-              : isMedicationSkippedOnDate(task, date)
-                ? "Skipped"
-                : "Scheduled"
-            : completed
-              ? "Completed"
-              : "Scheduled";
-
-        row.innerHTML = `
-          <div>
-            <div style="font-weight:700;">${escapeHtml(task.title)}</div>
-            <div class="muted">
-              ${escapeHtml(task.category)} • ${escapeHtml(formatTime(task.time))}
-              ${
-                task.source === "medication" && task.instructions
-                  ? ` • ${escapeHtml(task.instructions)}`
-                  : ""
-              }
-            </div>
-          </div>
-          <div class="muted">${escapeHtml(medStatus)}</div>
-        `;
-
-        wrapper.appendChild(row);
+        group.appendChild(makeTaskCard(task, occurrenceDate, completed, false));
       });
 
-      monthList.appendChild(wrapper);
+      listEl.appendChild(group);
     });
 
     if (!hasAnything) {
-      monthList.innerHTML = `<div class="empty-state">No tasks scheduled this month.</div>`;
+      listEl.innerHTML = `<div class="empty-state">${escapeHtml(emptyMessage)}</div>`;
     }
 
     scheduleEmptyState.classList.toggle("hidden", hasAnything);
+  }
+
+  function renderWeekView() {
+    renderGroupedRange(weekList, getDatesForRange(7), "No tasks scheduled this week.");
+  }
+
+  function renderMonthView() {
+    renderGroupedRange(monthList, getDatesForRange(31), "No tasks scheduled this month.");
   }
 
   function setActiveView(view) {
@@ -1162,9 +1087,7 @@ document.addEventListener("DOMContentLoaded", () => {
   btnSaveTask.addEventListener("click", saveTask);
 
   childSwitcher.addEventListener("change", () => {
-    db.activeChildId = childSwitcher.value;
-    db.currentChildId = childSwitcher.value;
-    saveDB(db);
+    setActiveChildId(childSwitcher.value);
     renderAll();
   });
 
@@ -1212,18 +1135,18 @@ document.addEventListener("DOMContentLoaded", () => {
 
       if (fetchedChildren.length) {
         db.children = fetchedChildren;
-
-        const savedActiveId = db.activeChildId;
-        const validActive =
-          fetchedChildren.find((child) => String(child.id) === String(savedActiveId)) ||
-          fetchedChildren[0] ||
-          null;
-
-        db.activeChildId = validActive ? validActive.id : null;
-        db.currentChildId = db.activeChildId;
-        saveDB(db);
       }
     }
+
+    const validActiveChild =
+      db.children.find((child) => String(child.id) === String(db.activeChildId || db.currentChildId)) ||
+      db.children[0] ||
+      null;
+
+    db.activeChildId = validActiveChild ? validActiveChild.id : null;
+    db.currentChildId = db.activeChildId;
+
+    saveDB(db);
 
     setDefaultTaskDateTime();
     renderAll();
