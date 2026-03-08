@@ -68,6 +68,33 @@ document.addEventListener("DOMContentLoaded", async () => {
     saveStatus.className = isError ? "muted error-text" : "muted";
   }
 
+  function normalizeDiagnoses(value) {
+    if (Array.isArray(value)) return value.filter(Boolean);
+    if (typeof value === "string" && value.trim()) {
+      return value
+        .split(",")
+        .map((item) => item.trim())
+        .filter(Boolean);
+    }
+    return [];
+  }
+
+  function getAgeFromBirthdate(birthdate) {
+    if (!birthdate) return "";
+    const dob = new Date(birthdate);
+    if (Number.isNaN(dob.getTime())) return "";
+
+    const now = new Date();
+    let age = now.getFullYear() - dob.getFullYear();
+    const monthDiff = now.getMonth() - dob.getMonth();
+
+    if (monthDiff < 0 || (monthDiff === 0 && now.getDate() < dob.getDate())) {
+      age--;
+    }
+
+    return age;
+  }
+
   function clearForm() {
     allergies.value = "";
     baselineO2.value = "";
@@ -153,9 +180,10 @@ document.addEventListener("DOMContentLoaded", async () => {
       return;
     }
 
+    const childAge = activeChild.age ?? getAgeFromBirthdate(activeChild.birthdate);
     const ageText =
-      activeChild.age !== null && activeChild.age !== undefined && activeChild.age !== ""
-        ? `Age ${activeChild.age}`
+      childAge !== null && childAge !== undefined && childAge !== ""
+        ? `Age ${childAge}`
         : "Age —";
 
     childSummary.textContent = `${activeChild.name || "Child"} • ${ageText}`;
@@ -181,7 +209,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     const { data, error } = await supabase
       .from("children")
       .select("*")
-      .eq("parent_user_id", userId)
+      .eq("parent_id", userId)
       .order("created_at", { ascending: true });
 
     if (error) {
@@ -189,7 +217,11 @@ document.addEventListener("DOMContentLoaded", async () => {
       return [];
     }
 
-    return data || [];
+    return (data || []).map((child) => ({
+      ...child,
+      diagnoses: normalizeDiagnoses(child.diagnoses),
+      age: child.age ?? getAgeFromBirthdate(child.birthdate),
+    }));
   }
 
   async function fetchCarePlan(childId) {
@@ -214,7 +246,11 @@ document.addEventListener("DOMContentLoaded", async () => {
     const db = getLocalDB();
 
     if (Array.isArray(db.children) && db.children.length) {
-      return db.children;
+      return db.children.map((child) => ({
+        ...child,
+        diagnoses: normalizeDiagnoses(child.diagnoses),
+        age: child.age ?? getAgeFromBirthdate(child.birthdate),
+      }));
     }
 
     const child = db.child || null;
@@ -222,10 +258,11 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     return [
       {
-        id: "local-child-1",
+        id: db.activeChildId || "local-child-1",
         name: child.name || "Test Child",
         age: child.age ?? "",
-        diagnoses: Array.isArray(child.diagnoses) ? child.diagnoses : [],
+        birthdate: child.birthdate || null,
+        diagnoses: normalizeDiagnoses(child.diagnoses),
       },
     ];
   }
