@@ -6,7 +6,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   const childSwitcher = document.getElementById("childSwitcher");
   const logoutBtn = document.getElementById("logoutBtn");
 
-  const childName = document.getElementById("childName");
+  const childAvatar = document.getElementById("childAvatar");
   const childSummary = document.getElementById("childSummary");
   const diagnosisPills = document.getElementById("diagnosisPills");
 
@@ -177,7 +177,16 @@ document.addEventListener("DOMContentLoaded", async () => {
     return null;
   }
 
+  function getSelectedSpecialties() {
+    if (!specialtyChecks) return [];
+    return [...specialtyChecks.querySelectorAll('input[type="checkbox"]:checked')].map(
+      (input) => input.value
+    );
+  }
+
   function fillSpecialties(specialties = []) {
+    if (!specialtyChecks) return;
+
     specialtyChecks.innerHTML = "";
     const list =
       specialties.length > 0
@@ -197,8 +206,8 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
   function openQuickLog(category = "note") {
-    categorySelect.value = category;
-    noteInput.value = "";
+    if (categorySelect) categorySelect.value = category;
+    if (noteInput) noteInput.value = "";
     show(modal);
   }
 
@@ -218,13 +227,13 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
   function clearVitalsInputs() {
-    quickO2.value = "";
-    quickTemp.value = "";
-    quickBpSys.value = "";
-    quickBpDia.value = "";
-    quickHr.value = "";
-    quickRr.value = "";
-    quickVitalNotes.value = "";
+    if (quickO2) quickO2.value = "";
+    if (quickTemp) quickTemp.value = "";
+    if (quickBpSys) quickBpSys.value = "";
+    if (quickBpDia) quickBpDia.value = "";
+    if (quickHr) quickHr.value = "";
+    if (quickRr) quickRr.value = "";
+    if (quickVitalNotes) quickVitalNotes.value = "";
   }
 
   function updateVitalFieldVisibility(mode) {
@@ -394,7 +403,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     if (!result.error) return result.data || [];
 
-    console.warn("Could not load schedule:", result.error.message);
+    console.warn("Could not load schedule:", result.error?.message || "Unknown error");
     return [];
   }
 
@@ -442,9 +451,9 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   function renderChildSummaryCard(child) {
     if (!child) {
-      if (childName) childName.textContent = "Child";
       if (childSummary) childSummary.textContent = "Age —";
       if (diagnosisPills) diagnosisPills.innerHTML = "";
+      if (childAvatar) childAvatar.innerHTML = "";
       return;
     }
 
@@ -454,8 +463,17 @@ document.addEventListener("DOMContentLoaded", async () => {
         ? `Age ${childAge}`
         : "Age —";
 
-    if (childName) childName.textContent = child.name || "Child";
     if (childSummary) childSummary.textContent = ageText;
+
+    if (childAvatar) {
+      if (child.photo_url) {
+        childAvatar.innerHTML = `<img src="${escapeHtml(child.photo_url)}" alt="${escapeHtml(
+          child.name || "Child"
+        )}">`;
+      } else {
+        childAvatar.innerHTML = "";
+      }
+    }
 
     const diagnoses = normalizeDiagnoses(child.diagnoses);
 
@@ -487,6 +505,8 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
   function renderTodayList(items = []) {
+    if (!todayList) return;
+
     todayList.innerHTML = "";
 
     if (!items.length) {
@@ -504,7 +524,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         <div class="timeline-card">
           <div style="display:flex; justify-content:space-between; gap:12px; align-items:flex-start;">
             <div style="display:flex; gap:12px; align-items:flex-start; min-width:0;">
-              <div class="log-icon default" style="width:44px;height:44px;border-radius:14px;font-size:1rem;">${escapeHtml(
+              <div class="log-icon" style="width:44px;height:44px;border-radius:14px;font-size:1rem;">${escapeHtml(
                 getScheduleIcon(item)
               )}</div>
               <div style="min-width:0;">
@@ -512,7 +532,7 @@ document.addEventListener("DOMContentLoaded", async () => {
                 <div class="muted">${escapeHtml(item.location || item.type || "")}</div>
               </div>
             </div>
-            <div class="muted right-strong">${escapeHtml(item.timeLabel || "—")}</div>
+            <div class="muted" style="font-weight:700;">${escapeHtml(item.timeLabel || "—")}</div>
           </div>
         </div>
       `;
@@ -521,6 +541,8 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
   function renderUpcomingSchedule(items = []) {
+    if (!homeScheduleList) return;
+
     homeScheduleList.innerHTML = "";
 
     if (!items.length) {
@@ -534,7 +556,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       div.innerHTML = `
         <div style="display:flex; justify-content:space-between; gap:12px; align-items:flex-start;">
           <div style="display:flex; gap:12px; align-items:flex-start; min-width:0;">
-            <div class="log-icon default" style="width:42px;height:42px;border-radius:14px;font-size:0.95rem;">${escapeHtml(
+            <div class="log-icon" style="width:42px;height:42px;border-radius:14px;font-size:0.95rem;">${escapeHtml(
               getScheduleIcon(item)
             )}</div>
             <div style="min-width:0;">
@@ -542,7 +564,7 @@ document.addEventListener("DOMContentLoaded", async () => {
               <div class="muted">${escapeHtml(item.location || item.type || "")}</div>
             </div>
           </div>
-          <div class="muted right-strong">${escapeHtml(item.timeLabel || "—")}</div>
+          <div class="muted" style="font-weight:700;">${escapeHtml(item.timeLabel || "—")}</div>
         </div>
       `;
       homeScheduleList.appendChild(div);
@@ -550,6 +572,8 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
   function renderCareLogs(logs = []) {
+    if (!careLogList) return;
+
     careLogList.innerHTML = "";
 
     if (!logs.length) {
@@ -561,13 +585,13 @@ document.addEventListener("DOMContentLoaded", async () => {
       const li = document.createElement("li");
       li.className = "log-card";
       li.innerHTML = `
-        <div class="log-icon ${escapeHtml(log.category || "default")}">
+        <div class="log-icon">
           ${escapeHtml((log.categoryLabel || "N").charAt(0))}
         </div>
         <div class="log-main">
           <h3>${escapeHtml(log.categoryLabel || capitalize(log.category || "note"))}</h3>
           <p>${escapeHtml(log.note || "")}</p>
-          <div class="muted mt-8">${escapeHtml(log.author || "Unknown")} • ${escapeHtml(
+          <div class="muted mt-12">${escapeHtml(log.author || "Unknown")} • ${escapeHtml(
             log.timeLabel || "—"
           )}</div>
         </div>
@@ -577,6 +601,8 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
   function renderLastVitals(vitals) {
+    if (!lastVitalsCard || !lastVitalsContent) return;
+
     if (!vitals) {
       hide(lastVitalsCard);
       return;
@@ -609,6 +635,8 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
   function renderInventory(items = []) {
+    if (!lowSupplyCard || !lowSupplySummary || !lowSupplyDashboardList) return;
+
     const lowItems = items.filter((item) => {
       const qty = Number(item.quantity ?? item.qty ?? 0);
       const threshold = Number(item.low_threshold ?? item.threshold ?? 0);
@@ -643,6 +671,8 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
   function renderLastSymptom(symptomLog) {
+    if (!lastSymptomCard || !lastSymptomContent) return;
+
     if (!symptomLog) {
       hide(lastSymptomCard);
       return;
@@ -695,6 +725,8 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
   function renderEmergencySheet(child, carePlan, meds = []) {
+    if (!emergencyBody) return;
+
     if (!child) {
       emergencyBody.innerHTML = `<div class="muted">No child selected.</div>`;
       return;
@@ -799,6 +831,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         birthdate: child.birthdate || null,
         diagnoses: normalizeDiagnoses(child.diagnoses),
         allergies: child.allergies || "",
+        photo_url: child.photo_url || "",
       },
     ];
   }
@@ -851,9 +884,10 @@ document.addEventListener("DOMContentLoaded", async () => {
     const supabase = getSupabaseClient();
     const payload = {
       child_id: activeChild.id,
-      category: categorySelect.value,
-      note: noteInput.value.trim(),
-      author: authorInput.value.trim() || "Parent",
+      category: categorySelect?.value || "note",
+      note: noteInput?.value.trim() || "",
+      author: authorInput?.value.trim() || "Parent",
+      specialties: getSelectedSpecialties(),
       created_at: new Date().toISOString(),
     };
 
@@ -894,13 +928,13 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     const payload = {
       child_id: activeChild.id,
-      o2_sat: quickO2.value ? Number(quickO2.value) : null,
-      temperature: quickTemp.value ? Number(quickTemp.value) : null,
-      bp_systolic: quickBpSys.value ? Number(quickBpSys.value) : null,
-      bp_diastolic: quickBpDia.value ? Number(quickBpDia.value) : null,
-      heart_rate: quickHr.value ? Number(quickHr.value) : null,
-      respiratory_rate: quickRr.value ? Number(quickRr.value) : null,
-      notes: quickVitalNotes.value.trim(),
+      o2_sat: quickO2?.value ? Number(quickO2.value) : null,
+      temperature: quickTemp?.value ? Number(quickTemp.value) : null,
+      bp_systolic: quickBpSys?.value ? Number(quickBpSys.value) : null,
+      bp_diastolic: quickBpDia?.value ? Number(quickBpDia.value) : null,
+      heart_rate: quickHr?.value ? Number(quickHr.value) : null,
+      respiratory_rate: quickRr?.value ? Number(quickRr.value) : null,
+      notes: quickVitalNotes?.value.trim() || "",
       taken_at: new Date().toISOString(),
     };
 
@@ -942,163 +976,4 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   async function loadDashboard() {
     if (!activeChild) {
-      renderChildSummaryCard(null);
-      renderTodayList([]);
-      renderUpcomingSchedule([]);
-      renderCareLogs([]);
-      hide(lastVitalsCard);
-      hide(lowSupplyCard);
-      hide(lastSymptomCard);
-      return;
-    }
-
-    renderChildSummaryCard(activeChild);
-
-    const [
-      scheduleItemsRaw,
-      careLogsRaw,
-      symptomRaw,
-      vitalsRaw,
-      inventoryRaw,
-      medicationsRaw,
-      carePlan,
-    ] = await Promise.all([
-      fetchSchedule(activeChild.id),
-      fetchCareLogs(activeChild.id),
-      fetchAllCareLogsForSymptom(activeChild.id),
-      fetchVitals(activeChild.id),
-      fetchInventory(activeChild.id),
-      fetchMedications(activeChild.id),
-      fetchCarePlan(activeChild.id),
-    ]);
-
-    const localSchedule = getLocalScheduleFallback();
-    const localLogs = getLocalCareLogsFallback();
-    const localVitals = getLocalVitalsFallback();
-    const localInventory = getLocalInventoryFallback();
-    const localCarePlan = getLocalCarePlanFallback(activeChild.id);
-
-    const scheduleItems = normalizeScheduleItems(
-      scheduleItemsRaw.length ? scheduleItemsRaw : localSchedule
-    );
-
-    const careLogs = normalizeCareLogs(careLogsRaw.length ? careLogsRaw : localLogs);
-
-    const symptomLog = normalizeCareLogs(
-      symptomRaw.length ? symptomRaw : careLogs.filter((x) => x.category === "symptom").slice(0, 1)
-    )[0];
-
-    const vitals = (vitalsRaw.length ? vitalsRaw : localVitals)[0] || null;
-    const inventory = inventoryRaw.length ? inventoryRaw : localInventory;
-
-    const todayItems = scheduleItems.filter((item) => {
-      if (item.start_at) return isToday(item.start_at);
-      return false;
-    });
-
-    const upcomingItems = scheduleItems
-      .filter((item) => {
-        const d = new Date(item.start_at || item.date || "");
-        return !Number.isNaN(d.getTime()) && d >= new Date();
-      })
-      .slice(0, 5);
-
-    renderTodayList(todayItems.length ? todayItems : scheduleItems.slice(0, 5));
-    renderUpcomingSchedule(upcomingItems.length ? upcomingItems : scheduleItems.slice(0, 5));
-    renderCareLogs(careLogs.slice(0, 5));
-    renderLastVitals(vitals);
-    renderInventory(inventory);
-    renderLastSymptom(symptomLog);
-    renderEmergencySheet(activeChild, carePlan || localCarePlan, medicationsRaw);
-  }
-
-  async function init() {
-    const supabase = getSupabaseClient();
-
-    currentUser = await fetchUser();
-
-    if (currentUser?.email && welcomeText) {
-      welcomeText.textContent = `Welcome back, ${currentUser.email}`;
-    } else if (welcomeText) {
-      welcomeText.textContent = "Welcome back";
-    }
-
-    const localDb = getLocalDB();
-    fillSpecialties(safeArray(localDb.specialties));
-
-    let loadedChildren = [];
-    if (currentUser?.id) {
-      loadedChildren = await fetchChildren(currentUser.id);
-    }
-
-    if (!loadedChildren.length) {
-      loadedChildren = getLocalChildrenFallback();
-    }
-
-    children = loadedChildren;
-
-    const savedId = getActiveChildId();
-    activeChild =
-      children.find((c) => String(c.id) === String(savedId)) ||
-      children[0] ||
-      null;
-
-    if (activeChild) {
-      setActiveChildId(activeChild.id);
-    }
-
-    renderChildSwitcher();
-    await loadDashboard();
-
-    childSwitcher?.addEventListener("change", async (e) => {
-      const selectedId = e.target.value;
-      activeChild = children.find((c) => String(c.id) === String(selectedId)) || null;
-      if (activeChild) {
-        setActiveChildId(activeChild.id);
-      }
-      await loadDashboard();
-    });
-
-    logoutBtn?.addEventListener("click", async () => {
-      if (supabase?.auth) {
-        await supabase.auth.signOut();
-      }
-      window.location.href = "login.html";
-    });
-
-    quickCategoryButtons.forEach((btn) => {
-      btn.addEventListener("click", () => {
-        openQuickLog(btn.dataset.category || "note");
-      });
-    });
-
-    btnCloseModal?.addEventListener("click", closeQuickLog);
-    btnSave?.addEventListener("click", saveCareLog);
-
-    quickVitalButtons.forEach((btn) => {
-      btn.addEventListener("click", () => {
-        openVitalsModal(btn.dataset.quickVital || "full");
-      });
-    });
-
-    btnCloseVitalsModal?.addEventListener("click", closeVitalsModal);
-    btnSaveQuickVitals?.addEventListener("click", saveQuickVitals);
-
-    btnEmergency?.addEventListener("click", () => show(emergencyModal));
-    btnCloseEmergency?.addEventListener("click", () => hide(emergencyModal));
-
-    modal?.addEventListener("click", (e) => {
-      if (e.target === modal) closeQuickLog();
-    });
-
-    vitalsModal?.addEventListener("click", (e) => {
-      if (e.target === vitalsModal) closeVitalsModal();
-    });
-
-    emergencyModal?.addEventListener("click", (e) => {
-      if (e.target === emergencyModal) hide(emergencyModal);
-    });
-  }
-
-  await init();
-});
+      render
