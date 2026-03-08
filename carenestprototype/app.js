@@ -4,16 +4,11 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   const welcomeText = document.getElementById("welcomeText");
   const childSwitcher = document.getElementById("childSwitcher");
-  const childSwitcherMobile = document.getElementById("childSwitcherMobile");
   const logoutBtn = document.getElementById("logoutBtn");
-  const logoutBtnMobile = document.getElementById("logoutBtnMobile");
 
   const childName = document.getElementById("childName");
-  const childNameMobile = document.getElementById("childNameMobile");
   const childSummary = document.getElementById("childSummary");
-  const childSummaryMobile = document.getElementById("childSummaryMobile");
   const diagnosisPills = document.getElementById("diagnosisPills");
-  const diagnosisPillsMobile = document.getElementById("diagnosisPillsMobile");
 
   const todayList = document.getElementById("todayList");
   const homeScheduleList = document.getElementById("homeScheduleList");
@@ -93,7 +88,10 @@ document.addEventListener("DOMContentLoaded", async () => {
   function normalizeDiagnoses(value) {
     if (Array.isArray(value)) return value.filter(Boolean);
     if (typeof value === "string" && value.trim()) {
-      return value.split(",").map((item) => item.trim()).filter(Boolean);
+      return value
+        .split(",")
+        .map((item) => item.trim())
+        .filter(Boolean);
     }
     return [];
   }
@@ -418,45 +416,35 @@ document.addEventListener("DOMContentLoaded", async () => {
     return data || null;
   }
 
-  function syncSwitcherOptions() {
-    if (!childSwitcher || !childSwitcherMobile) return;
-    childSwitcherMobile.innerHTML = childSwitcher.innerHTML;
-    childSwitcherMobile.value = childSwitcher.value;
-  }
-
   function renderChildSwitcher() {
-    [childSwitcher, childSwitcherMobile].forEach((switcher) => {
-      if (!switcher) return;
-      switcher.innerHTML = "";
+    if (!childSwitcher) return;
 
-      if (!children.length) {
-        const option = document.createElement("option");
-        option.value = "";
-        option.textContent = "No children yet";
-        switcher.appendChild(option);
-        return;
+    childSwitcher.innerHTML = "";
+
+    if (!children.length) {
+      const option = document.createElement("option");
+      option.value = "";
+      option.textContent = "No children yet";
+      childSwitcher.appendChild(option);
+      return;
+    }
+
+    children.forEach((child) => {
+      const option = document.createElement("option");
+      option.value = child.id;
+      option.textContent = child.name || "Unnamed Child";
+      if (activeChild && String(activeChild.id) === String(child.id)) {
+        option.selected = true;
       }
-
-      children.forEach((child) => {
-        const option = document.createElement("option");
-        option.value = child.id;
-        option.textContent = child.name || "Unnamed Child";
-        if (activeChild && String(activeChild.id) === String(child.id)) {
-          option.selected = true;
-        }
-        switcher.appendChild(option);
-      });
+      childSwitcher.appendChild(option);
     });
   }
 
   function renderChildSummaryCard(child) {
     if (!child) {
       if (childName) childName.textContent = "Child";
-      if (childNameMobile) childNameMobile.textContent = "Child";
       if (childSummary) childSummary.textContent = "Age —";
-      if (childSummaryMobile) childSummaryMobile.textContent = "Age —";
       if (diagnosisPills) diagnosisPills.innerHTML = "";
-      if (diagnosisPillsMobile) diagnosisPillsMobile.innerHTML = "";
       return;
     }
 
@@ -467,28 +455,25 @@ document.addEventListener("DOMContentLoaded", async () => {
         : "Age —";
 
     if (childName) childName.textContent = child.name || "Child";
-    if (childNameMobile) childNameMobile.textContent = child.name || "Child";
     if (childSummary) childSummary.textContent = ageText;
-    if (childSummaryMobile) childSummaryMobile.textContent = ageText;
 
     const diagnoses = normalizeDiagnoses(child.diagnoses);
-    const renderPills = (el) => {
-      if (!el) return;
-      el.innerHTML = "";
+
+    if (diagnosisPills) {
+      diagnosisPills.innerHTML = "";
+
       if (!diagnoses.length) {
-        el.innerHTML = `<span class="pill">No diagnoses added</span>`;
+        diagnosisPills.innerHTML = `<span class="pill">No diagnoses added</span>`;
         return;
       }
+
       diagnoses.forEach((diagnosis) => {
         const span = document.createElement("span");
         span.className = "pill";
         span.textContent = diagnosis;
-        el.appendChild(span);
+        diagnosisPills.appendChild(span);
       });
-    };
-
-    renderPills(diagnosisPills);
-    renderPills(diagnosisPillsMobile);
+    }
   }
 
   function getScheduleIcon(item) {
@@ -1027,15 +1012,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     renderEmergencySheet(activeChild, carePlan || localCarePlan, medicationsRaw);
   }
 
-  function handleChildChange(selectedId) {
-    activeChild = children.find((c) => String(c.id) === String(selectedId)) || null;
-    if (activeChild) {
-      setActiveChildId(activeChild.id);
-    }
-    renderChildSwitcher();
-    loadDashboard();
-  }
-
   async function init() {
     const supabase = getSupabaseClient();
 
@@ -1072,28 +1048,23 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
 
     renderChildSwitcher();
-    syncSwitcherOptions();
     await loadDashboard();
 
     childSwitcher?.addEventListener("change", async (e) => {
-      handleChildChange(e.target.value);
-      if (childSwitcherMobile) childSwitcherMobile.value = e.target.value;
+      const selectedId = e.target.value;
+      activeChild = children.find((c) => String(c.id) === String(selectedId)) || null;
+      if (activeChild) {
+        setActiveChildId(activeChild.id);
+      }
+      await loadDashboard();
     });
 
-    childSwitcherMobile?.addEventListener("change", async (e) => {
-      handleChildChange(e.target.value);
-      if (childSwitcher) childSwitcher.value = e.target.value;
-    });
-
-    const logoutHandler = async () => {
+    logoutBtn?.addEventListener("click", async () => {
       if (supabase?.auth) {
         await supabase.auth.signOut();
       }
       window.location.href = "login.html";
-    };
-
-    logoutBtn?.addEventListener("click", logoutHandler);
-    logoutBtnMobile?.addEventListener("click", logoutHandler);
+    });
 
     quickCategoryButtons.forEach((btn) => {
       btn.addEventListener("click", () => {
