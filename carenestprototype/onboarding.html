@@ -16,7 +16,7 @@
 
     .auth-card {
       width: 100%;
-      max-width: 560px;
+      max-width: 760px;
       background: #fff;
       border-radius: 12px;
       padding: 30px;
@@ -38,11 +38,12 @@
     .auth-form {
       display: flex;
       flex-direction: column;
-      gap: 16px;
+      gap: 18px;
     }
 
     .auth-form input,
-    .auth-form textarea {
+    .auth-form textarea,
+    .auth-form select {
       width: 100%;
       box-sizing: border-box;
       padding: 12px;
@@ -53,7 +54,7 @@
     }
 
     .auth-form textarea {
-      min-height: 100px;
+      min-height: 90px;
       resize: vertical;
     }
 
@@ -89,10 +90,63 @@
       margin-bottom: 16px;
     }
 
-    .field label {
+    .field label,
+    .section-title {
       display: block;
       margin-bottom: 6px;
       font-weight: 600;
+    }
+
+    .grid-2 {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 14px;
+    }
+
+    .check-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    .check-item {
+      display: flex;
+      gap: 10px;
+      align-items: flex-start;
+      border: 1px solid #e4e8f0;
+      border-radius: 10px;
+      padding: 12px;
+      background: #fcfdff;
+    }
+
+    .check-item input {
+      width: auto;
+      margin-top: 3px;
+    }
+
+    .subsection {
+      border: 1px solid #e4e8f0;
+      background: #f9fbff;
+      border-radius: 12px;
+      padding: 16px;
+      display: none;
+    }
+
+    .subsection.show {
+      display: block;
+    }
+
+    .muted-note {
+      color: #667085;
+      font-size: 14px;
+      margin-top: -4px;
+    }
+
+    @media (max-width: 700px) {
+      .grid-2,
+      .check-grid {
+        grid-template-columns: 1fr;
+      }
     }
   </style>
 </head>
@@ -100,35 +154,137 @@
   <div class="auth-wrap">
     <section class="auth-card">
       <h1>Let’s set up your child’s profile</h1>
-      <p>Add your first child so CareNest can build the dashboard around their care needs.</p>
+      <p>We’ll tailor CareNest so you only see the tools that fit your child’s care needs.</p>
 
       <div id="errorMsg" class="error-msg"></div>
       <div id="successMsg" class="success-msg"></div>
 
       <form id="onboardingForm" class="auth-form">
-        <div class="field">
-          <label for="childName">Child Name</label>
-          <input id="childName" type="text" placeholder="Enter child name" required />
+        <div class="grid-2">
+          <div class="field">
+            <label for="childName">Child Name</label>
+            <input id="childName" type="text" placeholder="Enter child name" required />
+          </div>
+
+          <div class="field">
+            <label for="childBirthdate">Birthdate</label>
+            <input id="childBirthdate" type="date" />
+          </div>
         </div>
 
-        <div class="field">
-          <label for="childBirthdate">Birthdate</label>
-          <input id="childBirthdate" type="date" />
+        <div class="grid-2">
+          <div class="field">
+            <label for="complexityLevel">Care Complexity</label>
+            <select id="complexityLevel">
+              <option value="mild">Mild</option>
+              <option value="moderate" selected>Moderate</option>
+              <option value="high">High</option>
+            </select>
+          </div>
+
+          <div class="field">
+            <label for="childAllergies">Allergies</label>
+            <input id="childAllergies" type="text" placeholder="List allergies if any" />
+          </div>
         </div>
 
         <div class="field">
           <label for="childDiagnoses">Diagnoses</label>
-          <textarea id="childDiagnoses" placeholder="Example: Epilepsy, Cerebral Palsy, G-tube"></textarea>
-        </div>
-
-        <div class="field">
-          <label for="childAllergies">Allergies</label>
-          <textarea id="childAllergies" placeholder="List allergies if any"></textarea>
+          <textarea id="childDiagnoses" placeholder="Example: Epilepsy, Cerebral palsy, G-tube"></textarea>
         </div>
 
         <div class="field">
           <label for="childNotes">Notes</label>
           <textarea id="childNotes" placeholder="Anything important caregivers should know"></textarea>
+        </div>
+
+        <div class="field">
+          <div class="section-title">Which areas would you like CareNest to help manage?</div>
+          <div class="muted-note">Choose only what applies right now. You can always change this later.</div>
+
+          <div class="check-grid" style="margin-top: 12px;">
+            <label class="check-item">
+              <input type="checkbox" id="careMedications" />
+              <span>Medications</span>
+            </label>
+
+            <label class="check-item">
+              <input type="checkbox" id="careFeeds" />
+              <span>Feeds / Nutrition</span>
+            </label>
+
+            <label class="check-item">
+              <input type="checkbox" id="careRespiratory" />
+              <span>Respiratory Care</span>
+            </label>
+
+            <label class="check-item">
+              <input type="checkbox" id="careCardiology" />
+              <span>Cardiology</span>
+            </label>
+
+            <label class="check-item">
+              <input type="checkbox" id="careSymptoms" />
+              <span>Symptoms / Episodes</span>
+            </label>
+
+            <label class="check-item">
+              <input type="checkbox" id="careTherapies" />
+              <span>Therapies</span>
+            </label>
+
+            <label class="check-item">
+              <input type="checkbox" id="careAppointments" />
+              <span>Appointments</span>
+            </label>
+
+            <label class="check-item">
+              <input type="checkbox" id="careInventory" />
+              <span>Medical Supplies / Inventory</span>
+            </label>
+
+            <label class="check-item">
+              <input type="checkbox" id="careSchoolSupport" />
+              <span>School / Nurse Communication</span>
+            </label>
+          </div>
+        </div>
+
+        <div id="respiratorySection" class="subsection">
+          <div class="section-title">Respiratory Equipment</div>
+          <div class="check-grid">
+            <label class="check-item"><input type="checkbox" id="eqOxygen" /><span>Oxygen</span></label>
+            <label class="check-item"><input type="checkbox" id="eqPulseOxResp" /><span>Pulse Ox</span></label>
+            <label class="check-item"><input type="checkbox" id="eqNebulizer" /><span>Nebulizer</span></label>
+            <label class="check-item"><input type="checkbox" id="eqSuction" /><span>Suction</span></label>
+            <label class="check-item"><input type="checkbox" id="eqTrach" /><span>Trach</span></label>
+            <label class="check-item"><input type="checkbox" id="eqVentilator" /><span>Ventilator</span></label>
+            <label class="check-item"><input type="checkbox" id="eqCpapBipap" /><span>CPAP / BiPAP</span></label>
+            <label class="check-item"><input type="checkbox" id="eqAirwayClearance" /><span>Airway Clearance</span></label>
+          </div>
+        </div>
+
+        <div id="feedsSection" class="subsection">
+          <div class="section-title">Feeding Support</div>
+          <div class="check-grid">
+            <label class="check-item"><input type="checkbox" id="eqGTube" /><span>G-Tube</span></label>
+            <label class="check-item"><input type="checkbox" id="eqJTube" /><span>J-Tube</span></label>
+            <label class="check-item"><input type="checkbox" id="eqFeedingPump" /><span>Feeding Pump</span></label>
+            <label class="check-item"><input type="checkbox" id="eqContinuousFeeds" /><span>Continuous Feeds</span></label>
+            <label class="check-item"><input type="checkbox" id="eqBolusFeeds" /><span>Bolus Feeds</span></label>
+          </div>
+        </div>
+
+        <div id="cardiologySection" class="subsection">
+          <div class="section-title">Cardiology Support</div>
+          <div class="check-grid">
+            <label class="check-item"><input type="checkbox" id="eqHeartRateMonitoring" /><span>Heart Rate Monitoring</span></label>
+            <label class="check-item"><input type="checkbox" id="eqBloodPressureMonitoring" /><span>Blood Pressure Monitoring</span></label>
+            <label class="check-item"><input type="checkbox" id="eqPulseOxCardio" /><span>Pulse Ox</span></label>
+            <label class="check-item"><input type="checkbox" id="eqCardiacMonitor" /><span>Cardiac Monitor</span></label>
+            <label class="check-item"><input type="checkbox" id="eqPacemaker" /><span>Pacemaker</span></label>
+            <label class="check-item"><input type="checkbox" id="eqCentralLine" /><span>Central Line</span></label>
+          </div>
         </div>
 
         <button type="submit" class="btn">Save and Continue</button>
@@ -140,6 +296,8 @@
   <script src="supabase.js"></script>
   <script src="auth.js"></script>
   <script src="onboarding.js"></script>
-  
+  <script>
+    requireAuth();
+  </script>
 </body>
 </html>
