@@ -180,10 +180,13 @@ document.addEventListener("DOMContentLoaded", () => {
       };
     });
 
-    if (!db.activeChildId || !db.children.find((c) => c.id === db.activeChildId)) {
+    const validActiveChild = db.children.find((c) => c.id === db.activeChildId);
+
+    if (!validActiveChild) {
       db.activeChildId = db.children[0].id;
-      db.currentChildId = db.children[0].id;
     }
+
+    db.currentChildId = db.activeChildId;
 
     saveDB(db);
     return true;
@@ -1152,9 +1155,6 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   function render() {
-    db = ensureDB(loadDB());
-    saveDB(db);
-
     const child = activeChild();
     renderHeader();
     applyAdaptiveUI();
@@ -1459,6 +1459,10 @@ document.addEventListener("DOMContentLoaded", () => {
   (async function initDashboard() {
     const ok = await syncChildrenFromSupabase();
     if (!ok) return;
+
+    console.log("Loaded children:", db.children);
+    console.log("Active child ID:", db.activeChildId);
+    console.log("Active child object:", activeChild());
 
     fillChildSwitcher();
     render();
