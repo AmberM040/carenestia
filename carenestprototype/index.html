@@ -3,23 +3,20 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>CareNest Dashboard</title>
+  <title>CareNestia Dashboard</title>
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
 
   <div class="app-shell">
 
-    <aside class="app-sidebar desktop-only">
+    <aside class="app-sidebar">
       <div class="sidebar-brand">
-        <div class="sidebar-brand-logo">
-          <img
-            src="logo.png"
-            alt="CareNest logo"
-            onerror="this.style.display='none'; this.parentNode.innerHTML='💙'; this.parentNode.style.display='grid'; this.parentNode.style.placeItems='center'; this.parentNode.style.background='linear-gradient(90deg, var(--primary), var(--primary-2))'; this.parentNode.style.color='#fff'; this.parentNode.style.fontSize='1.4rem';"
-          >
-        </div>
-        <div class="sidebar-brand-name">CareNestia</div>
+        <img
+          src="carenestprototype/carenestia_logo_wordmark.png"
+          class="sidebar-wordmark"
+          alt="CareNestia"
+        >
       </div>
 
       <nav class="sidebar-nav">
@@ -32,198 +29,178 @@
         <a class="sidebar-link" href="more.html">Documents</a>
       </nav>
 
-      <div class="sidebar-card">
-        <div class="section-head" style="margin-bottom:10px;">
-          <h3 style="font-size:1rem;">Quick Actions</h3>
-        </div>
+      <div class="sidebar-actions">
+        <div class="sidebar-actions-title">Quick Actions</div>
 
-        <div class="stack">
-          <button class="btn btn-primary btn-block" type="button" data-category="note">+ Add New</button>
-          <button class="btn btn-ghost btn-block" type="button" data-category="symptom">Log Symptom</button>
-          <button class="btn btn-ghost btn-block" type="button" data-category="med">Log Medication</button>
-          <a class="btn btn-ghost btn-block" href="schedule.html">Add Appointment</a>
-          <a class="btn btn-ghost btn-block" href="inventory.html">Add Supply</a>
-          <button class="btn btn-ghost btn-block" type="button" data-category="note">Add Care Note</button>
-        </div>
+        <button class="btn btn-primary btn-block" type="button" data-category="note">+ Add New</button>
+        <button class="btn btn-ghost btn-block" type="button" data-category="symptom">Log Symptom</button>
+        <button class="btn btn-ghost btn-block" type="button" data-category="med">Log Medication</button>
+        <a class="btn btn-ghost btn-block" href="schedule.html">Add Appointment</a>
+        <a class="btn btn-ghost btn-block" href="inventory.html">Add Supply</a>
+        <button class="btn btn-ghost btn-block" type="button" data-category="note">Add Care Note</button>
       </div>
     </aside>
 
     <div class="app-main">
 
       <header class="app-topbar">
+        <div class="header-left">
+          <div class="avatar-circle"></div>
 
-  <div class="header-left">
+          <div class="child-header">
+            <h1 id="childName">Child</h1>
 
-    <img
-      src="images/logo-carenestia.png"
-      class="header-logo"
-      alt="CareNestia"
-    >
+            <div class="summary-meta">
+              <span id="childSummary">Age —</span>
+              <span id="welcomeText">Welcome back</span>
+            </div>
 
-    <div class="child-header">
-      <h1 id="childName">Child</h1>
+            <div id="diagnosisPills" class="pill-row"></div>
+          </div>
+        </div>
 
-      <div class="summary-meta">
-        <span id="childSummary">Age —</span>
-        <span id="welcomeText">Welcome back</span>
-      </div>
-
-      <div class="pill-row" id="diagnosisPills"></div>
-    </div>
-
-  </div>
-
-  <div class="header-right">
-
-    <select id="childSwitcher" class="child-switcher"></select>
-
-    <a class="btn btn-soft" href="careplan.html">
-      Edit Profile
-    </a>
-
-    <button id="logoutBtn" class="btn btn-ghost">
-      Log out
-    </button>
-
-  </div>
-
-</header>
+        <div class="header-right">
+          <select id="childSwitcher" class="child-switcher"></select>
+          <a class="btn btn-soft" href="careplan.html">Edit Child Profile</a>
+          <button id="logoutBtn" class="btn btn-ghost" type="button">Log out</button>
+        </div>
+      </header>
 
       <main class="app-content">
 
-        <section class="timeline-shell">
+        <section class="main-column">
 
-          <section class="card soft">
-            <div class="section-head" style="margin-bottom:0;">
-              <div>
-                <strong style="font-size:1.05rem; color:var(--text);">Next medication reminder</strong>
-                <p class="muted" style="margin:6px 0 0;">Track the next scheduled medication, appointment, or care task.</p>
-              </div>
-              <a class="btn btn-ghost" href="schedule.html">Open Schedule</a>
+          <section class="hero-strip card soft-card">
+            <div>
+              <h3>Next medication reminder</h3>
+              <p>Track the next scheduled medication, appointment, or care task.</p>
             </div>
+            <a class="btn btn-ghost" href="schedule.html">Open Schedule</a>
           </section>
 
-          <section class="card">
+          <section class="card section-card">
             <div class="section-head">
               <h2>Today</h2>
-              <a class="btn btn-ghost" href="schedule.html">View Full Schedule</a>
+              <a class="section-link" href="schedule.html">View Full Schedule</a>
             </div>
             <ul id="todayList" class="list"></ul>
           </section>
 
-          <section class="card">
+          <section class="card section-card">
             <div class="section-head">
               <h2>Upcoming Schedule</h2>
-              <a class="btn btn-ghost" href="schedule.html">Open Schedule</a>
+              <a class="section-link" href="schedule.html">Open Schedule</a>
             </div>
             <div id="homeScheduleList" class="list"></div>
           </section>
 
-          <section id="lastSymptomCard" class="card hidden">
+          <section id="lastSymptomCard" class="card section-card hidden">
             <div class="section-head">
               <h2>Last Symptom</h2>
-              <a class="btn btn-ghost" href="carelog.html">View Symptoms</a>
+              <a class="section-link" href="carelog.html">View Symptoms</a>
             </div>
             <div id="lastSymptomContent"></div>
           </section>
 
-          <section class="card">
+          <section class="card section-card">
             <div class="section-head">
               <h2>Recent Care Log</h2>
-              <a class="btn btn-ghost" href="carelog.html">Open Care Log</a>
+              <a class="section-link" href="carelog.html">Open Care Log</a>
             </div>
             <ul id="careLogList" class="list"></ul>
           </section>
 
         </section>
 
-        <aside class="stack">
+        <aside class="right-column">
 
-          <section id="lastVitalsCard" class="card hidden">
+          <section id="lastVitalsCard" class="card section-card hidden">
             <div class="section-head">
               <h2>Last Known Vitals</h2>
-              <div style="display:flex; gap:8px; flex-wrap:wrap;">
-                <button class="btn btn-ghost" type="button" data-quick-vital="full">Quick Log</button>
-                <a class="btn" href="vitals.html">View History</a>
+              <div class="mini-actions">
+                <button class="btn btn-ghost btn-sm" type="button" data-quick-vital="full">Quick Log</button>
+                <a class="btn btn-primary btn-sm" href="vitals.html">View History</a>
               </div>
             </div>
             <div id="lastVitalsContent"></div>
           </section>
 
-          <section id="lowSupplyCard" class="card hidden">
+          <section id="lowSupplyCard" class="card section-card hidden">
             <div class="section-head">
               <h2>Inventory Reminders</h2>
-              <a class="btn btn-ghost" href="inventory.html">View Inventory</a>
+              <a class="section-link" href="inventory.html">View Inventory</a>
             </div>
             <div id="lowSupplySummary" class="alert-box alert-danger" style="margin-bottom:12px;"></div>
             <div id="lowSupplyDashboardList" class="list"></div>
           </section>
 
-          <section class="card">
+          <section class="card section-card">
             <div class="section-head">
               <h2>Quick Log</h2>
-              <span class="muted">Fast daily updates</span>
+              <span class="muted-label">Fast daily updates</span>
             </div>
 
             <div class="quick-actions">
               <button class="quick-btn note" type="button" data-category="note">
-                + Note
+                <strong>+ Note</strong>
                 <span>Add general care note</span>
               </button>
 
               <button class="quick-btn med" type="button" data-category="med">
-                + Medication
+                <strong>+ Medication</strong>
                 <span>Record medication note</span>
               </button>
 
               <button class="quick-btn symptom" type="button" data-category="symptom">
-                + Symptom
+                <strong>+ Symptom</strong>
                 <span>Track symptoms or concerns</span>
               </button>
 
               <button class="quick-btn question" type="button" data-category="question">
-                + Question
+                <strong>+ Question</strong>
                 <span>Save a question for visits</span>
               </button>
 
               <button class="quick-btn vital" type="button" data-quick-vital="o2">
-                + O2
+                <strong>+ O2</strong>
                 <span>Log oxygen saturation</span>
               </button>
 
               <button class="quick-btn vital" type="button" data-quick-vital="temp">
-                + Temp
+                <strong>+ Temp</strong>
                 <span>Log temperature</span>
               </button>
 
               <button class="quick-btn vital" type="button" data-quick-vital="bp">
-                + BP
+                <strong>+ BP</strong>
                 <span>Log blood pressure</span>
               </button>
 
               <button class="quick-btn vital" type="button" data-quick-vital="hr">
-                + HR
+                <strong>+ HR</strong>
                 <span>Log heart rate</span>
               </button>
 
               <button class="quick-btn vital" type="button" data-quick-vital="rr">
-                + RR
+                <strong>+ RR</strong>
                 <span>Log respiratory rate</span>
               </button>
             </div>
           </section>
 
-          <section class="card">
+          <section class="card section-card emergency-card">
             <div class="section-head">
               <h2>Emergency Sheet</h2>
-              <div style="display:flex; gap:8px; flex-wrap:wrap;">
-                <button id="btnEmergency" class="btn" type="button">Open</button>
-                <a class="btn btn-ghost" href="crisis.html">Crisis Mode</a>
-              </div>
             </div>
-            <p class="muted">
+
+            <p class="muted-copy">
               Quick access to diagnoses, medications, contacts, allergies, and emergency instructions.
             </p>
+
+            <div class="mini-actions">
+              <button id="btnEmergency" class="btn btn-primary" type="button">Open</button>
+              <a class="btn btn-ghost" href="crisis.html">Crisis Mode</a>
+            </div>
           </section>
 
         </aside>
@@ -279,7 +256,7 @@
       </div>
 
       <div class="modal-actions">
-        <button id="btnSave" class="btn" type="button">Save</button>
+        <button id="btnSave" class="btn btn-primary" type="button">Save</button>
       </div>
     </div>
   </div>
@@ -329,7 +306,7 @@
       </div>
 
       <div class="modal-actions">
-        <button id="btnSaveQuickVitals" class="btn" type="button">Save Vitals</button>
+        <button id="btnSaveQuickVitals" class="btn btn-primary" type="button">Save Vitals</button>
       </div>
     </div>
   </div>
