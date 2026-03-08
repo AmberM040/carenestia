@@ -12,11 +12,7 @@
 
     <aside class="app-sidebar">
       <div class="sidebar-brand">
-        <img
-          src="carenestprototype/carenestia_logo_wordmark.png"
-          class="sidebar-wordmark"
-          alt="CareNestia"
-        >
+        <img src="images/carenestia_logo_wordmark.png" class="sidebar-wordmark" alt="CareNestia">
       </div>
 
       <nav class="sidebar-nav">
@@ -29,15 +25,17 @@
         <a class="sidebar-link" href="more.html">Documents</a>
       </nav>
 
-      <div class="sidebar-actions">
+      <div class="sidebar-actions-card">
         <div class="sidebar-actions-title">Quick Actions</div>
 
-        <button class="btn btn-primary btn-block" type="button" data-category="note">+ Add New</button>
-        <button class="btn btn-ghost btn-block" type="button" data-category="symptom">Log Symptom</button>
-        <button class="btn btn-ghost btn-block" type="button" data-category="med">Log Medication</button>
-        <a class="btn btn-ghost btn-block" href="schedule.html">Add Appointment</a>
-        <a class="btn btn-ghost btn-block" href="inventory.html">Add Supply</a>
-        <button class="btn btn-ghost btn-block" type="button" data-category="note">Add Care Note</button>
+        <div class="sidebar-actions-list">
+          <button class="btn btn-primary btn-block" type="button" data-category="note">+ Add New</button>
+          <button class="btn btn-ghost btn-block" type="button" data-category="symptom">Log Symptom</button>
+          <button class="btn btn-ghost btn-block" type="button" data-category="med">Log Medication</button>
+          <a class="btn btn-ghost btn-block" href="schedule.html">Add Appointment</a>
+          <a class="btn btn-ghost btn-block" href="inventory.html">Add Supply</a>
+          <button class="btn btn-ghost btn-block" type="button" data-category="note">Add Care Note</button>
+        </div>
       </div>
     </aside>
 
@@ -45,9 +43,9 @@
 
       <header class="app-topbar">
         <div class="header-left">
-          <div class="avatar-circle"></div>
+          <div class="child-avatar"></div>
 
-          <div class="child-header">
+          <div class="child-copy">
             <h1 id="childName">Child</h1>
 
             <div class="summary-meta">
@@ -55,7 +53,7 @@
               <span id="welcomeText">Welcome back</span>
             </div>
 
-            <div id="diagnosisPills" class="pill-row"></div>
+            <div class="pill-row" id="diagnosisPills"></div>
           </div>
         </div>
 
@@ -67,144 +65,142 @@
       </header>
 
       <main class="app-content">
-
         <section class="main-column">
 
-          <section class="hero-strip card soft-card">
-            <div>
-              <h3>Next medication reminder</h3>
-              <p>Track the next scheduled medication, appointment, or care task.</p>
+          <section class="card reminder-card">
+            <div class="section-head">
+              <div>
+                <h2>Next medication reminder</h2>
+                <p class="muted">Track the next scheduled medication, appointment, or care task.</p>
+              </div>
+              <a class="btn btn-ghost" href="schedule.html">Open Schedule</a>
             </div>
-            <a class="btn btn-ghost" href="schedule.html">Open Schedule</a>
           </section>
 
-          <section class="card section-card">
+          <section class="card">
             <div class="section-head">
               <h2>Today</h2>
-              <a class="section-link" href="schedule.html">View Full Schedule</a>
+              <a class="btn btn-ghost" href="schedule.html">View Full Schedule</a>
             </div>
-            <ul id="todayList" class="list"></ul>
+            <ul id="todayList" class="timeline-list"></ul>
           </section>
 
-          <section class="card section-card">
+          <section class="card">
             <div class="section-head">
               <h2>Upcoming Schedule</h2>
-              <a class="section-link" href="schedule.html">Open Schedule</a>
+              <a class="btn btn-ghost" href="schedule.html">Open Schedule</a>
             </div>
-            <div id="homeScheduleList" class="list"></div>
+            <div id="homeScheduleList" class="stack-list"></div>
           </section>
 
-          <section id="lastSymptomCard" class="card section-card hidden">
+          <section id="lastSymptomCard" class="card hidden">
             <div class="section-head">
               <h2>Last Symptom</h2>
-              <a class="section-link" href="carelog.html">View Symptoms</a>
+              <a class="btn btn-ghost" href="carelog.html">View Symptoms</a>
             </div>
             <div id="lastSymptomContent"></div>
           </section>
 
-          <section class="card section-card">
+          <section class="card">
             <div class="section-head">
               <h2>Recent Care Log</h2>
-              <a class="section-link" href="carelog.html">Open Care Log</a>
+              <a class="btn btn-ghost" href="carelog.html">Open Care Log</a>
             </div>
-            <ul id="careLogList" class="list"></ul>
+            <ul id="careLogList" class="stack-list"></ul>
           </section>
 
         </section>
 
-        <aside class="right-column">
+        <aside class="side-column">
 
-          <section id="lastVitalsCard" class="card section-card hidden">
+          <section id="lastVitalsCard" class="card hidden">
             <div class="section-head">
               <h2>Last Known Vitals</h2>
-              <div class="mini-actions">
-                <button class="btn btn-ghost btn-sm" type="button" data-quick-vital="full">Quick Log</button>
-                <a class="btn btn-primary btn-sm" href="vitals.html">View History</a>
+              <div class="button-row">
+                <button class="btn btn-ghost" type="button" data-quick-vital="full">Quick Log</button>
+                <a class="btn" href="vitals.html">View History</a>
               </div>
             </div>
             <div id="lastVitalsContent"></div>
           </section>
 
-          <section id="lowSupplyCard" class="card section-card hidden">
+          <section id="lowSupplyCard" class="card hidden">
             <div class="section-head">
               <h2>Inventory Reminders</h2>
-              <a class="section-link" href="inventory.html">View Inventory</a>
+              <a class="btn btn-ghost" href="inventory.html">View Inventory</a>
             </div>
-            <div id="lowSupplySummary" class="alert-box alert-danger" style="margin-bottom:12px;"></div>
-            <div id="lowSupplyDashboardList" class="list"></div>
+            <div id="lowSupplySummary" class="alert-box alert-danger"></div>
+            <div id="lowSupplyDashboardList" class="stack-list"></div>
           </section>
 
-          <section class="card section-card">
+          <section class="card">
             <div class="section-head">
               <h2>Quick Log</h2>
-              <span class="muted-label">Fast daily updates</span>
+              <span class="muted">Fast daily updates</span>
             </div>
 
             <div class="quick-actions">
-              <button class="quick-btn note" type="button" data-category="note">
+              <button class="quick-btn quick-note" type="button" data-category="note">
                 <strong>+ Note</strong>
                 <span>Add general care note</span>
               </button>
 
-              <button class="quick-btn med" type="button" data-category="med">
+              <button class="quick-btn quick-med" type="button" data-category="med">
                 <strong>+ Medication</strong>
                 <span>Record medication note</span>
               </button>
 
-              <button class="quick-btn symptom" type="button" data-category="symptom">
+              <button class="quick-btn quick-symptom" type="button" data-category="symptom">
                 <strong>+ Symptom</strong>
                 <span>Track symptoms or concerns</span>
               </button>
 
-              <button class="quick-btn question" type="button" data-category="question">
+              <button class="quick-btn quick-question" type="button" data-category="question">
                 <strong>+ Question</strong>
                 <span>Save a question for visits</span>
               </button>
 
-              <button class="quick-btn vital" type="button" data-quick-vital="o2">
+              <button class="quick-mini" type="button" data-quick-vital="o2">
                 <strong>+ O2</strong>
                 <span>Log oxygen saturation</span>
               </button>
 
-              <button class="quick-btn vital" type="button" data-quick-vital="temp">
+              <button class="quick-mini" type="button" data-quick-vital="temp">
                 <strong>+ Temp</strong>
                 <span>Log temperature</span>
               </button>
 
-              <button class="quick-btn vital" type="button" data-quick-vital="bp">
+              <button class="quick-mini" type="button" data-quick-vital="bp">
                 <strong>+ BP</strong>
                 <span>Log blood pressure</span>
               </button>
 
-              <button class="quick-btn vital" type="button" data-quick-vital="hr">
+              <button class="quick-mini" type="button" data-quick-vital="hr">
                 <strong>+ HR</strong>
                 <span>Log heart rate</span>
               </button>
 
-              <button class="quick-btn vital" type="button" data-quick-vital="rr">
+              <button class="quick-mini" type="button" data-quick-vital="rr">
                 <strong>+ RR</strong>
                 <span>Log respiratory rate</span>
               </button>
             </div>
           </section>
 
-          <section class="card section-card emergency-card">
+          <section class="card emergency-card">
             <div class="section-head">
               <h2>Emergency Sheet</h2>
+              <div class="button-row">
+                <button id="btnEmergency" class="btn" type="button">Open</button>
+                <a class="btn btn-ghost" href="crisis.html">Crisis Mode</a>
+              </div>
             </div>
-
-            <p class="muted-copy">
+            <p class="muted">
               Quick access to diagnoses, medications, contacts, allergies, and emergency instructions.
             </p>
-
-            <div class="mini-actions">
-              <button id="btnEmergency" class="btn btn-primary" type="button">Open</button>
-              <a class="btn btn-ghost" href="crisis.html">Crisis Mode</a>
-            </div>
           </section>
 
         </aside>
-
       </main>
     </div>
   </div>
@@ -256,7 +252,7 @@
       </div>
 
       <div class="modal-actions">
-        <button id="btnSave" class="btn btn-primary" type="button">Save</button>
+        <button id="btnSave" class="btn" type="button">Save</button>
       </div>
     </div>
   </div>
@@ -306,7 +302,7 @@
       </div>
 
       <div class="modal-actions">
-        <button id="btnSaveQuickVitals" class="btn btn-primary" type="button">Save Vitals</button>
+        <button id="btnSaveQuickVitals" class="btn" type="button">Save Vitals</button>
       </div>
     </div>
   </div>
