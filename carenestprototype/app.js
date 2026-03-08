@@ -106,17 +106,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     });
   }
 
-  function formatDateOnly(value) {
-    if (!value) return "—";
-    const d = new Date(value);
-    if (Number.isNaN(d.getTime())) return value;
-    return d.toLocaleDateString([], {
-      month: "short",
-      day: "numeric",
-      year: "numeric",
-    });
-  }
-
   function isToday(dateValue) {
     if (!dateValue) return false;
     const d = new Date(dateValue);
@@ -162,7 +151,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   function getSupabaseClient() {
     if (window.supabaseClient) return window.supabaseClient;
-    if (window.supabase) return window.supabase;
+    if (window.supabase?.from) return window.supabase;
     return null;
   }
 
@@ -366,7 +355,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     const supabase = getSupabaseClient();
     if (!supabase) return [];
 
-    // First try schedule_items
     let result = await supabase
       .from("schedule_items")
       .select("*")
@@ -377,7 +365,6 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     console.warn("schedule_items not available, trying appointments:", result.error.message);
 
-    // Fallback to appointments
     result = await supabase
       .from("appointments")
       .select("*")
@@ -390,18 +377,18 @@ document.addEventListener("DOMContentLoaded", async () => {
     return [];
   }
 
-  async function fetchEmergencyProfile(childId) {
+  async function fetchCarePlan(childId) {
     const supabase = getSupabaseClient();
     if (!supabase) return null;
 
     const { data, error } = await supabase
-      .from("emergency_profiles")
+      .from("care_plans")
       .select("*")
       .eq("child_id", childId)
       .maybeSingle();
 
     if (error) {
-      console.warn("Could not load emergency profile:", error.message);
+      console.warn("Could not load care plan:", error.message);
       return null;
     }
 
@@ -652,7 +639,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     `;
   }
 
-  function renderEmergencySheet(child, profile, meds = []) {
+  function renderEmergencySheet(child, carePlan, meds = []) {
     if (!child) {
       emergencyBody.innerHTML = `<div class="muted">No child selected.</div>`;
       return;
@@ -673,20 +660,63 @@ document.addEventListener("DOMContentLoaded", async () => {
           .join("")
       : "No medications listed";
 
+    const baselineVitals = `
+      <div><strong>O₂:</strong> ${escapeHtml(carePlan?.baseline_o2 || "—")}</div>
+      <div><strong>Temp:</strong> ${escapeHtml(carePlan?.baseline_temp || "—")}</div>
+      <div><strong>HR:</strong> ${escapeHtml(carePlan?.baseline_hr || "—")}</div>
+      <div><strong>RR:</strong> ${escapeHtml(carePlan?.baseline_rr || "—")}</div>
+      <div><strong>BP:</strong> ${escapeHtml(carePlan?.baseline_bp || "—")}</div>
+    `;
+
+    const rescueMed = `
+      <div><strong>Name:</strong> ${escapeHtml(carePlan?.rescue_med_name || "—")}</div>
+      <div><strong>Dose:</strong> ${escapeHtml(carePlan?.rescue_med_dose || "—")}</div>
+      <div><strong>Route:</strong> ${escapeHtml(carePlan?.rescue_med_route || "—")}</div>
+    `;
+
     emergencyBody.innerHTML = `
       ${buildEmergencySection("Child", `
         <div><strong>Name:</strong> ${escapeHtml(child.name || "—")}</div>
         <div><strong>Age:</strong> ${escapeHtml(child.age ?? "—")}</div>
         <div><strong>Diagnoses:</strong> ${escapeHtml(diagnoses)}</div>
       `)}
-      ${buildEmergencySection("Allergies", escapeHtml(profile?.allergies || child.allergies || "None listed"))}
-      ${buildEmergencySection("Emergency Instructions", escapeHtml(profile?.instructions || "No instructions added yet."))}
+      ${buildEmergencySection("Allergies", escapeHtml(carePlan?.allergies || child.allergies || "None listed"))}
+      ${buildEmergencySection("Baseline Vitals", baselineVitals)}
+      ${buildEmergencySection(
+        "Emergency Protocol",
+        escapeHtml(carePlan?.seizure_protocol || "No emergency protocol added yet.")
+      )}
+      ${buildEmergencySection("Rescue Medication", rescueMed)}
+      ${buildEmergencySection(
+        "When to Call EMS",
+        escapeHtml(carePlan?.ems_when || "No EMS guidance added yet.")
+      )}
+      ${buildEmergencySection(
+        "Oxygen Guidance",
+        escapeHtml(carePlan?.oxygen_guidance || "No oxygen guidance added yet.")
+      )}
       ${buildEmergencySection("Medications", medList)}
-      ${buildEmergencySection("Contacts", `
-        <div><strong>Parent:</strong> ${escapeHtml(profile?.parent_contact || "—")}</div>
-        <div><strong>Doctor:</strong> ${escapeHtml(profile?.doctor_contact || "—")}</div>
-        <div><strong>Hospital:</strong> ${escapeHtml(profile?.preferred_hospital || "—")}</div>
-      `)}
+      ${buildEmergencySection(
+        "Daily Care Notes",
+        `
+          <div><strong>Feeding:</strong> ${escapeHtml(carePlan?.feeding_notes || "—")}</div>
+          <div><strong>Mobility:</strong> ${escapeHtml(carePlan?.mobility_notes || "—")}</div>
+          <div><strong>Communication:</strong> ${escapeHtml(carePlan?.communication_notes || "—")}</div>
+          <div><strong>Calming:</strong> ${escapeHtml(carePlan?.calming_notes || "—")}</div>
+        `
+      )}
+      ${buildEmergencySection(
+        "Contacts",
+        `
+          <div><strong>Emergency Contacts:</strong> ${escapeHtml(carePlan?.emergency_contacts || "—")}</div>
+          <div><strong>Doctor Contacts:</strong> ${escapeHtml(carePlan?.doctor_contacts || "—")}</div>
+          <div><strong>Hospital:</strong> ${escapeHtml(carePlan?.preferred_hospital || "—")}</div>
+        `
+      )}
+      ${buildEmergencySection(
+        "Additional Notes",
+        escapeHtml(carePlan?.additional_notes || "No additional notes.")
+      )}
     `;
   }
 
@@ -709,14 +739,13 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   function getLocalScheduleFallback() {
     const db = getLocalDB();
-    const todayItems = safeArray(db.today).map((item, index) => ({
+    return safeArray(db.today).map((item, index) => ({
       id: `local-today-${index}`,
       title: item.title,
       location: item.location,
       timeLabel: item.time || "—",
       date: item.time,
     }));
-    return todayItems;
   }
 
   function getLocalCareLogsFallback() {
@@ -741,6 +770,12 @@ document.addEventListener("DOMContentLoaded", async () => {
     return safeArray(db.inventory);
   }
 
+  function getLocalCarePlanFallback(childId) {
+    const db = getLocalDB();
+    const plans = db.carePlans || {};
+    return plans[childId] || null;
+  }
+
   // -----------------------------
   // Save actions
   // -----------------------------
@@ -756,7 +791,6 @@ document.addEventListener("DOMContentLoaded", async () => {
       category: categorySelect.value,
       note: noteInput.value.trim(),
       author: authorInput.value.trim() || "Parent",
-      specialties: getSelectedSpecialties(),
       created_at: new Date().toISOString(),
     };
 
@@ -867,7 +901,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       vitalsRaw,
       inventoryRaw,
       medicationsRaw,
-      emergencyProfile,
+      carePlan,
     ] = await Promise.all([
       fetchSchedule(activeChild.id),
       fetchCareLogs(activeChild.id),
@@ -875,13 +909,14 @@ document.addEventListener("DOMContentLoaded", async () => {
       fetchVitals(activeChild.id),
       fetchInventory(activeChild.id),
       fetchMedications(activeChild.id),
-      fetchEmergencyProfile(activeChild.id),
+      fetchCarePlan(activeChild.id),
     ]);
 
     const localSchedule = getLocalScheduleFallback();
     const localLogs = getLocalCareLogsFallback();
     const localVitals = getLocalVitalsFallback();
     const localInventory = getLocalInventoryFallback();
+    const localCarePlan = getLocalCarePlanFallback(activeChild.id);
 
     const scheduleItems = normalizeScheduleItems(
       scheduleItemsRaw.length ? scheduleItemsRaw : localSchedule
@@ -914,7 +949,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     renderLastVitals(vitals);
     renderInventory(inventory);
     renderLastSymptom(symptomLog);
-    renderEmergencySheet(activeChild, emergencyProfile, medicationsRaw);
+    renderEmergencySheet(activeChild, carePlan || localCarePlan, medicationsRaw);
   }
 
   // -----------------------------
@@ -958,7 +993,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     renderChildSwitcher();
     await loadDashboard();
 
-    // Events
     childSwitcher?.addEventListener("change", async (e) => {
       const selectedId = e.target.value;
       activeChild = children.find((c) => String(c.id) === String(selectedId)) || null;
