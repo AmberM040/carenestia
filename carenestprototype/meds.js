@@ -8,6 +8,7 @@ let db = loadDB();
 ----------------------------- */
 ensureDB(db);
 
+if (!Array.isArray(db.children)) db.children = [];
 if (!Array.isArray(db.meds)) db.meds = [];
 if (!Array.isArray(db.doseEvents)) db.doseEvents = [];
 if (!Array.isArray(db.medicationChangeHistory)) db.medicationChangeHistory = [];
@@ -117,8 +118,22 @@ async function fetchChildrenForUser(userId) {
   }));
 }
 
+function getChildrenSafe() {
+  return Array.isArray(db.children) ? db.children : [];
+}
+
 function getActiveChildSafe() {
-  return getActiveChild(db);
+  const children = getChildrenSafe();
+  if (!children.length) return null;
+
+  const preferredId = db.activeChildId || db.currentChildId || null;
+
+  if (preferredId) {
+    const match = children.find((child) => String(child.id) === String(preferredId));
+    if (match) return match;
+  }
+
+  return children[0] || null;
 }
 
 function getActiveChildIdSafe() {
@@ -127,8 +142,11 @@ function getActiveChildIdSafe() {
 }
 
 function setActiveChildIdSafe(id) {
-  db.activeChildId = id;
-  db.currentChildId = id;
+  const children = getChildrenSafe();
+  const validChild = children.find((child) => String(child.id) === String(id));
+
+  db.activeChildId = validChild ? validChild.id : null;
+  db.currentChildId = db.activeChildId;
   saveDB(db);
 }
 
@@ -262,16 +280,16 @@ function isSameDay(isoA, dateObj) {
 
 function getMedicationsForActiveChild() {
   const childId = getActiveChildIdSafe();
-  return db.meds.filter((m) => m.childId === childId);
+  return db.meds.filter((m) => String(m.childId) === String(childId));
 }
 
 function getMedicationById(id) {
-  return db.meds.find((m) => m.id === id);
+  return db.meds.find((m) => String(m.id) === String(id));
 }
 
 function getDoseEventsForMedication(id) {
   return db.doseEvents
-    .filter((log) => log.medId === id)
+    .filter((log) => String(log.medId) === String(id))
     .sort((a, b) => new Date(b.time || b.loggedAt) - new Date(a.time || a.loggedAt));
 }
 
@@ -294,12 +312,12 @@ function addChangeHistory(medId, action, detail) {
 
 function getChangeHistoryForActiveChild() {
   const childId = getActiveChildIdSafe();
-  return db.medicationChangeHistory.filter((item) => item.childId === childId);
+  return db.medicationChangeHistory.filter((item) => String(item.childId) === String(childId));
 }
 
 function getDoseEventsForActiveChild() {
   const childId = getActiveChildIdSafe();
-  return db.doseEvents.filter((item) => item.childId === childId);
+  return db.doseEvents.filter((item) => String(item.childId) === String(childId));
 }
 
 function describeMedication(med) {
@@ -356,7 +374,7 @@ function renderChildSwitcher() {
   if (!childSwitcher) return;
 
   childSwitcher.innerHTML = "";
-  const children = Array.isArray(db.children) ? db.children : [];
+  const children = getChildrenSafe();
 
   if (!children.length) {
     const option = document.createElement("option");
@@ -642,6 +660,8 @@ function getRecentDoseSafetyWarning(medication) {
    Render
 ----------------------------- */
 function renderTodayMeds() {
+  if (!todayMeds) return;
+
   const childId = getActiveChildIdSafe();
   if (!childId) {
     todayMeds.innerHTML = `<div class="muted">No active child selected.</div>`;
@@ -793,6 +813,8 @@ function renderTodayMeds() {
 }
 
 function renderMedList() {
+  if (!medList) return;
+
   const meds = getMedicationsForActiveChild()
     .filter((m) => (showArchived ? true : !m.archived))
     .map(normalizeMedication)
@@ -861,6 +883,8 @@ function renderMedList() {
 }
 
 function renderTimeline() {
+  if (!timeline) return;
+
   const logs = [...getDoseEventsForActiveChild()].sort(
     (a, b) => new Date(b.time || b.loggedAt) - new Date(a.time || a.loggedAt)
   );
@@ -874,7 +898,7 @@ function renderTimeline() {
     .slice(0, 100)
     .map((log) => {
       const med = getMedicationById(log.medId);
-      const medName = med ? med.name : "Unknown medication";
+      const medNameText = med ? med.name : "Unknown medication";
       const details = [];
 
       if (log.type === "scheduled" && log.scheduledTime) details.push(`Scheduled: ${log.scheduledTime}`);
@@ -884,7 +908,7 @@ function renderTimeline() {
 
       return `
       <div class="timeline-item">
-        <strong>${escapeHtml(medName)}</strong>
+        <strong>${escapeHtml(medNameText)}</strong>
         <div class="muted small">${formatDateTime(log.time || log.loggedAt)}</div>
         <div class="small">${escapeHtml(details.join(" • "))}</div>
       </div>
@@ -894,6 +918,8 @@ function renderTimeline() {
 }
 
 function renderChangeHistory() {
+  if (!changeHistory) return;
+
   const items = [...getChangeHistoryForActiveChild()].sort(
     (a, b) => new Date(b.changedAt) - new Date(a.changedAt)
   );
@@ -907,11 +933,11 @@ function renderChangeHistory() {
     .slice(0, 100)
     .map((item) => {
       const med = getMedicationById(item.medId);
-      const medName = med ? med.name : "Medication";
+      const medNameText = med ? med.name : "Medication";
 
       return `
       <div class="history-item">
-        <strong>${escapeHtml(medName)}</strong>
+        <strong>${escapeHtml(medNameText)}</strong>
         <div class="muted small">${formatDateTime(item.changedAt)}</div>
         <div class="small">${escapeHtml(item.action)} • ${escapeHtml(item.detail)}</div>
       </div>
@@ -928,7 +954,14 @@ function renderAll() {
   renderTimeline();
   renderChangeHistory();
   updateMedicationFormMode();
-  if (showArchivedBtn) showArchivedBtn.textContent = showArchived ? "Hide Archived" : "Show Archived";
+
+  if (showArchivedBtn) {
+    showArchivedBtn.textContent = showArchived ? "Hide Archived" : "Show Archived";
+  }
+
+  if (showArchivedBtnSidebar) {
+    showArchivedBtnSidebar.textContent = showArchived ? "Hide Archived" : "Show Archived";
+  }
 }
 
 /* -----------------------------
@@ -936,24 +969,26 @@ function renderAll() {
 ----------------------------- */
 function resetForm() {
   editingMedicationId = null;
-  formTitle.textContent = "Add Medication";
-  medName.value = "";
-  medDose.value = "";
-  medRoute.value = "";
-  medType.value = "scheduled";
-  medScheduleMode.value = "standard";
-  medFreq.value = "";
-  medTimes.value = "";
-  medMinGap.value = String(DEFAULT_MIN_GAP_HOURS);
-  medStartDate.value = todayYYYYMMDD();
-  medEndDate.value = "";
-  medNotes.value = "";
+  if (formTitle) formTitle.textContent = "Add Medication";
+  if (medName) medName.value = "";
+  if (medDose) medDose.value = "";
+  if (medRoute) medRoute.value = "";
+  if (medType) medType.value = "scheduled";
+  if (medScheduleMode) medScheduleMode.value = "standard";
+  if (medFreq) medFreq.value = "";
+  if (medTimes) medTimes.value = "";
+  if (medMinGap) medMinGap.value = String(DEFAULT_MIN_GAP_HOURS);
+  if (medStartDate) medStartDate.value = todayYYYYMMDD();
+  if (medEndDate) medEndDate.value = "";
+  if (medNotes) medNotes.value = "";
   resetWeanDraft();
   renderWeanSteps();
   updateMedicationFormMode();
 }
 
 function openForm(editMedication = null) {
+  if (!medFormCard) return;
+
   medFormCard.classList.remove("hidden");
 
   if (!editMedication) {
@@ -964,18 +999,18 @@ function openForm(editMedication = null) {
   const med = normalizeMedication(editMedication);
 
   editingMedicationId = med.id;
-  formTitle.textContent = "Edit Medication";
-  medName.value = med.name || "";
-  medDose.value = med.dose || "";
-  medRoute.value = med.route || "";
-  medType.value = med.type || "scheduled";
-  medScheduleMode.value = med.scheduleMode || "standard";
-  medFreq.value = med.freq || "";
-  medTimes.value = med.times || "";
-  medMinGap.value = String(med.minGapHours || DEFAULT_MIN_GAP_HOURS);
-  medStartDate.value = med.startDate || todayYYYYMMDD();
-  medEndDate.value = med.endDate || "";
-  medNotes.value = med.notes || "";
+  if (formTitle) formTitle.textContent = "Edit Medication";
+  if (medName) medName.value = med.name || "";
+  if (medDose) medDose.value = med.dose || "";
+  if (medRoute) medRoute.value = med.route || "";
+  if (medType) medType.value = med.type || "scheduled";
+  if (medScheduleMode) medScheduleMode.value = med.scheduleMode || "standard";
+  if (medFreq) medFreq.value = med.freq || "";
+  if (medTimes) medTimes.value = med.times || "";
+  if (medMinGap) medMinGap.value = String(med.minGapHours || DEFAULT_MIN_GAP_HOURS);
+  if (medStartDate) medStartDate.value = med.startDate || todayYYYYMMDD();
+  if (medEndDate) medEndDate.value = med.endDate || "";
+  if (medNotes) medNotes.value = med.notes || "";
 
   weanStepsDraft = Array.isArray(med.taperSteps)
     ? med.taperSteps.map((step) => ({ ...step, id: uid("step") }))
@@ -986,28 +1021,28 @@ function openForm(editMedication = null) {
 }
 
 function closeForm() {
-  medFormCard.classList.add("hidden");
+  if (medFormCard) medFormCard.classList.add("hidden");
 }
 
 function getFormPayload() {
-  const scheduleMode = medScheduleMode.value || "standard";
+  const scheduleMode = medScheduleMode?.value || "standard";
   const taperSteps = scheduleMode === "wean" ? collectWeanSteps() : [];
 
   return {
     childId: getActiveChildIdSafe(),
-    name: medName.value.trim(),
-    dose: medDose.value.trim(),
-    route: medRoute.value.trim(),
-    type: medType.value,
+    name: medName?.value.trim() || "",
+    dose: medDose?.value.trim() || "",
+    route: medRoute?.value.trim() || "",
+    type: medType?.value || "scheduled",
     scheduleMode,
-    freq: medFreq.value.trim(),
-    times: medTimes.value.trim(),
-    minGapHours: Number(medMinGap.value || DEFAULT_MIN_GAP_HOURS),
+    freq: medFreq?.value.trim() || "",
+    times: medTimes?.value.trim() || "",
+    minGapHours: Number(medMinGap?.value || DEFAULT_MIN_GAP_HOURS),
     graceMinutes: GRACE_MINUTES,
-    startDate: medStartDate.value || todayYYYYMMDD(),
-    endDate: medEndDate.value || "",
+    startDate: medStartDate?.value || todayYYYYMMDD(),
+    endDate: medEndDate?.value || "",
     taperSteps,
-    notes: medNotes.value.trim()
+    notes: medNotes?.value.trim() || ""
   };
 }
 
@@ -1159,8 +1194,8 @@ function deleteMedication(id) {
   const ok = confirm(`Delete ${med.name}?\n\nThis will also remove its dose history for this child.`);
   if (!ok) return;
 
-  db.meds = db.meds.filter((m) => m.id !== id);
-  db.doseEvents = db.doseEvents.filter((e) => e.medId !== id);
+  db.meds = db.meds.filter((m) => String(m.id) !== String(id));
+  db.doseEvents = db.doseEvents.filter((e) => String(e.medId) !== String(id));
   db.medicationChangeHistory.unshift({
     id: uid("change"),
     childId: med.childId,
@@ -1319,9 +1354,9 @@ function buildDoctorReport() {
   } else {
     recentLogs.forEach((log) => {
       const med = getMedicationById(log.medId);
-      const medName = med ? med.name : "Unknown";
+      const medNameText = med ? med.name : "Unknown";
 
-      text += `• ${formatDateTime(log.time || log.loggedAt)} — ${medName}`;
+      text += `• ${formatDateTime(log.time || log.loggedAt)} — ${medNameText}`;
 
       if (log.type === "scheduled" && log.scheduledTime) {
         text += ` — Scheduled dose (${log.scheduledTime})`;
@@ -1393,7 +1428,6 @@ function exportReport() {
    Events
 ----------------------------- */
 addMedBtn?.addEventListener("click", () => openForm());
-
 addMedBtnSidebar?.addEventListener("click", () => openForm());
 addMedBtnQuick?.addEventListener("click", () => openForm());
 
@@ -1422,38 +1456,34 @@ exportReportBtnQuick?.addEventListener("click", exportReport);
 
 copyReportBtn?.addEventListener("click", async () => {
   try {
-    await navigator.clipboard.writeText(reportOutput.textContent || "");
+    await navigator.clipboard.writeText(reportOutput?.textContent || "");
     alert("Report copied.");
   } catch (err) {
     alert("Could not copy report.");
   }
 });
 
-if (medType) medType.addEventListener("change", updateMedicationFormMode);
-if (medScheduleMode) medScheduleMode.addEventListener("change", updateMedicationFormMode);
+medType?.addEventListener("change", updateMedicationFormMode);
+medScheduleMode?.addEventListener("change", updateMedicationFormMode);
 
-if (addWeanStepBtn) {
-  addWeanStepBtn.addEventListener("click", () => addWeanStep());
-}
+addWeanStepBtn?.addEventListener("click", () => addWeanStep());
 
-if (weanStepsList) {
-  weanStepsList.addEventListener("input", (e) => {
-    const stepId = e.target.dataset.stepId;
-    if (!stepId) return;
+weanStepsList?.addEventListener("input", (e) => {
+  const stepId = e.target.dataset.stepId;
+  if (!stepId) return;
 
-    if (e.target.classList.contains("js-wean-label")) updateWeanStep(stepId, "label", e.target.value);
-    if (e.target.classList.contains("js-wean-dose")) updateWeanStep(stepId, "dose", e.target.value);
-    if (e.target.classList.contains("js-wean-start")) updateWeanStep(stepId, "startDate", e.target.value);
-    if (e.target.classList.contains("js-wean-end")) updateWeanStep(stepId, "endDate", e.target.value);
-    if (e.target.classList.contains("js-wean-times")) updateWeanStep(stepId, "times", e.target.value);
-  });
+  if (e.target.classList.contains("js-wean-label")) updateWeanStep(stepId, "label", e.target.value);
+  if (e.target.classList.contains("js-wean-dose")) updateWeanStep(stepId, "dose", e.target.value);
+  if (e.target.classList.contains("js-wean-start")) updateWeanStep(stepId, "startDate", e.target.value);
+  if (e.target.classList.contains("js-wean-end")) updateWeanStep(stepId, "endDate", e.target.value);
+  if (e.target.classList.contains("js-wean-times")) updateWeanStep(stepId, "times", e.target.value);
+});
 
-  weanStepsList.addEventListener("click", (e) => {
-    const btn = e.target.closest(".js-remove-wean-step");
-    if (!btn) return;
-    removeWeanStep(btn.dataset.stepId);
-  });
-}
+weanStepsList?.addEventListener("click", (e) => {
+  const btn = e.target.closest(".js-remove-wean-step");
+  if (!btn) return;
+  removeWeanStep(btn.dataset.stepId);
+});
 
 document.addEventListener("click", (e) => {
   const scheduledBtn = e.target.closest(".js-log-scheduled");
@@ -1518,12 +1548,12 @@ async function init() {
   db = loadDB();
   ensureDB(db);
 
+  if (!Array.isArray(db.children)) db.children = [];
   if (!Array.isArray(db.meds)) db.meds = [];
   if (!Array.isArray(db.doseEvents)) db.doseEvents = [];
   if (!Array.isArray(db.medicationChangeHistory)) db.medicationChangeHistory = [];
 
   db.meds = db.meds.map(normalizeMedication);
-  saveDB(db);
 
   const currentUser = await fetchUser();
 
@@ -1532,18 +1562,22 @@ async function init() {
 
     if (fetchedChildren.length) {
       db.children = fetchedChildren;
-
-      const savedActiveId = db.activeChildId;
-      const validActive =
-        fetchedChildren.find((child) => String(child.id) === String(savedActiveId)) ||
-        fetchedChildren[0] ||
-        null;
-
-      db.activeChildId = validActive ? validActive.id : null;
-      db.currentChildId = db.activeChildId;
-      saveDB(db);
     }
   }
+
+  const validActiveChild =
+    db.children.find((child) => String(child.id) === String(db.activeChildId || db.currentChildId)) ||
+    db.children[0] ||
+    null;
+
+  db.activeChildId = validActiveChild ? validActiveChild.id : null;
+  db.currentChildId = db.activeChildId;
+
+  saveDB(db);
+
+  console.log("Children loaded:", db.children);
+  console.log("Active child id:", db.activeChildId);
+  console.log("Active child:", getActiveChildSafe());
 
   resetForm();
   renderAll();
