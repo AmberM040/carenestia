@@ -1,0 +1,52 @@
+create table if not exists public.medications (
+  id uuid primary key default gen_random_uuid(),
+  child_id uuid not null references public.children(id) on delete cascade,
+  name text not null,
+  dose text null,
+  schedule_time text null,
+  instructions text null,
+  created_at timestamptz default now()
+);
+
+create table if not exists public.vitals (
+  id uuid primary key default gen_random_uuid(),
+  child_id uuid not null references public.children(id) on delete cascade,
+  o2_sat numeric null,
+  temperature numeric null,
+  bp_systolic numeric null,
+  bp_diastolic numeric null,
+  heart_rate numeric null,
+  respiratory_rate numeric null,
+  notes text null,
+  taken_at timestamptz default now(),
+  created_at timestamptz default now()
+);
+
+create table if not exists public.inventory (
+  id uuid primary key default gen_random_uuid(),
+  child_id uuid not null references public.children(id) on delete cascade,
+  name text not null,
+  quantity numeric null default 0,
+  low_threshold numeric null default 0,
+  created_at timestamptz default now()
+);
+
+create table if not exists public.schedule_items (
+  id uuid primary key default gen_random_uuid(),
+  child_id uuid not null references public.children(id) on delete cascade,
+  title text not null,
+  location text null,
+  type text null,
+  start_at timestamptz null,
+  created_at timestamptz default now()
+);
+
+create table if not exists public.appointments (
+  id uuid primary key default gen_random_uuid(),
+  child_id uuid not null references public.children(id) on delete cascade,
+  title text not null,
+  location text null,
+  type text null,
+  start_at timestamptz null,
+  created_at timestamptz default now()
+);
