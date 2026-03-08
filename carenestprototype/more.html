@@ -57,12 +57,14 @@
         <h2>Care Tools</h2>
       </div>
 
-      <a class="nav-card" href="careplan.html">
-  <strong>Care Plan</strong>
-  <span>Emergency instructions, protocols, and baseline info</span>
-</a>
-
       <div class="simple-list">
+        <a class="simple-item" href="careplan.html">
+          <div>
+            <div class="strong">Care Plan</div>
+            <div class="muted tiny">Emergency instructions, protocols, and baseline info</div>
+          </div>
+        </a>
+
         <a class="simple-item" href="inventory.html">
           <div>
             <div class="strong">Inventory</div>
@@ -137,10 +139,11 @@
 
   <button class="emergency-btn hidden" type="button">Emergency</button>
 
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="supabase.js"></script>
   <script src="storage.js"></script>
   <script src="auth.js"></script>
   <script src="more.js"></script>
 
 </body>
-
 </html>
