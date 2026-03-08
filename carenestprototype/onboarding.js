@@ -4,6 +4,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const successMsg = document.getElementById("successMsg");
 
   function showError(message) {
+    console.error(message);
     if (!errorMsg) return;
     errorMsg.textContent = message;
     errorMsg.style.display = "block";
@@ -28,51 +29,69 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
-  if (!form) return;
+  if (!form) {
+    console.error("onboardingForm not found");
+    return;
+  }
 
   form.addEventListener("submit", async (e) => {
     e.preventDefault();
     clearMessages();
 
-    const childName = document.getElementById("childName").value.trim();
-    const childBirthdate = document.getElementById("childBirthdate").value || null;
-    const childDiagnoses = document.getElementById("childDiagnoses").value.trim();
-    const childAllergies = document.getElementById("childAllergies").value.trim();
-    const childNotes = document.getElementById("childNotes").value.trim();
+    const childName = document.getElementById("childName")?.value.trim() || "";
+    const childBirthdate =
+      document.getElementById("childBirthdate")?.value || null;
+    const childDiagnoses =
+      document.getElementById("childDiagnoses")?.value.trim() || "";
+    const childAllergies =
+      document.getElementById("childAllergies")?.value.trim() || "";
+    const childNotes =
+      document.getElementById("childNotes")?.value.trim() || "";
 
     if (!childName) {
       showError("Please enter your child’s name.");
       return;
     }
 
-    const { data: userData, error: userError } = await supabaseClient.auth.getUser();
+    const {
+      data: { user },
+      error: userError,
+    } = await supabaseClient.auth.getUser();
 
-    if (userError || !userData.user) {
+    if (userError) {
+      showError(userError.message);
+      return;
+    }
+
+    if (!user) {
       showError("You must be logged in to continue.");
       return;
     }
 
-    const user = userData.user;
+    const payload = {
+      parent_id: user.id,
+      name: childName,
+      birthdate: childBirthdate,
+      diagnoses: childDiagnoses,
+      allergies: childAllergies,
+      notes: childNotes,
+    };
 
-    const { error } = await supabaseClient
+    console.log("Saving child payload:", payload);
+
+    const { data, error } = await supabaseClient
       .from("children")
-      .insert([
-        {
-          parent_id: user.id,
-          name: childName,
-          birthdate: childBirthdate,
-          diagnoses: childDiagnoses,
-          allergies: childAllergies,
-          notes: childNotes
-        }
-      ]);
+      .insert([payload])
+      .select();
 
     if (error) {
       showError(error.message);
       return;
     }
 
+    console.log("Child saved:", data);
     showSuccess("Child profile created. Redirecting...");
+
     setTimeout(() => {
       window.location.href = "index.html";
     }, 900);
