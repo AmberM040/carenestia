@@ -1,53 +1,50 @@
-document.addEventListener("DOMContentLoaded", () => {
-  const state = {
-    user: null,
-    children: [],
-    activeChildId: null,
-    activeChild: null,
-    careProfile: null,
-    equipmentProfile: null,
-    careLogs: []
-  };
+document.addEventListener("DOMContentLoaded", async () => {
+  const LOCAL_DB_KEY = "carenest_prototype_v1";
+  const ACTIVE_CHILD_KEY = "carenest_active_child_id";
 
-  // Elements
+  // -----------------------------
+  // DOM refs
+  // -----------------------------
   const welcomeText = document.getElementById("welcomeText");
+  const childSwitcher = document.getElementById("childSwitcher");
+  const logoutBtn = document.getElementById("logoutBtn");
+
   const childName = document.getElementById("childName");
   const childSummary = document.getElementById("childSummary");
   const diagnosisPills = document.getElementById("diagnosisPills");
-  const childSwitcher = document.getElementById("childSwitcher");
 
   const todayList = document.getElementById("todayList");
-  const careLogList = document.getElementById("careLogList");
   const homeScheduleList = document.getElementById("homeScheduleList");
+  const careLogList = document.getElementById("careLogList");
+
+  const lastVitalsCard = document.getElementById("lastVitalsCard");
+  const lastVitalsContent = document.getElementById("lastVitalsContent");
 
   const lowSupplyCard = document.getElementById("lowSupplyCard");
   const lowSupplySummary = document.getElementById("lowSupplySummary");
   const lowSupplyDashboardList = document.getElementById("lowSupplyDashboardList");
 
-  const lastVitalsCard = document.getElementById("lastVitalsCard");
-  const lastVitalsContent = document.getElementById("lastVitalsContent");
-
   const lastSymptomCard = document.getElementById("lastSymptomCard");
   const lastSymptomContent = document.getElementById("lastSymptomContent");
 
+  const btnEmergency = document.getElementById("btnEmergency");
+  const emergencyModal = document.getElementById("emergencyModal");
+  const btnCloseEmergency = document.getElementById("btnCloseEmergency");
+  const emergencyBody = document.getElementById("emergencyBody");
+
   const modal = document.getElementById("modal");
-  const categorySelect = document.getElementById("categorySelect");
-  const noteInput = document.getElementById("noteInput");
-  const authorInput = document.getElementById("authorInput");
-  const specialtyChecks = document.getElementById("specialtyChecks");
   const btnCloseModal = document.getElementById("btnCloseModal");
   const btnSave = document.getElementById("btnSave");
+  const categorySelect = document.getElementById("categorySelect");
+  const authorInput = document.getElementById("authorInput");
+  const specialtyChecks = document.getElementById("specialtyChecks");
+  const noteInput = document.getElementById("noteInput");
 
   const vitalsModal = document.getElementById("vitalsModal");
   const btnCloseVitalsModal = document.getElementById("btnCloseVitalsModal");
   const btnSaveQuickVitals = document.getElementById("btnSaveQuickVitals");
-  const quickO2 = document.getElementById("quickO2");
-  const quickTemp = document.getElementById("quickTemp");
-  const quickBpSys = document.getElementById("quickBpSys");
-  const quickBpDia = document.getElementById("quickBpDia");
-  const quickHr = document.getElementById("quickHr");
-  const quickRr = document.getElementById("quickRr");
-  const quickVitalNotes = document.getElementById("quickVitalNotes");
+  const quickVitalButtons = document.querySelectorAll("[data-quick-vital]");
+
   const wrapO2 = document.getElementById("wrapO2");
   const wrapTemp = document.getElementById("wrapTemp");
   const wrapBpSys = document.getElementById("wrapBpSys");
@@ -55,661 +52,962 @@ document.addEventListener("DOMContentLoaded", () => {
   const wrapHr = document.getElementById("wrapHr");
   const wrapRr = document.getElementById("wrapRr");
 
-  const emergencyModal = document.getElementById("emergencyModal");
-  const emergencyBody = document.getElementById("emergencyBody");
-  const btnEmergency = document.getElementById("btnEmergency");
-  const btnCloseEmergency = document.getElementById("btnCloseEmergency");
-  const bottomEmergencyBtn = document.querySelector(".emergency-btn");
+  const quickO2 = document.getElementById("quickO2");
+  const quickTemp = document.getElementById("quickTemp");
+  const quickBpSys = document.getElementById("quickBpSys");
+  const quickBpDia = document.getElementById("quickBpDia");
+  const quickHr = document.getElementById("quickHr");
+  const quickRr = document.getElementById("quickRr");
+  const quickVitalNotes = document.getElementById("quickVitalNotes");
 
-  const required = {
-    childSummary,
-    childSwitcher,
-    todayList,
-    careLogList,
-    modal,
-    categorySelect,
-    noteInput,
-    authorInput,
-    specialtyChecks,
-    btnCloseModal,
-    btnSave,
-    emergencyModal,
-    emergencyBody,
-    btnCloseEmergency
-  };
+  const quickCategoryButtons = document.querySelectorAll("[data-category]");
 
-  const missing = Object.entries(required)
-    .filter(([, v]) => !v)
-    .map(([k]) => k);
+  // -----------------------------
+  // State
+  // -----------------------------
+  let currentUser = null;
+  let children = [];
+  let activeChild = null;
+  let currentQuickVitalMode = "full";
 
-  if (missing.length) {
-    alert("Missing elements in index.html: " + missing.join(", "));
-    return;
+  // -----------------------------
+  // Helpers
+  // -----------------------------
+  function show(el) {
+    el?.classList.remove("hidden");
   }
 
-  function calculateAge(birthdate) {
-    const birth = new Date(birthdate);
-    if (Number.isNaN(birth.getTime())) return "—";
-
-    const today = new Date();
-    let age = today.getFullYear() - birth.getFullYear();
-
-    const hadBirthdayThisYear =
-      today.getMonth() > birth.getMonth() ||
-      (today.getMonth() === birth.getMonth() && today.getDate() >= birth.getDate());
-
-    if (!hadBirthdayThisYear) age -= 1;
-    return age;
+  function hide(el) {
+    el?.classList.add("hidden");
   }
 
-  function fmtDateTime(value) {
-    const date = new Date(value);
-    if (Number.isNaN(date.getTime())) return "Unknown time";
+  function safeArray(value) {
+    return Array.isArray(value) ? value : [];
+  }
 
-    return date.toLocaleString([], {
+  function escapeHtml(str = "") {
+    return String(str)
+      .replaceAll("&", "&amp;")
+      .replaceAll("<", "&lt;")
+      .replaceAll(">", "&gt;")
+      .replaceAll('"', "&quot;")
+      .replaceAll("'", "&#039;");
+  }
+
+  function formatDateTime(value) {
+    if (!value) return "—";
+    const d = new Date(value);
+    if (Number.isNaN(d.getTime())) return value;
+    return d.toLocaleString([], {
       month: "short",
       day: "numeric",
       hour: "numeric",
-      minute: "2-digit"
+      minute: "2-digit",
     });
   }
 
-  function categoryLabel(value) {
-    const map = {
-      symptom: "Symptom",
-      question: "Question",
-      note: "Care Note",
-      med: "Medication"
-    };
-    return map[value] || "Entry";
-  }
-
-  async function loadUser() {
-    const {
-      data: { user },
-      error
-    } = await supabaseClient.auth.getUser();
-
-    if (error || !user) {
-      window.location.href = "login.html";
-      return false;
-    }
-
-    state.user = user;
-    return true;
-  }
-
-  async function loadChildren() {
-    const { data, error } = await supabaseClient
-      .from("children")
-      .select("*")
-      .eq("parent_id", state.user.id)
-      .order("created_at", { ascending: true });
-
-    if (error) {
-      console.error("Error loading children:", error);
-      alert("Could not load children.");
-      return false;
-    }
-
-    if (!data || !data.length) {
-      window.location.href = "onboarding.html";
-      return false;
-    }
-
-    state.children = data;
-    return true;
-  }
-
-  function setInitialActiveChild() {
-    if (!state.children.length) {
-      state.activeChildId = null;
-      state.activeChild = null;
-      return;
-    }
-
-    const firstChild = state.children[0];
-    state.activeChildId = firstChild.id;
-    state.activeChild = firstChild;
-
-    console.log("Active child set:", firstChild);
-  }
-
-  async function loadActiveChildProfiles() {
-    if (!state.activeChildId) return;
-
-    const { data: careProfile, error: careError } = await supabaseClient
-      .from("child_care_profiles")
-      .select("*")
-      .eq("child_id", state.activeChildId)
-      .maybeSingle();
-
-    if (careError) {
-      console.error("Error loading care profile:", careError);
-    }
-
-    const { data: equipmentProfile, error: equipmentError } = await supabaseClient
-      .from("child_equipment_profiles")
-      .select("*")
-      .eq("child_id", state.activeChildId)
-      .maybeSingle();
-
-    if (equipmentError) {
-      console.error("Error loading equipment profile:", equipmentError);
-    }
-
-    state.careProfile = careProfile || {};
-    state.equipmentProfile = equipmentProfile || {};
-  }
-
-  async function loadActiveChildCareLogs() {
-    if (!state.activeChildId) return;
-
-    const { data, error } = await supabaseClient
-      .from("care_logs")
-      .select("*")
-      .eq("child_id", state.activeChildId)
-      .order("created_at", { ascending: false })
-      .limit(3);
-
-    if (error) {
-      console.error("Error loading care logs:", error);
-      state.careLogs = [];
-      return;
-    }
-
-    state.careLogs = data || [];
-  }
-
-  async function selectChild(childId) {
-    const child = state.children.find((c) => c.id === childId);
-    if (!child) return;
-
-    state.activeChildId = child.id;
-    state.activeChild = child;
-
-    console.log("Switched child:", child);
-
-    await loadActiveChildProfiles();
-    await loadActiveChildCareLogs();
-
-    render();
-  }
-
-  function fillChildSwitcher() {
-    childSwitcher.innerHTML = "";
-
-    state.children.forEach((child) => {
-      const opt = document.createElement("option");
-      opt.value = child.id;
-      opt.textContent = child.name;
-      childSwitcher.appendChild(opt);
+  function formatDateOnly(value) {
+    if (!value) return "—";
+    const d = new Date(value);
+    if (Number.isNaN(d.getTime())) return value;
+    return d.toLocaleDateString([], {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
     });
-
-    childSwitcher.value = state.activeChildId || "";
   }
 
-  function getAllowedSpecialties() {
-    const care = state.careProfile || {};
-    const equipment = state.equipmentProfile || {};
-    const derived = ["General"];
-
-    if (care.has_respiratory || equipment.oxygen || equipment.trach || equipment.ventilator) {
-      derived.push("Pulmonology");
-    }
-
-    if (care.has_cardiology || equipment.heart_rate_monitoring || equipment.blood_pressure_monitoring) {
-      derived.push("Cardiology");
-    }
-
-    if (care.has_feeds || equipment.g_tube || equipment.j_tube || equipment.feeding_pump) {
-      derived.push("GI");
-    }
-
-    if (care.has_therapies) {
-      derived.push("PT/OT");
-    }
-
-    if (care.has_symptoms) {
-      derived.push("Neurology");
-    }
-
-    return [...new Set(derived)];
+  function isToday(dateValue) {
+    if (!dateValue) return false;
+    const d = new Date(dateValue);
+    const now = new Date();
+    return (
+      d.getFullYear() === now.getFullYear() &&
+      d.getMonth() === now.getMonth() &&
+      d.getDate() === now.getDate()
+    );
   }
 
-  function renderSpecialtyChecks(defaultSelected = []) {
-    specialtyChecks.innerHTML = "";
-
-    const allowed = getAllowedSpecialties();
-    const list = allowed.filter((s) => s !== "General");
-
-    if (!list.length) {
-      specialtyChecks.innerHTML = `<div class="muted tiny">General only.</div>`;
-      return;
+  function getLocalDB() {
+    try {
+      const raw = localStorage.getItem(LOCAL_DB_KEY);
+      return raw ? JSON.parse(raw) : {};
+    } catch (err) {
+      console.error("Failed to parse local DB:", err);
+      return {};
     }
+  }
 
-    list.forEach((s) => {
-      const id = "spec_" + s.replace(/\W+/g, "_");
-      const label = document.createElement("label");
-      label.className = "chip";
-      label.style.cursor = "pointer";
-      label.style.display = "inline-flex";
-      label.style.alignItems = "center";
-      label.style.gap = "8px";
-
-      label.innerHTML = `
-        <input type="checkbox" id="${id}" value="${s}" />
-        <span>${s}</span>
-      `;
-
-      specialtyChecks.appendChild(label);
-
-      const box = label.querySelector("input");
-      if (defaultSelected.includes(s)) box.checked = true;
-    });
+  function saveLocalDB(db) {
+    try {
+      localStorage.setItem(LOCAL_DB_KEY, JSON.stringify(db));
+    } catch (err) {
+      console.error("Failed to save local DB:", err);
+    }
   }
 
   function getSelectedSpecialties() {
-    const checked = [...specialtyChecks.querySelectorAll('input[type="checkbox"]:checked')].map((x) => x.value);
-    return checked.length ? checked : ["General"];
+    return [...specialtyChecks.querySelectorAll('input[type="checkbox"]:checked')].map(
+      (input) => input.value
+    );
   }
 
-  function renderHeader() {
-    const child = state.activeChild;
-    const care = state.careProfile || {};
-
-    if (welcomeText) {
-      const activeAreas = [
-        care.has_medications ? "meds" : null,
-        care.has_feeds ? "feeds" : null,
-        care.has_respiratory ? "respiratory" : null,
-        care.has_cardiology ? "cardiology" : null
-      ].filter(Boolean);
-
-      welcomeText.textContent = activeAreas.length
-        ? `Managing ${activeAreas.join(", ")}`
-        : "Welcome back";
-    }
-
-    if (!child) return;
-
-    if (childName) {
-      childName.textContent = child.name || "Child";
-    }
-
-    if (childSummary) {
-      const diagnoses = child.diagnoses
-        ? child.diagnoses.split(",").map((d) => d.trim()).filter(Boolean)
-        : [];
-      childSummary.textContent = `Age ${child.birthdate ? calculateAge(child.birthdate) : "—"}${diagnoses.length ? ` • ${diagnoses.join(" • ")}` : ""}`;
-    }
-
-    if (diagnosisPills) {
-      diagnosisPills.innerHTML = "";
-      const diagnoses = child.diagnoses
-        ? child.diagnoses.split(",").map((d) => d.trim()).filter(Boolean)
-        : [];
-
-      diagnoses.forEach((dx) => {
-        const pill = document.createElement("span");
-        pill.className = "pill";
-        pill.textContent = dx;
-        diagnosisPills.appendChild(pill);
-      });
-    }
+  function setActiveChildId(id) {
+    localStorage.setItem(ACTIVE_CHILD_KEY, id);
   }
 
-  function applyAdaptiveUI() {
-    const care = state.careProfile || {};
-    const equipment = state.equipmentProfile || {};
+  function getActiveChildId() {
+    return localStorage.getItem(ACTIVE_CHILD_KEY);
+  }
 
-    const showVitals =
-      !!care.has_respiratory ||
-      !!care.has_cardiology ||
-      !!equipment.oxygen ||
-      !!equipment.pulse_ox ||
-      !!equipment.heart_rate_monitoring ||
-      !!equipment.blood_pressure_monitoring ||
-      !!equipment.cardiac_monitor;
+  function getSupabaseClient() {
+    if (window.supabaseClient) return window.supabaseClient;
+    if (window.supabase) return window.supabase;
+    return null;
+  }
 
-    const showInventory = !!care.has_inventory;
-    const showSymptoms = !!care.has_symptoms;
+  function fillSpecialties(specialties = []) {
+    specialtyChecks.innerHTML = "";
+    const list =
+      specialties.length > 0
+        ? specialties
+        : ["General", "Neurology", "Pulmonology", "GI", "Cardiology", "PT/OT", "Primary Care"];
 
-    if (lastVitalsCard) {
-      lastVitalsCard.classList.toggle("hidden", !showVitals);
+    list.forEach((item) => {
+      const id = `spec_${item.replace(/\W+/g, "_").toLowerCase()}`;
+      const label = document.createElement("label");
+      label.className = "chip";
+      label.innerHTML = `
+        <input type="checkbox" id="${id}" value="${escapeHtml(item)}" />
+        <span>${escapeHtml(item)}</span>
+      `;
+      specialtyChecks.appendChild(label);
+    });
+  }
+
+  function openQuickLog(category = "note") {
+    categorySelect.value = category;
+    noteInput.value = "";
+    show(modal);
+  }
+
+  function closeQuickLog() {
+    hide(modal);
+  }
+
+  function openVitalsModal(mode = "full") {
+    currentQuickVitalMode = mode;
+    clearVitalsInputs();
+    updateVitalFieldVisibility(mode);
+    show(vitalsModal);
+  }
+
+  function closeVitalsModal() {
+    hide(vitalsModal);
+  }
+
+  function clearVitalsInputs() {
+    quickO2.value = "";
+    quickTemp.value = "";
+    quickBpSys.value = "";
+    quickBpDia.value = "";
+    quickHr.value = "";
+    quickRr.value = "";
+    quickVitalNotes.value = "";
+  }
+
+  function updateVitalFieldVisibility(mode) {
+    const showMap = {
+      o2: ["wrapO2"],
+      temp: ["wrapTemp"],
+      bp: ["wrapBpSys", "wrapBpDia"],
+      hr: ["wrapHr"],
+      rr: ["wrapRr"],
+      full: ["wrapO2", "wrapTemp", "wrapBpSys", "wrapBpDia", "wrapHr", "wrapRr"],
+    };
+
+    const visible = new Set(showMap[mode] || showMap.full);
+    [wrapO2, wrapTemp, wrapBpSys, wrapBpDia, wrapHr, wrapRr].forEach((el) => {
+      if (!el) return;
+      if (visible.has(el.id)) show(el);
+      else hide(el);
+    });
+  }
+
+  // -----------------------------
+  // Supabase fetch helpers
+  // -----------------------------
+  async function fetchUser() {
+    const supabase = getSupabaseClient();
+    if (!supabase?.auth) return null;
+
+    const { data, error } = await supabase.auth.getUser();
+    if (error) {
+      console.error("Error getting user:", error);
+      return null;
     }
 
-    if (lowSupplyCard) {
-      lowSupplyCard.classList.toggle("hidden", !showInventory);
+    return data?.user || null;
+  }
+
+  async function fetchChildren(userId) {
+    const supabase = getSupabaseClient();
+    if (!supabase) return [];
+
+    const { data, error } = await supabase
+      .from("children")
+      .select("*")
+      .eq("parent_user_id", userId)
+      .order("created_at", { ascending: true });
+
+    if (error) {
+      console.warn("Could not load children from Supabase:", error.message);
+      return [];
     }
 
-    if (lastSymptomCard) {
-      lastSymptomCard.classList.toggle("hidden", !showSymptoms);
+    return data || [];
+  }
+
+  async function fetchMedications(childId) {
+    const supabase = getSupabaseClient();
+    if (!supabase) return [];
+
+    const { data, error } = await supabase
+      .from("medications")
+      .select("*")
+      .eq("child_id", childId)
+      .order("created_at", { ascending: false });
+
+    if (error) {
+      console.warn("Could not load medications:", error.message);
+      return [];
     }
 
-    const emergencyButtonShouldShow =
-      !!care.has_respiratory ||
-      !!care.has_cardiology ||
-      !!care.has_feeds ||
-      !!care.has_medications ||
-      !!equipment.trach ||
-      !!equipment.ventilator ||
-      !!equipment.g_tube ||
-      !!equipment.oxygen;
+    return data || [];
+  }
 
-    if (bottomEmergencyBtn) {
-      bottomEmergencyBtn.classList.toggle("hidden", !emergencyButtonShouldShow);
+  async function fetchCareLogs(childId) {
+    const supabase = getSupabaseClient();
+    if (!supabase) return [];
+
+    const { data, error } = await supabase
+      .from("care_logs")
+      .select("*")
+      .eq("child_id", childId)
+      .order("created_at", { ascending: false })
+      .limit(8);
+
+    if (error) {
+      console.warn("Could not load care logs:", error.message);
+      return [];
     }
+
+    return data || [];
   }
 
-  function renderToday() {
-    todayList.innerHTML = `<li class="muted tiny">Schedule sync comes next.</li>`;
-  }
+  async function fetchAllCareLogsForSymptom(childId) {
+    const supabase = getSupabaseClient();
+    if (!supabase) return [];
 
-  function renderHomeSchedule() {
-    homeScheduleList.innerHTML = `<div class="empty-state">Schedule sync comes next.</div>`;
-  }
+    const { data, error } = await supabase
+      .from("care_logs")
+      .select("*")
+      .eq("child_id", childId)
+      .eq("category", "symptom")
+      .order("created_at", { ascending: false })
+      .limit(1);
 
-  function renderLowSupplies() {
-    if (!lowSupplyCard || !lowSupplySummary || !lowSupplyDashboardList) return;
-
-    if (state.careProfile?.has_inventory) {
-      lowSupplySummary.textContent = "Inventory sync comes next.";
-      lowSupplyDashboardList.innerHTML = `<div class="muted tiny">No inventory alerts yet.</div>`;
-    } else {
-      lowSupplySummary.textContent = "";
-      lowSupplyDashboardList.innerHTML = "";
+    if (error) {
+      console.warn("Could not load symptoms:", error.message);
+      return [];
     }
+
+    return data || [];
   }
 
-  function renderLastVitals() {
-    if (!lastVitalsCard || !lastVitalsContent) return;
-    lastVitalsContent.innerHTML = `<div class="muted tiny">Vitals sync comes next.</div>`;
+  async function fetchVitals(childId) {
+    const supabase = getSupabaseClient();
+    if (!supabase) return [];
+
+    const { data, error } = await supabase
+      .from("vitals")
+      .select("*")
+      .eq("child_id", childId)
+      .order("taken_at", { ascending: false })
+      .limit(1);
+
+    if (error) {
+      console.warn("Could not load vitals:", error.message);
+      return [];
+    }
+
+    return data || [];
   }
 
-  function renderLastSymptom() {
-    if (!lastSymptomCard || !lastSymptomContent) return;
-    lastSymptomContent.innerHTML = `<div class="muted tiny">Symptom sync comes next.</div>`;
+  async function fetchInventory(childId) {
+    const supabase = getSupabaseClient();
+    if (!supabase) return [];
+
+    const { data, error } = await supabase
+      .from("inventory")
+      .select("*")
+      .eq("child_id", childId)
+      .order("name", { ascending: true });
+
+    if (error) {
+      console.warn("Could not load inventory:", error.message);
+      return [];
+    }
+
+    return data || [];
   }
 
-  function renderCareLogs() {
-    careLogList.innerHTML = "";
+  async function fetchSchedule(childId) {
+    const supabase = getSupabaseClient();
+    if (!supabase) return [];
 
-    if (!state.careLogs.length) {
-      careLogList.innerHTML = `<li class="muted tiny">No entries yet. Try Quick Log.</li>`;
+    // First try schedule_items
+    let result = await supabase
+      .from("schedule_items")
+      .select("*")
+      .eq("child_id", childId)
+      .order("start_at", { ascending: true });
+
+    if (!result.error) return result.data || [];
+
+    console.warn("schedule_items not available, trying appointments:", result.error.message);
+
+    // Fallback to appointments
+    result = await supabase
+      .from("appointments")
+      .select("*")
+      .eq("child_id", childId)
+      .order("start_at", { ascending: true });
+
+    if (!result.error) return result.data || [];
+
+    console.warn("Could not load schedule:", result.error.message);
+    return [];
+  }
+
+  async function fetchEmergencyProfile(childId) {
+    const supabase = getSupabaseClient();
+    if (!supabase) return null;
+
+    const { data, error } = await supabase
+      .from("emergency_profiles")
+      .select("*")
+      .eq("child_id", childId)
+      .maybeSingle();
+
+    if (error) {
+      console.warn("Could not load emergency profile:", error.message);
+      return null;
+    }
+
+    return data || null;
+  }
+
+  // -----------------------------
+  // Render helpers
+  // -----------------------------
+  function renderChildSwitcher() {
+    childSwitcher.innerHTML = "";
+
+    if (!children.length) {
+      const option = document.createElement("option");
+      option.value = "";
+      option.textContent = "No children yet";
+      childSwitcher.appendChild(option);
       return;
     }
 
-    state.careLogs.forEach((entry) => {
-      const specs = Array.isArray(entry.specialties) && entry.specialties.length
-        ? entry.specialties.join(", ")
-        : "General";
+    children.forEach((child) => {
+      const option = document.createElement("option");
+      option.value = child.id;
+      option.textContent = child.name || "Unnamed Child";
+      if (activeChild && String(activeChild.id) === String(child.id)) {
+        option.selected = true;
+      }
+      childSwitcher.appendChild(option);
+    });
+  }
 
+  function renderChildSummaryCard(child) {
+    if (!child) {
+      childName.textContent = "Child";
+      childSummary.textContent = "Age —";
+      diagnosisPills.innerHTML = "";
+      return;
+    }
+
+    childName.textContent = child.name || "Child";
+
+    const ageText =
+      child.age !== null && child.age !== undefined && child.age !== ""
+        ? `Age ${child.age}`
+        : "Age —";
+
+    childSummary.textContent = ageText;
+
+    diagnosisPills.innerHTML = "";
+    const diagnoses = safeArray(child.diagnoses);
+
+    if (!diagnoses.length) {
+      diagnosisPills.innerHTML = `<span class="pill">No diagnoses added</span>`;
+      return;
+    }
+
+    diagnoses.forEach((diagnosis) => {
+      const span = document.createElement("span");
+      span.className = "pill";
+      span.textContent = diagnosis;
+      diagnosisPills.appendChild(span);
+    });
+  }
+
+  function renderTodayList(items = []) {
+    todayList.innerHTML = "";
+
+    if (!items.length) {
+      todayList.innerHTML = `<li class="list-item muted">Nothing scheduled for today.</li>`;
+      return;
+    }
+
+    items.forEach((item) => {
       const li = document.createElement("li");
-      li.className = "item";
+      li.className = "list-item";
       li.innerHTML = `
-        <div class="left">
-          <span class="badge">${categoryLabel(entry.category)}</span>
-          <div>
-            <div class="strong">${entry.note}</div>
-            <div class="muted tiny">${entry.author || "Caregiver"} • ${fmtDateTime(entry.created_at)} • ${specs}</div>
-          </div>
+        <div>
+          <strong>${escapeHtml(item.title || item.name || "Untitled")}</strong>
+          <div class="muted">${escapeHtml(item.location || item.type || "")}</div>
+        </div>
+        <div class="muted">${escapeHtml(item.timeLabel || "—")}</div>
+      `;
+      todayList.appendChild(li);
+    });
+  }
+
+  function renderUpcomingSchedule(items = []) {
+    homeScheduleList.innerHTML = "";
+
+    if (!items.length) {
+      homeScheduleList.innerHTML = `<div class="list-item muted">No upcoming schedule items.</div>`;
+      return;
+    }
+
+    items.forEach((item) => {
+      const div = document.createElement("div");
+      div.className = "list-item";
+      div.innerHTML = `
+        <div>
+          <strong>${escapeHtml(item.title || item.name || "Untitled")}</strong>
+          <div class="muted">${escapeHtml(item.location || item.type || "")}</div>
+        </div>
+        <div class="muted">${escapeHtml(item.timeLabel || "—")}</div>
+      `;
+      homeScheduleList.appendChild(div);
+    });
+  }
+
+  function renderCareLogs(logs = []) {
+    careLogList.innerHTML = "";
+
+    if (!logs.length) {
+      careLogList.innerHTML = `<li class="list-item muted">No recent care log entries.</li>`;
+      return;
+    }
+
+    logs.forEach((log) => {
+      const li = document.createElement("li");
+      li.className = "list-item";
+      li.innerHTML = `
+        <div>
+          <strong>${escapeHtml(log.categoryLabel || capitalize(log.category || "note"))}</strong>
+          <div>${escapeHtml(log.note || "")}</div>
+          <div class="muted">${escapeHtml(log.author || "Unknown")} • ${escapeHtml(
+            log.timeLabel || "—"
+          )}</div>
         </div>
       `;
       careLogList.appendChild(li);
     });
   }
 
-  function render() {
-    renderHeader();
-    applyAdaptiveUI();
-    renderToday();
-    renderHomeSchedule();
-    renderLowSupplies();
-    renderLastVitals();
-    renderLastSymptom();
-    renderCareLogs();
-  }
-
-  function openModal(categoryValue) {
-    categorySelect.value = categoryValue;
-    noteInput.value = "";
-    authorInput.value = "Mom";
-    renderSpecialtyChecks([]);
-    modal.classList.remove("hidden");
-    noteInput.focus();
-  }
-
-  function closeModal() {
-    modal.classList.add("hidden");
-  }
-
-  async function saveQuickLog() {
-    const note = noteInput.value.trim();
-    const author = authorInput.value.trim() || "Caregiver";
-    const category = categorySelect.value;
-    const specialties = getSelectedSpecialties();
-
-    if (!note) {
-      alert("Please type a note.");
+  function renderLastVitals(vitals) {
+    if (!vitals) {
+      hide(lastVitalsCard);
       return;
     }
 
-    if (!state.activeChildId || !state.user) {
-      alert("No active child selected.");
-      return;
-    }
+    const bp =
+      vitals.bp_systolic && vitals.bp_diastolic
+        ? `${vitals.bp_systolic}/${vitals.bp_diastolic}`
+        : "—";
 
-    const { error } = await supabaseClient
-      .from("care_logs")
-      .insert([
-        {
-          child_id: state.activeChildId,
-          parent_id: state.user.id,
-          category,
-          note,
-          author,
-          specialties,
-          created_at: new Date().toISOString()
-        }
-      ]);
+    lastVitalsContent.innerHTML = `
+      <div class="grid-2">
+        <div class="list-item"><strong>O₂:</strong> ${escapeHtml(vitals.o2_sat ?? "—")}</div>
+        <div class="list-item"><strong>Temp:</strong> ${escapeHtml(vitals.temperature ?? "—")}</div>
+        <div class="list-item"><strong>BP:</strong> ${escapeHtml(bp)}</div>
+        <div class="list-item"><strong>HR:</strong> ${escapeHtml(vitals.heart_rate ?? "—")}</div>
+        <div class="list-item"><strong>RR:</strong> ${escapeHtml(vitals.respiratory_rate ?? "—")}</div>
+        <div class="list-item"><strong>Taken:</strong> ${escapeHtml(
+          formatDateTime(vitals.taken_at || vitals.created_at)
+        )}</div>
+      </div>
+      ${
+        vitals.notes
+          ? `<div class="mt-12 muted"><strong>Notes:</strong> ${escapeHtml(vitals.notes)}</div>`
+          : ""
+      }
+    `;
 
-    if (error) {
-      console.error("Quick log save error:", error);
-      alert(error.message);
-      return;
-    }
-
-    closeModal();
-    await loadActiveChildCareLogs();
-    render();
+    show(lastVitalsCard);
   }
 
-  function resetQuickVitalsForm() {
-    if (quickO2) quickO2.value = "";
-    if (quickTemp) quickTemp.value = "";
-    if (quickBpSys) quickBpSys.value = "";
-    if (quickBpDia) quickBpDia.value = "";
-    if (quickHr) quickHr.value = "";
-    if (quickRr) quickRr.value = "";
-    if (quickVitalNotes) quickVitalNotes.value = "";
-  }
-
-  function showVitalFields(mode) {
-    [wrapO2, wrapTemp, wrapBpSys, wrapBpDia, wrapHr, wrapRr].forEach((el) => {
-      if (el) el.style.display = "";
+  function renderInventory(items = []) {
+    const lowItems = items.filter((item) => {
+      const qty = Number(item.quantity ?? item.qty ?? 0);
+      const threshold = Number(item.low_threshold ?? item.threshold ?? 0);
+      return threshold > 0 && qty <= threshold;
     });
 
-    if (!wrapO2 || !wrapTemp || !wrapBpSys || !wrapBpDia || !wrapHr || !wrapRr) return;
-
-    if (mode === "o2") {
-      wrapTemp.style.display = "none";
-      wrapBpSys.style.display = "none";
-      wrapBpDia.style.display = "none";
-      wrapHr.style.display = "none";
-      wrapRr.style.display = "none";
+    if (!lowItems.length) {
+      hide(lowSupplyCard);
+      return;
     }
 
-    if (mode === "temp") {
-      wrapO2.style.display = "none";
-      wrapBpSys.style.display = "none";
-      wrapBpDia.style.display = "none";
-      wrapHr.style.display = "none";
-      wrapRr.style.display = "none";
-    }
+    lowSupplySummary.textContent =
+      lowItems.length === 1
+        ? "1 item is running low."
+        : `${lowItems.length} items are running low.`;
 
-    if (mode === "bp") {
-      wrapO2.style.display = "none";
-      wrapTemp.style.display = "none";
-      wrapHr.style.display = "none";
-      wrapRr.style.display = "none";
-    }
+    lowSupplyDashboardList.innerHTML = "";
+    lowItems.slice(0, 5).forEach((item) => {
+      const div = document.createElement("div");
+      div.className = "list-item";
+      div.innerHTML = `
+        <div>
+          <strong>${escapeHtml(item.name || "Supply")}</strong>
+          <div class="muted">Qty: ${escapeHtml(item.quantity ?? item.qty ?? "—")}</div>
+        </div>
+        <div class="muted">Low at ${escapeHtml(item.low_threshold ?? item.threshold ?? "—")}</div>
+      `;
+      lowSupplyDashboardList.appendChild(div);
+    });
 
-    if (mode === "hr") {
-      wrapO2.style.display = "none";
-      wrapTemp.style.display = "none";
-      wrapBpSys.style.display = "none";
-      wrapBpDia.style.display = "none";
-      wrapRr.style.display = "none";
-    }
-
-    if (mode === "rr") {
-      wrapO2.style.display = "none";
-      wrapTemp.style.display = "none";
-      wrapBpSys.style.display = "none";
-      wrapBpDia.style.display = "none";
-      wrapHr.style.display = "none";
-    }
+    show(lowSupplyCard);
   }
 
-  function openVitalsModal(mode = "full") {
-    if (!vitalsModal) return;
-    resetQuickVitalsForm();
-    showVitalFields(mode);
-    vitalsModal.classList.remove("hidden");
-  }
+  function renderLastSymptom(symptomLog) {
+    if (!symptomLog) {
+      hide(lastSymptomCard);
+      return;
+    }
 
-  function closeVitalsModal() {
-    if (!vitalsModal) return;
-    vitalsModal.classList.add("hidden");
-  }
-
-  function openEmergency() {
-    if (!state.activeChild) return;
-
-    const child = state.activeChild;
-    const equipment = state.equipmentProfile || {};
-
-    const diagnoses = child.diagnoses
-      ? child.diagnoses.split(",").map((d) => d.trim()).filter(Boolean)
-      : [];
-
-    emergencyBody.innerHTML = `
-      <div class="card" style="margin:0;border-radius:12px;">
-        <div class="strong" style="font-size:18px;">${child.name}</div>
-        <div class="muted">Age ${child.birthdate ? calculateAge(child.birthdate) : "—"}</div>
-      </div>
-
-      <div>
-        <div class="strong">Diagnoses</div>
-        <div class="muted">${diagnoses.join(", ") || "None listed"}</div>
-      </div>
-
-      <div>
-        <div class="strong">Allergies</div>
-        <div class="muted">${child.allergies || "(Add later)"}</div>
-      </div>
-
-      <div>
-        <div class="strong">Trach</div>
-        <div class="muted">${equipment.trach ? "Yes" : "No / Not listed"}</div>
-      </div>
-
-      <div>
-        <div class="strong">Vent</div>
-        <div class="muted">${equipment.ventilator ? "Yes" : "No / Not listed"}</div>
-      </div>
-
-      <div>
-        <div class="strong">G-Tube</div>
-        <div class="muted">${equipment.g_tube ? "Yes" : "No / Not listed"}</div>
-      </div>
-
-      <div>
-        <div class="strong">Oxygen</div>
-        <div class="muted">${equipment.oxygen ? "Yes" : "No / Not listed"}</div>
+    lastSymptomContent.innerHTML = `
+      <div class="list-item">
+        <div>
+          <strong>${escapeHtml(symptomLog.note || "Symptom logged")}</strong>
+          <div class="muted">${escapeHtml(symptomLog.author || "Unknown")} • ${escapeHtml(
+            symptomLog.timeLabel || "—"
+          )}</div>
+        </div>
       </div>
     `;
 
-    emergencyModal.classList.remove("hidden");
+    show(lastSymptomCard);
   }
 
-  function closeEmergency() {
-    emergencyModal.classList.add("hidden");
+  function capitalize(text = "") {
+    if (!text) return "";
+    return text.charAt(0).toUpperCase() + text.slice(1);
   }
 
-  document.querySelectorAll("[data-category]").forEach((btn) => {
-    btn.addEventListener("click", () => openModal(btn.dataset.category));
-  });
-
-  document.querySelectorAll("[data-quick-vital]").forEach((btn) => {
-    btn.addEventListener("click", () => {
-      openVitalsModal(btn.dataset.quickVital || "full");
+  function normalizeScheduleItems(items = []) {
+    return items.map((item) => {
+      const start = item.start_at || item.date || item.datetime || item.time;
+      return {
+        ...item,
+        timeLabel: start ? formatDateTime(start) : item.time || "—",
+      };
     });
-  });
-
-  btnCloseModal.addEventListener("click", closeModal);
-
-  modal.addEventListener("click", (e) => {
-    if (e.target === modal) closeModal();
-  });
-
-  if (btnCloseVitalsModal) {
-    btnCloseVitalsModal.addEventListener("click", closeVitalsModal);
   }
 
-  if (vitalsModal) {
-    vitalsModal.addEventListener("click", (e) => {
+  function normalizeCareLogs(items = []) {
+    return items.map((item) => ({
+      ...item,
+      categoryLabel: capitalize(item.category || "note"),
+      timeLabel: formatDateTime(item.created_at || item.logged_at || item.time),
+    }));
+  }
+
+  function buildEmergencySection(title, content) {
+    return `
+      <div class="card" style="padding:12px;">
+        <strong>${escapeHtml(title)}</strong>
+        <div class="muted" style="margin-top:6px;">${content}</div>
+      </div>
+    `;
+  }
+
+  function renderEmergencySheet(child, profile, meds = []) {
+    if (!child) {
+      emergencyBody.innerHTML = `<div class="muted">No child selected.</div>`;
+      return;
+    }
+
+    const diagnoses = safeArray(child.diagnoses).length
+      ? safeArray(child.diagnoses).join(", ")
+      : "None listed";
+
+    const medList = meds.length
+      ? meds
+          .map((med) => {
+            const parts = [med.name, med.dose, med.schedule_time || med.instructions]
+              .filter(Boolean)
+              .join(" • ");
+            return `<div>${escapeHtml(parts)}</div>`;
+          })
+          .join("")
+      : "No medications listed";
+
+    emergencyBody.innerHTML = `
+      ${buildEmergencySection("Child", `
+        <div><strong>Name:</strong> ${escapeHtml(child.name || "—")}</div>
+        <div><strong>Age:</strong> ${escapeHtml(child.age ?? "—")}</div>
+        <div><strong>Diagnoses:</strong> ${escapeHtml(diagnoses)}</div>
+      `)}
+      ${buildEmergencySection("Allergies", escapeHtml(profile?.allergies || child.allergies || "None listed"))}
+      ${buildEmergencySection("Emergency Instructions", escapeHtml(profile?.instructions || "No instructions added yet."))}
+      ${buildEmergencySection("Medications", medList)}
+      ${buildEmergencySection("Contacts", `
+        <div><strong>Parent:</strong> ${escapeHtml(profile?.parent_contact || "—")}</div>
+        <div><strong>Doctor:</strong> ${escapeHtml(profile?.doctor_contact || "—")}</div>
+        <div><strong>Hospital:</strong> ${escapeHtml(profile?.preferred_hospital || "—")}</div>
+      `)}
+    `;
+  }
+
+  // -----------------------------
+  // Local fallbacks
+  // -----------------------------
+  function getLocalChildrenFallback() {
+    const db = getLocalDB();
+    const child = db.child || null;
+    if (!child) return [];
+    return [
+      {
+        id: "local-child-1",
+        name: child.name || "Test Child",
+        age: child.age ?? "",
+        diagnoses: safeArray(child.diagnoses),
+      },
+    ];
+  }
+
+  function getLocalScheduleFallback() {
+    const db = getLocalDB();
+    const todayItems = safeArray(db.today).map((item, index) => ({
+      id: `local-today-${index}`,
+      title: item.title,
+      location: item.location,
+      timeLabel: item.time || "—",
+      date: item.time,
+    }));
+    return todayItems;
+  }
+
+  function getLocalCareLogsFallback() {
+    const db = getLocalDB();
+    return safeArray(db.careLogs || db.logs || []).map((item, index) => ({
+      id: `local-log-${index}`,
+      category: item.category || "note",
+      note: item.note || "",
+      author: item.author || "Parent",
+      created_at: item.created_at || item.time || new Date().toISOString(),
+    }));
+  }
+
+  function getLocalVitalsFallback() {
+    const db = getLocalDB();
+    const items = safeArray(db.vitals);
+    return items.length ? [items[items.length - 1]] : [];
+  }
+
+  function getLocalInventoryFallback() {
+    const db = getLocalDB();
+    return safeArray(db.inventory);
+  }
+
+  // -----------------------------
+  // Save actions
+  // -----------------------------
+  async function saveCareLog() {
+    if (!activeChild) {
+      alert("No child selected.");
+      return;
+    }
+
+    const supabase = getSupabaseClient();
+    const payload = {
+      child_id: activeChild.id,
+      category: categorySelect.value,
+      note: noteInput.value.trim(),
+      author: authorInput.value.trim() || "Parent",
+      specialties: getSelectedSpecialties(),
+      created_at: new Date().toISOString(),
+    };
+
+    if (!payload.note) {
+      alert("Please enter a note.");
+      return;
+    }
+
+    let saved = false;
+
+    if (supabase) {
+      const { error } = await supabase.from("care_logs").insert(payload);
+      if (!error) {
+        saved = true;
+      } else {
+        console.warn("Failed to save care log to Supabase:", error.message);
+      }
+    }
+
+    if (!saved) {
+      const db = getLocalDB();
+      if (!Array.isArray(db.careLogs)) db.careLogs = [];
+      db.careLogs.unshift(payload);
+      saveLocalDB(db);
+    }
+
+    closeQuickLog();
+    await loadDashboard();
+  }
+
+  async function saveQuickVitals() {
+    if (!activeChild) {
+      alert("No child selected.");
+      return;
+    }
+
+    const supabase = getSupabaseClient();
+
+    const payload = {
+      child_id: activeChild.id,
+      o2_sat: quickO2.value ? Number(quickO2.value) : null,
+      temperature: quickTemp.value ? Number(quickTemp.value) : null,
+      bp_systolic: quickBpSys.value ? Number(quickBpSys.value) : null,
+      bp_diastolic: quickBpDia.value ? Number(quickBpDia.value) : null,
+      heart_rate: quickHr.value ? Number(quickHr.value) : null,
+      respiratory_rate: quickRr.value ? Number(quickRr.value) : null,
+      notes: quickVitalNotes.value.trim(),
+      taken_at: new Date().toISOString(),
+    };
+
+    const hasAnyValue =
+      payload.o2_sat !== null ||
+      payload.temperature !== null ||
+      payload.bp_systolic !== null ||
+      payload.bp_diastolic !== null ||
+      payload.heart_rate !== null ||
+      payload.respiratory_rate !== null ||
+      payload.notes;
+
+    if (!hasAnyValue) {
+      alert("Please enter at least one vital.");
+      return;
+    }
+
+    let saved = false;
+
+    if (supabase) {
+      const { error } = await supabase.from("vitals").insert(payload);
+      if (!error) {
+        saved = true;
+      } else {
+        console.warn("Failed to save vitals to Supabase:", error.message);
+      }
+    }
+
+    if (!saved) {
+      const db = getLocalDB();
+      if (!Array.isArray(db.vitals)) db.vitals = [];
+      db.vitals.push(payload);
+      saveLocalDB(db);
+    }
+
+    closeVitalsModal();
+    await loadDashboard();
+  }
+
+  // -----------------------------
+  // Main loader
+  // -----------------------------
+  async function loadDashboard() {
+    if (!activeChild) {
+      renderChildSummaryCard(null);
+      renderTodayList([]);
+      renderUpcomingSchedule([]);
+      renderCareLogs([]);
+      hide(lastVitalsCard);
+      hide(lowSupplyCard);
+      hide(lastSymptomCard);
+      return;
+    }
+
+    renderChildSummaryCard(activeChild);
+
+    const [
+      scheduleItemsRaw,
+      careLogsRaw,
+      symptomRaw,
+      vitalsRaw,
+      inventoryRaw,
+      medicationsRaw,
+      emergencyProfile,
+    ] = await Promise.all([
+      fetchSchedule(activeChild.id),
+      fetchCareLogs(activeChild.id),
+      fetchAllCareLogsForSymptom(activeChild.id),
+      fetchVitals(activeChild.id),
+      fetchInventory(activeChild.id),
+      fetchMedications(activeChild.id),
+      fetchEmergencyProfile(activeChild.id),
+    ]);
+
+    const localSchedule = getLocalScheduleFallback();
+    const localLogs = getLocalCareLogsFallback();
+    const localVitals = getLocalVitalsFallback();
+    const localInventory = getLocalInventoryFallback();
+
+    const scheduleItems = normalizeScheduleItems(
+      scheduleItemsRaw.length ? scheduleItemsRaw : localSchedule
+    );
+
+    const careLogs = normalizeCareLogs(careLogsRaw.length ? careLogsRaw : localLogs);
+
+    const symptomLog = normalizeCareLogs(
+      symptomRaw.length ? symptomRaw : careLogs.filter((x) => x.category === "symptom").slice(0, 1)
+    )[0];
+
+    const vitals = (vitalsRaw.length ? vitalsRaw : localVitals)[0] || null;
+    const inventory = inventoryRaw.length ? inventoryRaw : localInventory;
+
+    const todayItems = scheduleItems.filter((item) => {
+      if (item.start_at) return isToday(item.start_at);
+      return false;
+    });
+
+    const upcomingItems = scheduleItems
+      .filter((item) => {
+        const d = new Date(item.start_at || item.date || "");
+        return !Number.isNaN(d.getTime()) && d >= new Date();
+      })
+      .slice(0, 5);
+
+    renderTodayList(todayItems.length ? todayItems : scheduleItems.slice(0, 5));
+    renderUpcomingSchedule(upcomingItems.length ? upcomingItems : scheduleItems.slice(0, 5));
+    renderCareLogs(careLogs.slice(0, 5));
+    renderLastVitals(vitals);
+    renderInventory(inventory);
+    renderLastSymptom(symptomLog);
+    renderEmergencySheet(activeChild, emergencyProfile, medicationsRaw);
+  }
+
+  // -----------------------------
+  // Init
+  // -----------------------------
+  async function init() {
+    const supabase = getSupabaseClient();
+
+    currentUser = await fetchUser();
+
+    if (currentUser?.email) {
+      welcomeText.textContent = `Welcome back, ${currentUser.email}`;
+    } else {
+      welcomeText.textContent = "Welcome back";
+    }
+
+    const localDb = getLocalDB();
+    fillSpecialties(safeArray(localDb.specialties));
+
+    let loadedChildren = [];
+    if (currentUser?.id) {
+      loadedChildren = await fetchChildren(currentUser.id);
+    }
+
+    if (!loadedChildren.length) {
+      loadedChildren = getLocalChildrenFallback();
+    }
+
+    children = loadedChildren;
+
+    const savedId = getActiveChildId();
+    activeChild =
+      children.find((c) => String(c.id) === String(savedId)) ||
+      children[0] ||
+      null;
+
+    if (activeChild) {
+      setActiveChildId(activeChild.id);
+    }
+
+    renderChildSwitcher();
+    await loadDashboard();
+
+    // Events
+    childSwitcher?.addEventListener("change", async (e) => {
+      const selectedId = e.target.value;
+      activeChild = children.find((c) => String(c.id) === String(selectedId)) || null;
+      if (activeChild) {
+        setActiveChildId(activeChild.id);
+      }
+      await loadDashboard();
+    });
+
+    logoutBtn?.addEventListener("click", async () => {
+      if (supabase?.auth) {
+        await supabase.auth.signOut();
+      }
+      window.location.href = "login.html";
+    });
+
+    quickCategoryButtons.forEach((btn) => {
+      btn.addEventListener("click", () => {
+        openQuickLog(btn.dataset.category || "note");
+      });
+    });
+
+    btnCloseModal?.addEventListener("click", closeQuickLog);
+    btnSave?.addEventListener("click", saveCareLog);
+
+    quickVitalButtons.forEach((btn) => {
+      btn.addEventListener("click", () => {
+        openVitalsModal(btn.dataset.quickVital || "full");
+      });
+    });
+
+    btnCloseVitalsModal?.addEventListener("click", closeVitalsModal);
+    btnSaveQuickVitals?.addEventListener("click", saveQuickVitals);
+
+    btnEmergency?.addEventListener("click", () => show(emergencyModal));
+    btnCloseEmergency?.addEventListener("click", () => hide(emergencyModal));
+
+    modal?.addEventListener("click", (e) => {
+      if (e.target === modal) closeQuickLog();
+    });
+
+    vitalsModal?.addEventListener("click", (e) => {
       if (e.target === vitalsModal) closeVitalsModal();
     });
-  }
 
-  btnSave.addEventListener("click", saveQuickLog);
-
-  if (btnSaveQuickVitals) {
-    btnSaveQuickVitals.addEventListener("click", () => {
-      alert("Vitals save is the next Supabase step.");
-      closeVitalsModal();
+    emergencyModal?.addEventListener("click", (e) => {
+      if (e.target === emergencyModal) hide(emergencyModal);
     });
   }
 
-  if (btnEmergency) btnEmergency.addEventListener("click", openEmergency);
-  if (bottomEmergencyBtn) bottomEmergencyBtn.addEventListener("click", openEmergency);
-
-  btnCloseEmergency.addEventListener("click", closeEmergency);
-
-  emergencyModal.addEventListener("click", (e) => {
-    if (e.target === emergencyModal) closeEmergency();
-  });
-
-  childSwitcher.addEventListener("change", async () => {
-    await selectChild(childSwitcher.value);
-  });
-
-  async function initDashboard() {
-    const okUser = await loadUser();
-    if (!okUser) return;
-
-    const okChildren = await loadChildren();
-    if (!okChildren) return;
-
-    setInitialActiveChild();
-    await loadActiveChildProfiles();
-    await loadActiveChildCareLogs();
-
-    fillChildSwitcher();
-    render();
-  }
-
-  initDashboard();
+  await init();
 });
