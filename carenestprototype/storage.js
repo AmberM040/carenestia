@@ -42,20 +42,10 @@ function getDefaultDB() {
       "Primary Care"
     ],
 
-    children: [
-      {
-        id: "child1",
-        name: "Test Child",
-        age: 6,
-        diagnoses: ["Epilepsy", "Cerebral Palsy"],
-        selectedSpecialties: ["General"],
-        emergency: {}
-      }
-    ],
-
-    // keep both for compatibility
-    activeChildId: "child1",
-    currentChildId: "child1",
+    // multi-child
+    children: [],
+    activeChildId: null,
+    currentChildId: null,
 
     today: [],
     meds: [],
@@ -66,74 +56,7 @@ function getDefaultDB() {
     doseEvents: [],
     medicationChangeHistory: [],
 
-    inventory: [
-      {
-        id: "inv_trach_ties",
-        childId: "child1",
-        name: "Trach Ties",
-        category: "Tracheostomy",
-        quantity: 8,
-        low: 3,
-        unit: "sets",
-        notes: "Change per care plan",
-        updated: Date.now()
-      },
-      {
-        id: "inv_suction_catheters",
-        childId: "child1",
-        name: "Suction Catheters",
-        category: "Tracheostomy",
-        quantity: 24,
-        low: 10,
-        unit: "count",
-        notes: "Check size before reorder",
-        updated: Date.now()
-      },
-      {
-        id: "inv_saline_bullets",
-        childId: "child1",
-        name: "Saline Bullets",
-        category: "Tracheostomy",
-        quantity: 18,
-        low: 6,
-        unit: "count",
-        notes: "",
-        updated: Date.now()
-      },
-      {
-        id: "inv_hme_filters",
-        childId: "child1",
-        name: "HME Filters",
-        category: "Tracheostomy",
-        quantity: 10,
-        low: 4,
-        unit: "count",
-        notes: "",
-        updated: Date.now()
-      },
-      {
-        id: "inv_formula",
-        childId: "child1",
-        name: "Formula",
-        category: "Nutrition",
-        quantity: 6,
-        low: 2,
-        unit: "boxes",
-        notes: "",
-        updated: Date.now()
-      },
-      {
-        id: "inv_feeding_syringes",
-        childId: "child1",
-        name: "Feeding Syringes",
-        category: "Medical",
-        quantity: 12,
-        low: 4,
-        unit: "count",
-        notes: "",
-        updated: Date.now()
-      }
-    ],
+    inventory: [],
 
     dashboard: {
       lowSupplies: [],
@@ -144,7 +67,7 @@ function getDefaultDB() {
     // legacy / current vitals history used by app.js
     vitals: {},
 
-    // new snapshot used by dashboard "last known vitals"
+    // snapshot used by dashboard "last known vitals"
     lastKnownVitals: {},
 
     vitalThresholds: {}
@@ -158,6 +81,19 @@ function ensureDB(db) {
   if (!Array.isArray(db.users)) db.users = [];
   if (!db.session || typeof db.session !== "object") {
     db.session = { userId: null };
+  }
+
+  // app preferences
+  if (typeof db.visitPrepSelectedSpecialty !== "string") {
+    db.visitPrepSelectedSpecialty = "General";
+  }
+
+  if (typeof db.visitPrepDays !== "string") {
+    db.visitPrepDays = "7";
+  }
+
+  if (typeof db.visitPrepIncludePRN !== "boolean") {
+    db.visitPrepIncludePRN = true;
   }
 
   // specialties
@@ -178,32 +114,81 @@ function ensureDB(db) {
     db.children = [];
   }
 
-  if (db.children.length === 0) {
-    db.children = [
-      {
-        id: "child1",
-        name: "Test Child",
-        age: 6,
-        diagnoses: ["Epilepsy", "Cerebral Palsy"],
-        selectedSpecialties: ["General"],
-        emergency: {}
-      }
-    ];
+  // backward compatibility for very old single-child dbs
+  if (db.child && typeof db.child === "object") {
+    const legacyChildId = db.child.id || "child1";
+    const alreadyExists = db.children.some((c) => String(c.id) === String(legacyChildId));
+
+    if (!alreadyExists) {
+      db.children.push({
+        id: legacyChildId,
+        name: db.child.name || "Child 1",
+        age: typeof db.child.age === "undefined" ? "" : db.child.age,
+        diagnoses: Array.isArray(db.child.diagnoses) ? db.child.diagnoses : [],
+        selectedSpecialties: Array.isArray(db.child.selectedSpecialties) && db.child.selectedSpecialties.length
+          ? db.child.selectedSpecialties
+          : ["General"],
+        emergency: db.child.emergency && typeof db.child.emergency === "object" ? db.child.emergency : {}
+      });
+    }
   }
+
+  // normalize children
+  db.children = db.children.map((c, index) => {
+    const safeChild = { ...c };
+
+    if (!safeChild.id) safeChild.id = `child${index + 1}`;
+    if (!safeChild.name) safeChild.name = `Child ${index + 1}`;
+    if (typeof safeChild.age === "undefined") safeChild.age = "";
+    if (!Array.isArray(safeChild.diagnoses)) safeChild.diagnoses = [];
+
+    if (!Array.isArray(safeChild.selectedSpecialties) || !safeChild.selectedSpecialties.length) {
+      safeChild.selectedSpecialties = ["General"];
+    }
+
+    if (!safeChild.emergency || typeof safeChild.emergency !== "object") {
+      safeChild.emergency = {};
+    }
+
+    if (!safeChild.emergency.trach) {
+      safeChild.emergency.trach = {
+        hasTrach: false,
+        type: "",
+        size: "",
+        lastChange: ""
+      };
+    }
+
+    if (!safeChild.emergency.vent) {
+      safeChild.emergency.vent = {
+        onVent: false,
+        mode: "",
+        settings: ""
+      };
+    }
+
+    if (!safeChild.emergency.gTube) {
+      safeChild.emergency.gTube = {
+        hasGTube: false
+      };
+    }
+
+    if (!safeChild.emergency.oxygen) {
+      safeChild.emergency.oxygen = {
+        hasOxygen: false
+      };
+    }
+
+    return safeChild;
+  });
 
   // active/current child sync
-  if (!db.activeChildId) {
-    db.activeChildId = db.currentChildId || db.children[0]?.id || "child1";
-  }
+  const childIds = db.children.map((c) => String(c.id));
+  const requestedActiveId = db.activeChildId || db.currentChildId || null;
+  const hasValidActive = requestedActiveId && childIds.includes(String(requestedActiveId));
 
-  if (!db.currentChildId) {
-    db.currentChildId = db.activeChildId || db.children[0]?.id || "child1";
-  }
-
-  // prefer keeping them aligned
-  if (db.activeChildId !== db.currentChildId) {
-    db.currentChildId = db.activeChildId;
-  }
+  db.activeChildId = hasValidActive ? requestedActiveId : (db.children[0]?.id || null);
+  db.currentChildId = db.activeChildId;
 
   // root collections
   if (!db.logs || typeof db.logs !== "object") db.logs = {};
@@ -245,50 +230,8 @@ function ensureDB(db) {
     db.doseEvents = db.medicationLogs;
   }
 
-  // normalize children + child-specific collections
-  db.children.forEach((c, index) => {
-    if (!c.id) c.id = `child${index + 1}`;
-    if (!c.name) c.name = `Child ${index + 1}`;
-    if (typeof c.age === "undefined") c.age = "";
-    if (!Array.isArray(c.diagnoses)) c.diagnoses = [];
-
-    if (!Array.isArray(c.selectedSpecialties) || !c.selectedSpecialties.length) {
-      c.selectedSpecialties = ["General"];
-    }
-
-    if (!c.emergency || typeof c.emergency !== "object") {
-      c.emergency = {};
-    }
-
-    if (!c.emergency.trach) {
-      c.emergency.trach = {
-        hasTrach: false,
-        type: "",
-        size: "",
-        lastChange: ""
-      };
-    }
-
-    if (!c.emergency.vent) {
-      c.emergency.vent = {
-        onVent: false,
-        mode: "",
-        settings: ""
-      };
-    }
-
-    if (!c.emergency.gTube) {
-      c.emergency.gTube = {
-        hasGTube: false
-      };
-    }
-
-    if (!c.emergency.oxygen) {
-      c.emergency.oxygen = {
-        hasOxygen: false
-      };
-    }
-
+  // child-specific collections
+  db.children.forEach((c) => {
     if (!Array.isArray(db.logs[c.id])) db.logs[c.id] = [];
     if (!Array.isArray(db.symptoms[c.id])) db.symptoms[c.id] = [];
     if (!Array.isArray(db.schedules[c.id])) db.schedules[c.id] = [];
@@ -319,77 +262,77 @@ function ensureDB(db) {
 
   // meds
   db.meds = db.meds.map((med, index) => {
-  const safeMed = { ...med };
+    const safeMed = { ...med };
 
-  if (!safeMed.id) safeMed.id = `med_${Date.now()}_${index}`;
-  if (!safeMed.childId) safeMed.childId = db.activeChildId || db.children[0]?.id || "child1";
-  if (!safeMed.name) safeMed.name = "";
-  if (!safeMed.dose) safeMed.dose = "";
-  if (!safeMed.route) safeMed.route = "";
-  if (!safeMed.freq) safeMed.freq = "";
-  if (!safeMed.notes) safeMed.notes = "";
+    if (!safeMed.id) safeMed.id = `med_${Date.now()}_${index}`;
+    if (!safeMed.childId) safeMed.childId = db.activeChildId || db.children[0]?.id || null;
+    if (!safeMed.name) safeMed.name = "";
+    if (!safeMed.dose) safeMed.dose = "";
+    if (!safeMed.route) safeMed.route = "";
+    if (!safeMed.freq) safeMed.freq = "";
+    if (!safeMed.notes) safeMed.notes = "";
 
-  if (!safeMed.type) {
-    safeMed.type = safeMed.prn ? "prn" : "scheduled";
-  }
+    if (!safeMed.type) {
+      safeMed.type = safeMed.prn ? "prn" : "scheduled";
+    }
 
-  if (!safeMed.scheduleMode) {
-    safeMed.scheduleMode = "standard";
-  }
+    if (!safeMed.scheduleMode) {
+      safeMed.scheduleMode = "standard";
+    }
 
-  if (typeof safeMed.endDate !== "string") {
-    safeMed.endDate = "";
-  }
+    if (typeof safeMed.endDate !== "string") {
+      safeMed.endDate = "";
+    }
 
-  if (!Array.isArray(safeMed.taperSteps)) {
-    safeMed.taperSteps = [];
-  }
+    if (!Array.isArray(safeMed.taperSteps)) {
+      safeMed.taperSteps = [];
+    }
 
-  safeMed.taperSteps = safeMed.taperSteps.map((step) => ({
-    label: step?.label || "",
-    startDate: step?.startDate || "",
-    endDate: step?.endDate || "",
-    dose: step?.dose || "",
-    times: Array.isArray(step?.times) ? step.times.join(", ") : (step?.times || "")
-  }));
+    safeMed.taperSteps = safeMed.taperSteps.map((step) => ({
+      label: step?.label || "",
+      startDate: step?.startDate || "",
+      endDate: step?.endDate || "",
+      dose: step?.dose || "",
+      times: Array.isArray(step?.times) ? step.times.join(", ") : (step?.times || "")
+    }));
 
-  if (typeof safeMed.archived !== "boolean") {
-    safeMed.archived = false;
-  }
+    if (typeof safeMed.archived !== "boolean") {
+      safeMed.archived = false;
+    }
 
-  if (!safeMed.startDate) {
-    safeMed.startDate = new Date().toISOString().slice(0, 10);
-  }
+    if (!safeMed.startDate) {
+      safeMed.startDate = new Date().toISOString().slice(0, 10);
+    }
 
-  if (!safeMed.createdAt) {
-    safeMed.createdAt = new Date().toISOString();
-  }
+    if (!safeMed.createdAt) {
+      safeMed.createdAt = new Date().toISOString();
+    }
 
-  if (typeof safeMed.minGapHours !== "number" || Number.isNaN(safeMed.minGapHours)) {
-    safeMed.minGapHours = 4;
-  }
+    if (typeof safeMed.minGapHours !== "number" || Number.isNaN(safeMed.minGapHours)) {
+      safeMed.minGapHours = 4;
+    }
 
-  if (typeof safeMed.graceMinutes !== "number" || Number.isNaN(safeMed.graceMinutes)) {
-    safeMed.graceMinutes = 15;
-  }
+    if (typeof safeMed.graceMinutes !== "number" || Number.isNaN(safeMed.graceMinutes)) {
+      safeMed.graceMinutes = 15;
+    }
 
-  if (Array.isArray(safeMed.times)) {
-    safeMed.times = safeMed.times.join(", ");
-  }
+    if (Array.isArray(safeMed.times)) {
+      safeMed.times = safeMed.times.join(", ");
+    }
 
-  if (!safeMed.times) {
-    safeMed.times = "";
-  }
+    if (!safeMed.times) {
+      safeMed.times = "";
+    }
 
-  return safeMed;
-});
+    return safeMed;
+  });
 
   // dose events
   db.doseEvents = db.doseEvents.map((evt, index) => {
     const safeEvt = { ...evt };
 
     if (!safeEvt.id) safeEvt.id = `dose_${Date.now()}_${index}`;
-    if (!safeEvt.childId) safeEvt.childId = db.activeChildId || db.children[0]?.id || "child1";
+    if (!safeEvt.childId) safeEvt.childId = db.activeChildId || db.children[0]?.id || null;
     if (!safeEvt.medId && safeEvt.medicationId) safeEvt.medId = safeEvt.medicationId;
     if (!safeEvt.type) safeEvt.type = safeEvt.logType || "scheduled";
     if (!safeEvt.time && safeEvt.loggedAt) safeEvt.time = safeEvt.loggedAt;
@@ -399,12 +342,12 @@ function ensureDB(db) {
     return safeEvt;
   });
 
-  // med history
+  // medication change history
   db.medicationChangeHistory = db.medicationChangeHistory.map((item, index) => {
     const safeItem = { ...item };
 
     if (!safeItem.id) safeItem.id = `medhx_${Date.now()}_${index}`;
-    if (!safeItem.childId) safeItem.childId = db.activeChildId || db.children[0]?.id || "child1";
+    if (!safeItem.childId) safeItem.childId = db.activeChildId || db.children[0]?.id || null;
     if (!safeItem.medId && safeItem.medicationId) safeItem.medId = safeItem.medicationId;
     if (!safeItem.action) safeItem.action = "updated";
     if (!safeItem.detail) safeItem.detail = "";
@@ -418,7 +361,7 @@ function ensureDB(db) {
     const safeItem = { ...item };
 
     if (!safeItem.id) safeItem.id = `inv_${Date.now()}_${index}`;
-    if (!safeItem.childId) safeItem.childId = db.activeChildId || db.children[0]?.id || "child1";
+    if (!safeItem.childId) safeItem.childId = db.activeChildId || db.children[0]?.id || null;
     if (!safeItem.name) safeItem.name = "Untitled Item";
     if (!safeItem.category) safeItem.category = "Other";
     if (!Number.isFinite(Number(safeItem.quantity))) safeItem.quantity = 0;
@@ -432,7 +375,7 @@ function ensureDB(db) {
     return safeItem;
   });
 
-  // vitals history used by your current app.js
+  // vitals history used by current app.js
   db.vitals = Object.fromEntries(
     Object.entries(db.vitals).map(([childId, rows]) => [
       childId,
@@ -458,7 +401,6 @@ function normalizeVitalRow(row, index) {
     notes: row?.notes || ""
   };
 
-  // support both old combined rows and new individual rows
   if (row?.type) {
     safeRow.type = row.type;
     safeRow.label = row.label || "";
@@ -518,7 +460,6 @@ function rebuildLastKnownVitalsFromVitalsHistory(db) {
     rows.sort((a, b) => Number(a.createdAt || 0) - Number(b.createdAt || 0));
 
     rows.forEach((row) => {
-      // new style individual entries
       if (row.type) {
         if (row.type === "o2") {
           snapshot.o2 = {
@@ -573,7 +514,6 @@ function rebuildLastKnownVitalsFromVitalsHistory(db) {
         return;
       }
 
-      // old style combined entries
       if (row.o2 != null) {
         snapshot.o2 = {
           value: row.o2,
@@ -665,7 +605,7 @@ function seedDemoUser() {
   );
   if (existing) return;
 
-  const childId = db.children[0]?.id || "child1";
+  const childId = db.children[0]?.id || null;
 
   db.users.push({
     id: "u1",
@@ -673,7 +613,7 @@ function seedDemoUser() {
     name: "Demo Parent",
     email: "parent@example.com",
     password: "demo123",
-    childIds: [childId]
+    childIds: childId ? [childId] : []
   });
 
   saveDB(db);
@@ -686,13 +626,21 @@ function makeId(prefix) {
 /* ---------- app helpers ---------- */
 
 function getActiveChild(db) {
-  if (!db || !Array.isArray(db.children)) return null;
-  return db.children.find((c) => c.id === db.activeChildId) || db.children[0] || null;
+  if (!db || !Array.isArray(db.children) || !db.children.length) return null;
+
+  const preferredId = db.activeChildId || db.currentChildId || null;
+
+  if (preferredId) {
+    const match = db.children.find((c) => String(c.id) === String(preferredId));
+    if (match) return match;
+  }
+
+  return db.children[0] || null;
 }
 
 function getChildById(db, childId) {
   if (!db || !Array.isArray(db.children)) return null;
-  return db.children.find((c) => c.id === childId) || null;
+  return db.children.find((c) => String(c.id) === String(childId)) || null;
 }
 
 function getActiveChildId() {
@@ -703,7 +651,7 @@ function getActiveChildId() {
 
 function getChildMeds(db, childId) {
   if (!db) return [];
-  return (db.meds || []).filter((m) => m.childId === childId);
+  return (db.meds || []).filter((m) => String(m.childId) === String(childId));
 }
 
 function getActiveChildMeds(db) {
@@ -714,7 +662,7 @@ function getActiveChildMeds(db) {
 
 function getChildDoseEvents(db, childId) {
   if (!db) return [];
-  return (db.doseEvents || []).filter((e) => e.childId === childId);
+  return (db.doseEvents || []).filter((e) => String(e.childId) === String(childId));
 }
 
 function getActiveChildDoseEvents(db) {
@@ -725,7 +673,7 @@ function getActiveChildDoseEvents(db) {
 
 function getChildMedicationHistory(db, childId) {
   if (!db) return [];
-  return (db.medicationChangeHistory || []).filter((h) => h.childId === childId);
+  return (db.medicationChangeHistory || []).filter((h) => String(h.childId) === String(childId));
 }
 
 function getActiveChildMedicationHistory(db) {
@@ -736,7 +684,7 @@ function getActiveChildMedicationHistory(db) {
 
 function getChildInventory(db, childId) {
   if (!db) return [];
-  return (db.inventory || []).filter((i) => i.childId === childId);
+  return (db.inventory || []).filter((i) => String(i.childId) === String(childId));
 }
 
 function getActiveChildInventory(db) {
@@ -801,7 +749,7 @@ function parseMedTimes(timesValue) {
 
   return String(timesValue)
     .split(",")
-    .map(t => t.trim())
+    .map((t) => t.trim())
     .filter(Boolean);
 }
 
@@ -826,7 +774,7 @@ function getMedDoseForDate(med, targetDateStr) {
 
   if (mode === "wean") {
     const steps = Array.isArray(med.taperSteps) ? med.taperSteps : [];
-    const step = steps.find(s => isDateInRange(targetDateStr, s.startDate, s.endDate));
+    const step = steps.find((s) => isDateInRange(targetDateStr, s.startDate, s.endDate));
     if (!step) return null;
 
     return {
@@ -855,17 +803,17 @@ function isMedicationActiveOnDate(med, targetDateStr) {
 
   if (mode === "wean") {
     const steps = Array.isArray(med.taperSteps) ? med.taperSteps : [];
-    return steps.some(step => isDateInRange(targetDateStr, step.startDate, step.endDate));
+    return steps.some((step) => isDateInRange(targetDateStr, step.startDate, step.endDate));
   }
 
   return isDateInRange(targetDateStr, med.startDate, null);
 }
 
 function generateMedicationScheduleItems(db, childId, targetDateStr) {
-  const meds = (db.meds || []).filter(m => m.childId === childId);
+  const meds = (db.meds || []).filter((m) => String(m.childId) === String(childId));
   const items = [];
 
-  meds.forEach(med => {
+  meds.forEach((med) => {
     if (!isMedicationActiveOnDate(med, targetDateStr)) return;
 
     const doseInfo = getMedDoseForDate(med, targetDateStr);
@@ -874,7 +822,7 @@ function generateMedicationScheduleItems(db, childId, targetDateStr) {
     const times = Array.isArray(doseInfo.times) ? doseInfo.times : [];
     if (!times.length) return;
 
-    times.forEach(time => {
+    times.forEach((time) => {
       items.push({
         id: `medsched_${med.id}_${targetDateStr}_${time}`,
         medId: med.id,
