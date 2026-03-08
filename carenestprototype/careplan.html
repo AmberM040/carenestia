@@ -1,0 +1,182 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Care Plan • CareNest</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="topbar-inner">
+      <div class="brand">
+        <div class="brand-logo">💙</div>
+        <div class="brand-text">CareNest</div>
+      </div>
+
+      <div class="topbar-actions">
+        <select id="childSwitcher" class="child-switcher"></select>
+        <a class="btn btn-ghost" href="more.html">Back</a>
+      </div>
+    </div>
+  </header>
+
+  <main class="page">
+    <section class="card">
+      <div class="section-head">
+        <div>
+          <h1 style="margin:0;">Care Plan</h1>
+          <p id="childSummary" class="muted" style="margin:6px 0 0;">Select a child</p>
+        </div>
+        <button id="saveCarePlanBtn" class="btn" type="button">Save Care Plan</button>
+      </div>
+    </section>
+
+    <div class="grid-2">
+      <section class="card">
+        <div class="section-head">
+          <h2>Baseline & Safety</h2>
+        </div>
+
+        <div class="field">
+          <label for="allergies">Allergies</label>
+          <textarea id="allergies" class="input" placeholder="Medication, food, latex, adhesive, etc."></textarea>
+        </div>
+
+        <div class="grid-2">
+          <div class="field">
+            <label for="baselineO2">Baseline O₂</label>
+            <input id="baselineO2" class="input" type="text" placeholder="95-98%" />
+          </div>
+          <div class="field">
+            <label for="baselineTemp">Baseline Temp</label>
+            <input id="baselineTemp" class="input" type="text" placeholder="98.6°F" />
+          </div>
+          <div class="field">
+            <label for="baselineHr">Baseline HR</label>
+            <input id="baselineHr" class="input" type="text" placeholder="80-120" />
+          </div>
+          <div class="field">
+            <label for="baselineRr">Baseline RR</label>
+            <input id="baselineRr" class="input" type="text" placeholder="18-24" />
+          </div>
+          <div class="field">
+            <label for="baselineBp">Baseline BP</label>
+            <input id="baselineBp" class="input" type="text" placeholder="100/60" />
+          </div>
+        </div>
+
+        <div class="field">
+          <label for="oxygenGuidance">Oxygen Guidance</label>
+          <textarea id="oxygenGuidance" class="input" placeholder="When to start oxygen, usual liters, when to escalate, etc."></textarea>
+        </div>
+      </section>
+
+      <section class="card">
+        <div class="section-head">
+          <h2>Emergency Protocol</h2>
+        </div>
+
+        <div class="field">
+          <label for="seizureProtocol">Seizure / Emergency Protocol</label>
+          <textarea id="seizureProtocol" class="input" placeholder="What caregivers should do first, timing rules, positioning, suction, monitor steps, etc."></textarea>
+        </div>
+
+        <div class="grid-3">
+          <div class="field">
+            <label for="rescueMedName">Rescue Medication</label>
+            <input id="rescueMedName" class="input" type="text" placeholder="Diastat / Valtoco / etc." />
+          </div>
+          <div class="field">
+            <label for="rescueMedDose">Dose</label>
+            <input id="rescueMedDose" class="input" type="text" placeholder="10 mg" />
+          </div>
+          <div class="field">
+            <label for="rescueMedRoute">Route</label>
+            <input id="rescueMedRoute" class="input" type="text" placeholder="Nasal / Rectal / Buccal" />
+          </div>
+        </div>
+
+        <div class="field">
+          <label for="emsWhen">When to Call EMS</label>
+          <textarea id="emsWhen" class="input" placeholder="Examples: seizure over 5 minutes, trouble breathing, color change, clustered seizures, etc."></textarea>
+        </div>
+      </section>
+    </div>
+
+    <div class="grid-2">
+      <section class="card">
+        <div class="section-head">
+          <h2>Daily Care Notes</h2>
+        </div>
+
+        <div class="field">
+          <label for="feedingNotes">Feeding / Tube Notes</label>
+          <textarea id="feedingNotes" class="input" placeholder="Formula, rate, flushes, venting, feeding precautions, etc."></textarea>
+        </div>
+
+        <div class="field">
+          <label for="mobilityNotes">Mobility / Positioning Notes</label>
+          <textarea id="mobilityNotes" class="input" placeholder="Transfers, equipment, brace use, repositioning, fall precautions, etc."></textarea>
+        </div>
+
+        <div class="field">
+          <label for="communicationNotes">Communication Notes</label>
+          <textarea id="communicationNotes" class="input" placeholder="How child communicates pain, needs, yes/no, device use, etc."></textarea>
+        </div>
+
+        <div class="field">
+          <label for="calmingNotes">Comfort / Calming Notes</label>
+          <textarea id="calmingNotes" class="input" placeholder="What helps during distress, sensory needs, preferred soothing methods, etc."></textarea>
+        </div>
+      </section>
+
+      <section class="card">
+        <div class="section-head">
+          <h2>Contacts & Logistics</h2>
+        </div>
+
+        <div class="field">
+          <label for="emergencyContacts">Emergency Contacts</label>
+          <textarea id="emergencyContacts" class="input" placeholder="Parent names, numbers, backup contacts"></textarea>
+        </div>
+
+        <div class="field">
+          <label for="doctorContacts">Doctor Contacts</label>
+          <textarea id="doctorContacts" class="input" placeholder="Neurology, pulmonology, GI, PCP, etc."></textarea>
+        </div>
+
+        <div class="field">
+          <label for="preferredHospital">Preferred Hospital</label>
+          <input id="preferredHospital" class="input" type="text" placeholder="Children's Hospital..." />
+        </div>
+
+        <div class="field">
+          <label for="insuranceNotes">Insurance Notes</label>
+          <textarea id="insuranceNotes" class="input" placeholder="Optional notes"></textarea>
+        </div>
+
+        <div class="field">
+          <label for="additionalNotes">Additional Notes</label>
+          <textarea id="additionalNotes" class="input" placeholder="Anything else caregivers or EMS should know"></textarea>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <nav class="bottom-nav">
+    <div class="bottom-nav-inner">
+      <a class="nav-link" href="index.html">Home</a>
+      <a class="nav-link" href="carelog.html">Care Log</a>
+      <a class="nav-link" href="meds.html">Meds</a>
+      <a class="nav-link" href="schedule.html">Schedule</a>
+      <a class="nav-link active" href="more.html">More</a>
+    </div>
+  </nav>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="supabase.js"></script>
+  <script src="auth.js"></script>
+  <script src="careplan.js"></script>
+</body>
+</html>
