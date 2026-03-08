@@ -4,11 +4,20 @@ document.addEventListener("DOMContentLoaded", () => {
 
   const childSwitcher = document.getElementById("childSwitcher");
   const childSummary = document.getElementById("childSummary");
+  const childAvatar = document.getElementById("childAvatar");
+  const logoutBtn = document.getElementById("logoutBtn");
 
   const scheduleViewTabs = document.getElementById("scheduleViewTabs");
   const scheduleCategoryFilter = document.getElementById("scheduleCategoryFilter");
   const btnClearScheduleFilters = document.getElementById("btnClearScheduleFilters");
   const btnAddTask = document.getElementById("btnAddTask");
+  const btnAddTaskSidebar = document.getElementById("btnAddTaskSidebar");
+  const btnAddTaskQuick = document.getElementById("btnAddTaskQuick");
+
+  const btnEmergency = document.getElementById("btnEmergency");
+  const emergencyModal = document.getElementById("emergencyModal");
+  const btnCloseEmergency = document.getElementById("btnCloseEmergency");
+  const emergencyBody = document.getElementById("emergencyBody");
 
   const todayView = document.getElementById("todayView");
   const weekView = document.getElementById("weekView");
@@ -83,6 +92,42 @@ document.addEventListener("DOMContentLoaded", () => {
     return;
   }
 
+  function escapeHtml(str = "") {
+    return String(str)
+      .replaceAll("&", "&amp;")
+      .replaceAll("<", "&lt;")
+      .replaceAll(">", "&gt;")
+      .replaceAll('"', "&quot;")
+      .replaceAll("'", "&#039;");
+  }
+
+  function normalizeDiagnoses(value) {
+    if (Array.isArray(value)) return value.filter(Boolean);
+    if (typeof value === "string" && value.trim()) {
+      return value
+        .split(",")
+        .map((item) => item.trim())
+        .filter(Boolean);
+    }
+    return [];
+  }
+
+  function getAgeFromBirthdate(birthdate) {
+    if (!birthdate) return "";
+    const dob = new Date(birthdate);
+    if (Number.isNaN(dob.getTime())) return "";
+
+    const now = new Date();
+    let age = now.getFullYear() - dob.getFullYear();
+    const monthDiff = now.getMonth() - dob.getMonth();
+
+    if (monthDiff < 0 || (monthDiff === 0 && now.getDate() < dob.getDate())) {
+      age--;
+    }
+
+    return age;
+  }
+
   function activeChild() {
     return getActiveChild(db);
   }
@@ -140,29 +185,112 @@ document.addEventListener("DOMContentLoaded", () => {
     childSwitcher.innerHTML = "";
     const children = Array.isArray(db.children) ? db.children : [];
 
+    if (!children.length) {
+      const option = document.createElement("option");
+      option.value = "";
+      option.textContent = "No children yet";
+      childSwitcher.appendChild(option);
+      return;
+    }
+
     children.forEach((child) => {
       const option = document.createElement("option");
       option.value = child.id;
-      option.textContent = child.name;
+      option.textContent = child.name || "Unnamed Child";
       childSwitcher.appendChild(option);
     });
 
-    childSwitcher.value = db.activeChildId || "";
+    childSwitcher.value = db.activeChildId || children[0]?.id || "";
   }
 
   function updateChildSummary() {
     const child = activeChild();
 
     if (!child) {
-      childSummary.textContent = "No child selected";
+      childSummary.textContent = "Age —";
+      if (childAvatar) childAvatar.innerHTML = "";
       return;
     }
 
-    const diagnoses = Array.isArray(child.diagnoses) && child.diagnoses.length
-      ? child.diagnoses.join(" • ")
-      : "No diagnoses listed";
+    const diagnoses = normalizeDiagnoses(child.diagnoses);
+    const childAge = child.age ?? getAgeFromBirthdate(child.birthdate);
 
-    childSummary.textContent = `${child.name} • Age ${child.age ?? "—"} • ${diagnoses}`;
+    let summaryText =
+      childAge !== null && childAge !== undefined && childAge !== ""
+        ? `Age ${childAge}`
+        : "Age —";
+
+    if (diagnoses.length) {
+      summaryText += ` • ${diagnoses.slice(0, 2).join(" • ")}`;
+    }
+
+    childSummary.textContent = summaryText;
+
+    if (childAvatar) {
+      if (child.photo_url) {
+        childAvatar.innerHTML = `<img src="${escapeHtml(child.photo_url)}" alt="${escapeHtml(
+          child.name || "Child"
+        )}">`;
+      } else {
+        childAvatar.innerHTML = "";
+      }
+    }
+  }
+
+  function renderEmergencySheet() {
+    if (!emergencyBody) return;
+
+    const child = activeChild();
+    if (!child) {
+      emergencyBody.innerHTML = `<div class="muted">No child selected.</div>`;
+      return;
+    }
+
+    const plan = (db.carePlans && db.carePlans[child.id]) || null;
+    const diagnoses = normalizeDiagnoses(child.diagnoses).length
+      ? normalizeDiagnoses(child.diagnoses).join(", ")
+      : "None listed";
+
+    emergencyBody.innerHTML = `
+      <div class="card" style="padding:12px;">
+        <strong>Child</strong>
+        <div class="muted" style="margin-top:6px;">
+          <div><strong>Name:</strong> ${escapeHtml(child.name || "—")}</div>
+          <div><strong>Age:</strong> ${escapeHtml(child.age ?? getAgeFromBirthdate(child.birthdate) || "—")}</div>
+          <div><strong>Diagnoses:</strong> ${escapeHtml(diagnoses)}</div>
+        </div>
+      </div>
+
+      <div class="card" style="padding:12px;">
+        <strong>Allergies</strong>
+        <div class="muted" style="margin-top:6px;">
+          ${escapeHtml(plan?.allergies || child.allergies || "None listed")}
+        </div>
+      </div>
+
+      <div class="card" style="padding:12px;">
+        <strong>Emergency Protocol</strong>
+        <div class="muted" style="margin-top:6px;">
+          ${escapeHtml(plan?.seizure_protocol || "No emergency protocol added yet.")}
+        </div>
+      </div>
+
+      <div class="card" style="padding:12px;">
+        <strong>When to Call EMS</strong>
+        <div class="muted" style="margin-top:6px;">
+          ${escapeHtml(plan?.ems_when || "No EMS guidance added yet.")}
+        </div>
+      </div>
+
+      <div class="card" style="padding:12px;">
+        <strong>Contacts</strong>
+        <div class="muted" style="margin-top:6px;">
+          <div><strong>Emergency Contacts:</strong> ${escapeHtml(plan?.emergency_contacts || "—")}</div>
+          <div><strong>Doctor Contacts:</strong> ${escapeHtml(plan?.doctor_contacts || "—")}</div>
+          <div><strong>Hospital:</strong> ${escapeHtml(plan?.preferred_hospital || "—")}</div>
+        </div>
+      </div>
+    `;
   }
 
   function setDefaultTaskDateTime() {
@@ -508,15 +636,15 @@ document.addEventListener("DOMContentLoaded", () => {
 
   function getCategoryMeta(category) {
     const map = {
-      "Medication": { cls: "med", icon: "💊" },
-      "Feeding": { cls: "gi", icon: "🍼" },
-      "Therapy": { cls: "general", icon: "🤸" },
+      Medication: { cls: "med", icon: "💊" },
+      Feeding: { cls: "gi", icon: "🍼" },
+      Therapy: { cls: "general", icon: "🤸" },
       "Symptom Check": { cls: "neuro", icon: "🩺" },
       "Respiratory Care": { cls: "pulm", icon: "🫁" },
-      "Equipment": { cls: "card", icon: "🧰" },
-      "Hygiene": { cls: "general", icon: "🧼" },
-      "Appointment": { cls: "card", icon: "📅" },
-      "Other": { cls: "general", icon: "📝" }
+      Equipment: { cls: "card", icon: "🧰" },
+      Hygiene: { cls: "general", icon: "🧼" },
+      Appointment: { cls: "card", icon: "📅" },
+      Other: { cls: "general", icon: "📝" }
     };
 
     return map[category] || { cls: "general", icon: "📝" };
@@ -540,49 +668,54 @@ document.addEventListener("DOMContentLoaded", () => {
       if (task.durationMinutes) subtitleParts.push(`${task.durationMinutes} min`);
     }
 
-    const medLog = task.source === "medication"
-      ? getMedicationLogForDateAndTime(task.medId, occurrenceDate, task.time)
-      : null;
+    const medLog =
+      task.source === "medication"
+        ? getMedicationLogForDateAndTime(task.medId, occurrenceDate, task.time)
+        : null;
 
-    const statusLabel = task.source === "medication"
-      ? medLog?.type === "scheduled"
-        ? "Dose Logged"
-        : medLog?.type === "skip"
-        ? "Skipped"
-        : isDueNow
-        ? "Due Now"
-        : task.category
-      : completed
-      ? "Completed"
-      : isDueNow
-      ? "Due Now"
-      : task.category;
+    const statusLabel =
+      task.source === "medication"
+        ? medLog?.type === "scheduled"
+          ? "Dose Logged"
+          : medLog?.type === "skip"
+            ? "Skipped"
+            : isDueNow
+              ? "Due Now"
+              : task.category
+        : completed
+          ? "Completed"
+          : isDueNow
+            ? "Due Now"
+            : task.category;
 
     card.innerHTML = `
       <div class="log-icon ${meta.cls}">${meta.icon}</div>
 
       <div class="log-main">
         <h3>
-          ${task.title}
+          ${escapeHtml(task.title)}
           <span class="time">${formatTime(task.time)}</span>
         </h3>
-        <p>${task.instructions || task.note || "No extra instructions."}</p>
-        <p class="muted mt-8">${subtitleParts.join(" • ")}</p>
+        <p>${escapeHtml(task.instructions || task.note || "No extra instructions.")}</p>
+        <p class="muted mt-8">${escapeHtml(subtitleParts.join(" • "))}</p>
         <p class="muted mt-8">
-          ${task.category}
-          ${task.source === "medication"
-            ? ` • ${task.scheduleMode === "temporary"
-                ? "Temporary Med"
-                : task.scheduleMode === "wean"
-                ? "Wean / Taper"
-                : "Medication"}`
-            : ` • ${task.frequency.charAt(0).toUpperCase() + task.frequency.slice(1)}${task.shareable ? " • Shared" : ""}`
+          ${escapeHtml(task.category)}
+          ${
+            task.source === "medication"
+              ? ` • ${
+                  task.scheduleMode === "temporary"
+                    ? "Temporary Med"
+                    : task.scheduleMode === "wean"
+                      ? "Wean / Taper"
+                      : "Medication"
+                }`
+              : ` • ${task.frequency.charAt(0).toUpperCase() + task.frequency.slice(1)}${task.shareable ? " • Shared" : ""}`
           }
         </p>
       </div>
 
       <div class="log-side">
-        <span class="log-tag ${meta.cls}">${statusLabel}</span>
+        <span class="log-tag ${meta.cls}">${escapeHtml(statusLabel)}</span>
       </div>
     `;
 
@@ -607,7 +740,7 @@ document.addEventListener("DOMContentLoaded", () => {
         buttonRow.appendChild(undoBtn);
       } else {
         const logDoseBtn = document.createElement("button");
-        logDoseBtn.className = "btn";
+        logDoseBtn.className = "btn btn-primary";
         logDoseBtn.type = "button";
         logDoseBtn.textContent = "Log Dose";
         logDoseBtn.addEventListener("click", () => logMedicationDose(task, occurrenceDate));
@@ -718,7 +851,7 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   function renderEmptyInto(container, message) {
-    container.innerHTML = `<div class="empty-state">${message}</div>`;
+    container.innerHTML = `<div class="empty-state">${escapeHtml(message)}</div>`;
   }
 
   function renderTodayView() {
@@ -796,7 +929,8 @@ document.addEventListener("DOMContentLoaded", () => {
           dayTasks.push({
             task,
             occurrenceDate: getOccurrenceDate(task, date),
-            completed: isMedicationCompletedOnDate(task, date) || isMedicationSkippedOnDate(task, date)
+            completed:
+              isMedicationCompletedOnDate(task, date) || isMedicationSkippedOnDate(task, date)
           });
         });
 
@@ -864,7 +998,8 @@ document.addEventListener("DOMContentLoaded", () => {
           dayTasks.push({
             task,
             occurrenceDate: getOccurrenceDate(task, date),
-            completed: isMedicationCompletedOnDate(task, date) || isMedicationSkippedOnDate(task, date)
+            completed:
+              isMedicationCompletedOnDate(task, date) || isMedicationSkippedOnDate(task, date)
           });
         });
 
@@ -893,25 +1028,30 @@ document.addEventListener("DOMContentLoaded", () => {
         row.style.padding = "8px 0";
         row.style.borderTop = "1px solid var(--border)";
 
-        const medStatus = task.source === "medication"
-          ? isMedicationCompletedOnDate(task, date)
-            ? "Dose Logged"
-            : isMedicationSkippedOnDate(task, date)
-            ? "Skipped"
-            : "Scheduled"
-          : completed
-          ? "Completed"
-          : "Scheduled";
+        const medStatus =
+          task.source === "medication"
+            ? isMedicationCompletedOnDate(task, date)
+              ? "Dose Logged"
+              : isMedicationSkippedOnDate(task, date)
+                ? "Skipped"
+                : "Scheduled"
+            : completed
+              ? "Completed"
+              : "Scheduled";
 
         row.innerHTML = `
           <div>
-            <div style="font-weight:700;">${task.title}</div>
+            <div style="font-weight:700;">${escapeHtml(task.title)}</div>
             <div class="muted">
-              ${task.category} • ${formatTime(task.time)}
-              ${task.source === "medication" && task.instructions ? ` • ${task.instructions}` : ""}
+              ${escapeHtml(task.category)} • ${escapeHtml(formatTime(task.time))}
+              ${
+                task.source === "medication" && task.instructions
+                  ? ` • ${escapeHtml(task.instructions)}`
+                  : ""
+              }
             </div>
           </div>
-          <div class="muted">${medStatus}</div>
+          <div class="muted">${escapeHtml(medStatus)}</div>
         `;
 
         wrapper.appendChild(row);
@@ -951,6 +1091,7 @@ document.addEventListener("DOMContentLoaded", () => {
     db = ensureDB(loadDB());
     fillChildSwitcher();
     updateChildSummary();
+    renderEmergencySheet();
     renderCurrentView();
   }
 
@@ -962,6 +1103,14 @@ document.addEventListener("DOMContentLoaded", () => {
   btnAddTask.addEventListener("click", () => {
     resetTaskForm();
     openTaskModal();
+  });
+
+  btnAddTaskSidebar?.addEventListener("click", () => {
+    btnAddTask.click();
+  });
+
+  btnAddTaskQuick?.addEventListener("click", () => {
+    btnAddTask.click();
   });
 
   btnCloseTaskModal.addEventListener("click", closeTaskModal);
@@ -979,6 +1128,17 @@ document.addEventListener("DOMContentLoaded", () => {
     renderAll();
   });
 
+  logoutBtn?.addEventListener("click", async () => {
+    if (window.supabaseClient?.auth) {
+      try {
+        await window.supabaseClient.auth.signOut();
+      } catch (err) {
+        console.warn("Supabase sign out failed:", err);
+      }
+    }
+    window.location.href = "login.html";
+  });
+
   scheduleCategoryFilter.addEventListener("change", renderCurrentView);
   btnClearScheduleFilters.addEventListener("click", clearFilters);
 
@@ -986,6 +1146,20 @@ document.addEventListener("DOMContentLoaded", () => {
     btn.addEventListener("click", () => {
       setActiveView(btn.dataset.view);
     });
+  });
+
+  btnEmergency?.addEventListener("click", () => {
+    emergencyModal?.classList.remove("hidden");
+  });
+
+  btnCloseEmergency?.addEventListener("click", () => {
+    emergencyModal?.classList.add("hidden");
+  });
+
+  emergencyModal?.addEventListener("click", (e) => {
+    if (e.target === emergencyModal) {
+      emergencyModal.classList.add("hidden");
+    }
   });
 
   setDefaultTaskDateTime();
