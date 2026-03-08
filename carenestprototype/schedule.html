@@ -12,7 +12,7 @@
 
     <aside class="app-sidebar">
       <div class="sidebar-brand">
-        <img src="images/carenestia_logo_wordmark.png" class="sidebar-wordmark" alt="CareNestia">
+        <img src="images/carenestia_logo_wordmark.png" class="sidebar-wordmark" alt="CareNestia" />
       </div>
 
       <nav class="sidebar-nav">
@@ -58,7 +58,7 @@
 
       <main class="app-content">
 
-        <section class="main-column">
+        <div class="main-column">
 
           <section class="card">
             <div class="section-head">
@@ -94,31 +94,31 @@
             </div>
           </section>
 
-          <section id="todayView">
+          <section id="todayView" class="card">
             <div class="section-head">
               <h2>Due Now</h2>
             </div>
             <section id="dueNowList" class="stack-list"></section>
 
-            <div class="section-head">
+            <div class="section-head" style="margin-top:20px;">
               <h2>Up Next</h2>
             </div>
             <section id="upNextList" class="stack-list"></section>
 
-            <div class="section-head">
+            <div class="section-head" style="margin-top:20px;">
               <h2>Completed</h2>
             </div>
             <section id="completedList" class="stack-list"></section>
           </section>
 
-          <section id="weekView" class="hidden">
+          <section id="weekView" class="card hidden">
             <div class="section-head">
               <h2>This Week</h2>
             </div>
             <section id="weekList" class="stack-list"></section>
           </section>
 
-          <section id="monthView" class="hidden">
+          <section id="monthView" class="card hidden">
             <div class="section-head">
               <h2>This Month</h2>
             </div>
@@ -130,7 +130,7 @@
               No schedule items yet.
             </div>
           </section>
-        </section>
+        </div>
 
         <aside class="side-column">
 
@@ -212,7 +212,6 @@
 
   <div id="taskModal" class="modal hidden">
     <div class="modal-card">
-
       <div class="section-head">
         <h2>Add Schedule Task</h2>
         <button id="btnCloseTaskModal" class="btn btn-ghost" type="button">Close</button>
@@ -319,7 +318,6 @@
       </div>
 
       <div id="taskSaveStatus" class="muted">Ready to save.</div>
-
     </div>
   </div>
 
