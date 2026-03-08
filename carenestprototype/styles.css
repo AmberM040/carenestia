@@ -1,40 +1,103 @@
-/* ---------- GLOBAL ---------- */
+/* ============================= */
+/* ROOT COLORS */
+/* ============================= */
 
-*{
+:root{
+
+--bg:#eef3f8;
+--bg-soft:#f6f8fc;
+
+--surface:#ffffff;
+--surface-soft:#f8fbff;
+
+--text:#1f2a44;
+--text-soft:#53617c;
+--muted:#7c8aa5;
+
+--border:#e3eaf3;
+
+--primary:#4d8df7;
+--primary-dark:#2f67cf;
+--teal:#66cddd;
+
+--shadow-sm:0 6px 18px rgba(32,45,70,0.05);
+--shadow:0 16px 40px rgba(32,45,70,0.08);
+
+--radius-lg:22px;
+--radius-md:16px;
+--radius-sm:12px;
+
+--sidebar-width:250px;
+
+}
+
+/* ============================= */
+/* RESET */
+/* ============================= */
+
+*,
+*::before,
+*::after{
 box-sizing:border-box;
-margin:0;
-padding:0;
 }
 
 body{
-font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;
-background:#f3f6fb;
-color:#1f2d3d;
-}
-
-/* ---------- APP LAYOUT ---------- */
-
-.app-shell{
-display:flex;
+margin:0;
+font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto;
+background:linear-gradient(180deg,#eef3f8 0%,#f7f9fc 100%);
+color:var(--text);
 min-height:100vh;
 }
 
-/* ---------- SIDEBAR ---------- */
+/* ============================= */
+/* APP SHELL */
+/* ============================= */
+
+.app-shell{
+
+width:calc(100% - 40px);
+max-width:1500px;
+
+margin:20px auto;
+
+display:grid;
+grid-template-columns:var(--sidebar-width) 1fr;
+
+background:white;
+
+border-radius:28px;
+
+overflow:hidden;
+
+box-shadow:var(--shadow);
+
+}
+
+/* ============================= */
+/* SIDEBAR */
+/* ============================= */
 
 .app-sidebar{
-width:230px;
-background:white;
-border-right:1px solid #e4e9f2;
-padding:24px 16px;
+
+background:linear-gradient(180deg,#f7fbff,#f2f6fb);
+
+border-right:1px solid var(--border);
+
+padding:22px 16px;
+
 display:flex;
 flex-direction:column;
-gap:20px;
+gap:18px;
+
 }
 
 .sidebar-brand{
-font-weight:800;
-font-size:1.3rem;
 margin-bottom:10px;
+}
+
+.sidebar-wordmark{
+height:34px;
+width:auto;
 }
 
 .sidebar-nav{
@@ -44,216 +107,446 @@ gap:6px;
 }
 
 .sidebar-link{
-text-decoration:none;
+
 padding:10px 12px;
-border-radius:10px;
-color:#44546f;
-font-weight:500;
+
+border-radius:12px;
+
+color:var(--text-soft);
+
+font-weight:600;
+
+transition:.15s;
+
 }
 
 .sidebar-link:hover{
-background:#eef2f9;
+background:#eef3fb;
 }
 
 .sidebar-link.active{
-background:#e3ecff;
-color:#2f6fb2;
+
+background:#e6efff;
+
+color:var(--primary-dark);
+
 }
 
-/* ---------- MAIN ---------- */
+/* ============================= */
+/* SIDEBAR ACTIONS */
+/* ============================= */
+
+.sidebar-actions-card{
+
+background:var(--surface-soft);
+
+border-radius:18px;
+
+padding:14px;
+
+margin-top:10px;
+
+}
+
+.sidebar-actions-title{
+
+font-size:.9rem;
+
+font-weight:700;
+
+color:var(--muted);
+
+margin-bottom:10px;
+
+}
+
+.sidebar-actions-list{
+
+display:flex;
+flex-direction:column;
+gap:6px;
+
+}
+
+/* ============================= */
+/* MAIN AREA */
+/* ============================= */
 
 .app-main{
-flex:1;
 display:flex;
 flex-direction:column;
 }
 
-/* ---------- HEADER ---------- */
+/* ============================= */
+/* HEADER */
+/* ============================= */
 
 .app-topbar{
+
 display:flex;
+
 justify-content:space-between;
+
 align-items:center;
-padding:18px 24px;
+
+padding:16px 20px;
+
+border-bottom:1px solid var(--border);
+
 background:white;
-border-bottom:1px solid #e4e9f2;
+
 }
 
 .header-left{
+
 display:flex;
+
 align-items:center;
-gap:14px;
+
+gap:20px;
+
 }
 
 .header-logo{
-width:40px;
-height:40px;
-object-fit:contain;
+height:36px;
+width:auto;
 }
 
-.child-header h1{
-font-size:1.6rem;
-font-weight:800;
+.header-child{
+display:flex;
+align-items:center;
+gap:12px;
+}
+
+.child-avatar{
+
+width:38px;
+height:38px;
+
+border-radius:50%;
+
+background:#dce7f7;
+
+}
+
+.child-copy h1{
+font-size:1.4rem;
 margin-bottom:4px;
 }
 
 .summary-meta{
-font-size:0.9rem;
-color:#667085;
+
 display:flex;
 gap:10px;
-margin-bottom:6px;
+
+font-size:.85rem;
+
+color:var(--muted);
+
+margin-bottom:4px;
+
 }
 
 .pill-row{
 display:flex;
-flex-wrap:wrap;
 gap:6px;
 }
 
 .pill{
+
 background:#e7f0ff;
+
 color:#2f6fb2;
-font-size:0.75rem;
+
 padding:4px 8px;
-border-radius:20px;
+
+border-radius:999px;
+
+font-size:.75rem;
+
 }
 
-/* ---------- HEADER RIGHT ---------- */
+/* ============================= */
+/* HEADER RIGHT */
+/* ============================= */
 
 .header-right{
+
 display:flex;
-align-items:center;
+
 gap:10px;
+
+align-items:center;
+
 }
 
 .child-switcher{
+
 padding:6px 10px;
-border-radius:8px;
-border:1px solid #d5dbea;
-background:white;
+
+border-radius:10px;
+
+border:1px solid var(--border);
+
 }
 
-/* ---------- CONTENT ---------- */
+/* ============================= */
+/* MAIN CONTENT */
+/* ============================= */
 
 .app-content{
+
 display:grid;
+
 grid-template-columns:2fr 1fr;
+
 gap:18px;
+
 padding:18px;
+
 }
 
-/* ---------- CARDS ---------- */
-
-.card{
-background:white;
-border-radius:16px;
-padding:18px;
-box-shadow:0 1px 2px rgba(0,0,0,0.05);
-}
-
-.card h2{
-font-size:1.1rem;
-margin-bottom:12px;
-}
-
-/* ---------- LIST ---------- */
-
-.list{
+.main-column{
 display:flex;
 flex-direction:column;
-gap:10px;
+gap:18px;
 }
 
-.list-item{
-padding:10px;
-border-radius:10px;
-background:#f7f9fc;
+.side-column{
 display:flex;
-justify-content:space-between;
+flex-direction:column;
+gap:18px;
 }
 
-/* ---------- QUICK ACTIONS ---------- */
+/* ============================= */
+/* CARDS */
+/* ============================= */
+
+.card{
+
+background:white;
+
+border-radius:20px;
+
+padding:18px;
+
+border:1px solid var(--border);
+
+box-shadow:var(--shadow-sm);
+
+}
+
+.section-head{
+
+display:flex;
+
+justify-content:space-between;
+
+align-items:center;
+
+margin-bottom:12px;
+
+}
+
+.section-head h2{
+font-size:1.05rem;
+}
+
+/* ============================= */
+/* LIST */
+/* ============================= */
+
+.stack-list{
+
+display:flex;
+
+flex-direction:column;
+
+gap:10px;
+
+}
+
+.timeline-list{
+
+display:flex;
+
+flex-direction:column;
+
+gap:8px;
+
+}
+
+/* ============================= */
+/* QUICK ACTIONS */
+/* ============================= */
 
 .quick-actions{
+
 display:grid;
+
 grid-template-columns:1fr 1fr;
+
 gap:10px;
+
 }
 
 .quick-btn{
-background:#f7f9fc;
-border:none;
-border-radius:12px;
+
+border-radius:14px;
+
 padding:12px;
-font-weight:600;
-cursor:pointer;
+
+background:#f6f9ff;
+
+border:1px solid var(--border);
+
 text-align:left;
+
+cursor:pointer;
+
 }
 
 .quick-btn span{
+
 display:block;
-font-size:0.75rem;
-color:#6b7280;
-margin-top:3px;
+
+font-size:.75rem;
+
+color:var(--muted);
+
+margin-top:4px;
+
 }
 
-.quick-btn:hover{
-background:#eef2f9;
+.quick-note{
+background:#fff3c6;
 }
 
-/* ---------- BUTTONS ---------- */
+.quick-med{
+background:#e5f4e8;
+}
+
+.quick-symptom{
+background:#e6f7ff;
+}
+
+.quick-question{
+background:#e9f1ff;
+}
+
+.quick-mini{
+
+border:none;
+
+background:transparent;
+
+text-align:left;
+
+padding:6px;
+
+cursor:pointer;
+
+}
+
+/* ============================= */
+/* BUTTONS */
+/* ============================= */
 
 .btn{
-background:#2f6fb2;
+
+background:var(--primary);
+
 color:white;
+
 border:none;
+
 border-radius:10px;
+
 padding:8px 14px;
+
 font-weight:600;
+
 cursor:pointer;
+
 }
 
 .btn-soft{
+
 background:#eef2ff;
-color:#2f6fb2;
+
+color:var(--primary-dark);
+
 border-radius:10px;
+
 padding:8px 14px;
-text-decoration:none;
+
 }
 
 .btn-ghost{
-background:transparent;
-border:1px solid #d5dbea;
-color:#44546f;
+
+background:white;
+
+border:1px solid var(--border);
+
+color:var(--text-soft);
+
 }
 
-/* ---------- MODALS ---------- */
+/* ============================= */
+/* MODALS */
+/* ============================= */
 
 .modal{
+
 position:fixed;
+
 inset:0;
-background:rgba(0,0,0,0.4);
+
+background:rgba(0,0,0,.35);
+
 display:flex;
+
 align-items:center;
+
 justify-content:center;
+
+}
+
+.modal-card{
+
+background:white;
+
+padding:20px;
+
+border-radius:20px;
+
+width:420px;
+
+max-width:90%;
+
 }
 
 .modal.hidden{
 display:none;
 }
 
-.modal-card{
-background:white;
-padding:20px;
-border-radius:16px;
-width:420px;
-max-width:90%;
+/* ============================= */
+/* BOTTOM NAV */
+/* ============================= */
+
+.bottom-nav{
+display:none;
 }
 
-/* ---------- RESPONSIVE ---------- */
+/* ============================= */
+/* RESPONSIVE */
+/* ============================= */
 
-@media (max-width:1000px){
+@media(max-width:1000px){
+
+.app-shell{
+grid-template-columns:1fr;
+}
 
 .app-sidebar{
 display:none;
@@ -261,6 +554,10 @@ display:none;
 
 .app-content{
 grid-template-columns:1fr;
+}
+
+.bottom-nav{
+display:block;
 }
 
 }
