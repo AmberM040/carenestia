@@ -50,32 +50,44 @@
 
     <div class="app-main">
 
-      <header class="app-topbar desktop-only">
-        <div style="display:flex; align-items:center; gap:14px; min-width:0;">
-          <div style="width:52px; height:52px; border-radius:50%; background:#dfe9f8; flex:0 0 auto; overflow:hidden;">
-            <img
-              src="child-avatar.jpg"
-              alt=""
-              onerror="this.style.display='none'; this.parentNode.style.background='linear-gradient(180deg,#dce8fb,#eef4fd)';"
-            >
-          </div>
+      <header class="app-topbar">
 
-          <div style="min-width:0;">
-            <h1 id="childName" style="margin:0; font-size:2rem; line-height:1; letter-spacing:-0.03em;">Child</h1>
-            <div class="summary-meta" style="margin-top:6px;">
-              <div id="childSummary">Age —</div>
-              <div id="welcomeText">Welcome back</div>
-            </div>
-            <div class="pill-row" id="diagnosisPills"></div>
-          </div>
-        </div>
+  <div class="header-left">
 
-        <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap; justify-content:flex-end;">
-          <select id="childSwitcher" class="child-switcher" style="max-width:220px;"></select>
-          <a class="btn btn-soft" href="careplan.html">Edit Child Profile</a>
-          <button id="logoutBtn" class="btn btn-ghost" type="button">Log out</button>
-        </div>
-      </header>
+    <img
+      src="images/logo-carenestia.png"
+      class="header-logo"
+      alt="CareNestia"
+    >
+
+    <div class="child-header">
+      <h1 id="childName">Child</h1>
+
+      <div class="summary-meta">
+        <span id="childSummary">Age —</span>
+        <span id="welcomeText">Welcome back</span>
+      </div>
+
+      <div class="pill-row" id="diagnosisPills"></div>
+    </div>
+
+  </div>
+
+  <div class="header-right">
+
+    <select id="childSwitcher" class="child-switcher"></select>
+
+    <a class="btn btn-soft" href="careplan.html">
+      Edit Profile
+    </a>
+
+    <button id="logoutBtn" class="btn btn-ghost">
+      Log out
+    </button>
+
+  </div>
+
+</header>
 
       <main class="app-content">
 
