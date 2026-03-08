@@ -4,11 +4,16 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   const welcomeText = document.getElementById("welcomeText");
   const childSwitcher = document.getElementById("childSwitcher");
+  const childSwitcherMobile = document.getElementById("childSwitcherMobile");
   const logoutBtn = document.getElementById("logoutBtn");
+  const logoutBtnMobile = document.getElementById("logoutBtnMobile");
 
   const childName = document.getElementById("childName");
+  const childNameMobile = document.getElementById("childNameMobile");
   const childSummary = document.getElementById("childSummary");
+  const childSummaryMobile = document.getElementById("childSummaryMobile");
   const diagnosisPills = document.getElementById("diagnosisPills");
+  const diagnosisPillsMobile = document.getElementById("diagnosisPillsMobile");
 
   const todayList = document.getElementById("todayList");
   const homeScheduleList = document.getElementById("homeScheduleList");
@@ -88,10 +93,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   function normalizeDiagnoses(value) {
     if (Array.isArray(value)) return value.filter(Boolean);
     if (typeof value === "string" && value.trim()) {
-      return value
-        .split(",")
-        .map((item) => item.trim())
-        .filter(Boolean);
+      return value.split(",").map((item) => item.trim()).filter(Boolean);
     }
     return [];
   }
@@ -119,6 +121,16 @@ document.addEventListener("DOMContentLoaded", async () => {
     return d.toLocaleString([], {
       month: "short",
       day: "numeric",
+      hour: "numeric",
+      minute: "2-digit",
+    });
+  }
+
+  function formatTimeOnly(value) {
+    if (!value) return "—";
+    const d = new Date(value);
+    if (Number.isNaN(d.getTime())) return value;
+    return d.toLocaleTimeString([], {
       hour: "numeric",
       minute: "2-digit",
     });
@@ -376,8 +388,6 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     if (!result.error) return result.data || [];
 
-    console.warn("schedule_items not available, trying appointments:", result.error.message);
-
     result = await supabase
       .from("appointments")
       .select("*")
@@ -408,37 +418,47 @@ document.addEventListener("DOMContentLoaded", async () => {
     return data || null;
   }
 
+  function syncSwitcherOptions() {
+    if (!childSwitcher || !childSwitcherMobile) return;
+    childSwitcherMobile.innerHTML = childSwitcher.innerHTML;
+    childSwitcherMobile.value = childSwitcher.value;
+  }
+
   function renderChildSwitcher() {
-    childSwitcher.innerHTML = "";
+    [childSwitcher, childSwitcherMobile].forEach((switcher) => {
+      if (!switcher) return;
+      switcher.innerHTML = "";
 
-    if (!children.length) {
-      const option = document.createElement("option");
-      option.value = "";
-      option.textContent = "No children yet";
-      childSwitcher.appendChild(option);
-      return;
-    }
-
-    children.forEach((child) => {
-      const option = document.createElement("option");
-      option.value = child.id;
-      option.textContent = child.name || "Unnamed Child";
-      if (activeChild && String(activeChild.id) === String(child.id)) {
-        option.selected = true;
+      if (!children.length) {
+        const option = document.createElement("option");
+        option.value = "";
+        option.textContent = "No children yet";
+        switcher.appendChild(option);
+        return;
       }
-      childSwitcher.appendChild(option);
+
+      children.forEach((child) => {
+        const option = document.createElement("option");
+        option.value = child.id;
+        option.textContent = child.name || "Unnamed Child";
+        if (activeChild && String(activeChild.id) === String(child.id)) {
+          option.selected = true;
+        }
+        switcher.appendChild(option);
+      });
     });
   }
 
   function renderChildSummaryCard(child) {
     if (!child) {
-      childName.textContent = "Child";
-      childSummary.textContent = "Age —";
-      diagnosisPills.innerHTML = "";
+      if (childName) childName.textContent = "Child";
+      if (childNameMobile) childNameMobile.textContent = "Child";
+      if (childSummary) childSummary.textContent = "Age —";
+      if (childSummaryMobile) childSummaryMobile.textContent = "Age —";
+      if (diagnosisPills) diagnosisPills.innerHTML = "";
+      if (diagnosisPillsMobile) diagnosisPillsMobile.innerHTML = "";
       return;
     }
-
-    childName.textContent = child.name || "Child";
 
     const childAge = child.age ?? getAgeFromBirthdate(child.birthdate);
     const ageText =
@@ -446,22 +466,39 @@ document.addEventListener("DOMContentLoaded", async () => {
         ? `Age ${childAge}`
         : "Age —";
 
-    childSummary.textContent = ageText;
+    if (childName) childName.textContent = child.name || "Child";
+    if (childNameMobile) childNameMobile.textContent = child.name || "Child";
+    if (childSummary) childSummary.textContent = ageText;
+    if (childSummaryMobile) childSummaryMobile.textContent = ageText;
 
-    diagnosisPills.innerHTML = "";
     const diagnoses = normalizeDiagnoses(child.diagnoses);
+    const renderPills = (el) => {
+      if (!el) return;
+      el.innerHTML = "";
+      if (!diagnoses.length) {
+        el.innerHTML = `<span class="pill">No diagnoses added</span>`;
+        return;
+      }
+      diagnoses.forEach((diagnosis) => {
+        const span = document.createElement("span");
+        span.className = "pill";
+        span.textContent = diagnosis;
+        el.appendChild(span);
+      });
+    };
 
-    if (!diagnoses.length) {
-      diagnosisPills.innerHTML = `<span class="pill">No diagnoses added</span>`;
-      return;
-    }
+    renderPills(diagnosisPills);
+    renderPills(diagnosisPillsMobile);
+  }
 
-    diagnoses.forEach((diagnosis) => {
-      const span = document.createElement("span");
-      span.className = "pill";
-      span.textContent = diagnosis;
-      diagnosisPills.appendChild(span);
-    });
+  function getScheduleIcon(item) {
+    const text = `${item.title || ""} ${item.type || ""}`.toLowerCase();
+    if (text.includes("therapy")) return "🧩";
+    if (text.includes("feed")) return "🍼";
+    if (text.includes("nurse")) return "👩‍⚕️";
+    if (text.includes("med")) return "💊";
+    if (text.includes("appointment")) return "📅";
+    return "•";
   }
 
   function renderTodayList(items = []) {
@@ -474,13 +511,25 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     items.forEach((item) => {
       const li = document.createElement("li");
-      li.className = "list-item";
+      li.className = "timeline-row";
       li.innerHTML = `
-        <div>
-          <strong>${escapeHtml(item.title || item.name || "Untitled")}</strong>
-          <div class="muted">${escapeHtml(item.location || item.type || "")}</div>
+        <div class="timeline-time">${escapeHtml(
+          item.start_at ? formatTimeOnly(item.start_at) : item.timeLabel || "—"
+        )}</div>
+        <div class="timeline-card">
+          <div style="display:flex; justify-content:space-between; gap:12px; align-items:flex-start;">
+            <div style="display:flex; gap:12px; align-items:flex-start; min-width:0;">
+              <div class="log-icon default" style="width:44px;height:44px;border-radius:14px;font-size:1rem;">${escapeHtml(
+                getScheduleIcon(item)
+              )}</div>
+              <div style="min-width:0;">
+                <h3 style="margin:0 0 4px;">${escapeHtml(item.title || item.name || "Untitled")}</h3>
+                <div class="muted">${escapeHtml(item.location || item.type || "")}</div>
+              </div>
+            </div>
+            <div class="muted right-strong">${escapeHtml(item.timeLabel || "—")}</div>
+          </div>
         </div>
-        <div class="muted">${escapeHtml(item.timeLabel || "—")}</div>
       `;
       todayList.appendChild(li);
     });
@@ -496,13 +545,20 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     items.forEach((item) => {
       const div = document.createElement("div");
-      div.className = "list-item";
+      div.className = "timeline-card";
       div.innerHTML = `
-        <div>
-          <strong>${escapeHtml(item.title || item.name || "Untitled")}</strong>
-          <div class="muted">${escapeHtml(item.location || item.type || "")}</div>
+        <div style="display:flex; justify-content:space-between; gap:12px; align-items:flex-start;">
+          <div style="display:flex; gap:12px; align-items:flex-start; min-width:0;">
+            <div class="log-icon default" style="width:42px;height:42px;border-radius:14px;font-size:0.95rem;">${escapeHtml(
+              getScheduleIcon(item)
+            )}</div>
+            <div style="min-width:0;">
+              <h3 style="margin:0 0 4px;">${escapeHtml(item.title || item.name || "Untitled")}</h3>
+              <div class="muted">${escapeHtml(item.location || item.type || "")}</div>
+            </div>
+          </div>
+          <div class="muted right-strong">${escapeHtml(item.timeLabel || "—")}</div>
         </div>
-        <div class="muted">${escapeHtml(item.timeLabel || "—")}</div>
       `;
       homeScheduleList.appendChild(div);
     });
@@ -518,12 +574,15 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     logs.forEach((log) => {
       const li = document.createElement("li");
-      li.className = "list-item";
+      li.className = "log-card";
       li.innerHTML = `
-        <div>
-          <strong>${escapeHtml(log.categoryLabel || capitalize(log.category || "note"))}</strong>
-          <div>${escapeHtml(log.note || "")}</div>
-          <div class="muted">${escapeHtml(log.author || "Unknown")} • ${escapeHtml(
+        <div class="log-icon ${escapeHtml(log.category || "default")}">
+          ${escapeHtml((log.categoryLabel || "N").charAt(0))}
+        </div>
+        <div class="log-main">
+          <h3>${escapeHtml(log.categoryLabel || capitalize(log.category || "note"))}</h3>
+          <p>${escapeHtml(log.note || "")}</p>
+          <div class="muted mt-8">${escapeHtml(log.author || "Unknown")} • ${escapeHtml(
             log.timeLabel || "—"
           )}</div>
         </div>
@@ -544,15 +603,15 @@ document.addEventListener("DOMContentLoaded", async () => {
         : "—";
 
     lastVitalsContent.innerHTML = `
-      <div class="grid-2">
-        <div class="list-item"><strong>O₂:</strong> ${escapeHtml(vitals.o2_sat ?? "—")}</div>
-        <div class="list-item"><strong>Temp:</strong> ${escapeHtml(vitals.temperature ?? "—")}</div>
-        <div class="list-item"><strong>BP:</strong> ${escapeHtml(bp)}</div>
-        <div class="list-item"><strong>HR:</strong> ${escapeHtml(vitals.heart_rate ?? "—")}</div>
-        <div class="list-item"><strong>RR:</strong> ${escapeHtml(vitals.respiratory_rate ?? "—")}</div>
-        <div class="list-item"><strong>Taken:</strong> ${escapeHtml(
+      <div class="vitals-grid">
+        <div class="vital-box"><h4>O₂</h4><div class="vital-value">${escapeHtml(vitals.o2_sat ?? "—")}</div></div>
+        <div class="vital-box"><h4>Temp</h4><div class="vital-value">${escapeHtml(vitals.temperature ?? "—")}</div></div>
+        <div class="vital-box"><h4>BP</h4><div class="vital-value">${escapeHtml(bp)}</div></div>
+        <div class="vital-box"><h4>HR</h4><div class="vital-value">${escapeHtml(vitals.heart_rate ?? "—")}</div></div>
+        <div class="vital-box"><h4>RR</h4><div class="vital-value">${escapeHtml(vitals.respiratory_rate ?? "—")}</div></div>
+        <div class="vital-box"><h4>Taken</h4><div class="vital-value" style="font-size:0.95rem;">${escapeHtml(
           formatDateTime(vitals.taken_at || vitals.created_at)
-        )}</div>
+        )}</div></div>
       </div>
       ${
         vitals.notes
@@ -968,14 +1027,23 @@ document.addEventListener("DOMContentLoaded", async () => {
     renderEmergencySheet(activeChild, carePlan || localCarePlan, medicationsRaw);
   }
 
+  function handleChildChange(selectedId) {
+    activeChild = children.find((c) => String(c.id) === String(selectedId)) || null;
+    if (activeChild) {
+      setActiveChildId(activeChild.id);
+    }
+    renderChildSwitcher();
+    loadDashboard();
+  }
+
   async function init() {
     const supabase = getSupabaseClient();
 
     currentUser = await fetchUser();
 
-    if (currentUser?.email) {
+    if (currentUser?.email && welcomeText) {
       welcomeText.textContent = `Welcome back, ${currentUser.email}`;
-    } else {
+    } else if (welcomeText) {
       welcomeText.textContent = "Welcome back";
     }
 
@@ -1004,23 +1072,28 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
 
     renderChildSwitcher();
+    syncSwitcherOptions();
     await loadDashboard();
 
     childSwitcher?.addEventListener("change", async (e) => {
-      const selectedId = e.target.value;
-      activeChild = children.find((c) => String(c.id) === String(selectedId)) || null;
-      if (activeChild) {
-        setActiveChildId(activeChild.id);
-      }
-      await loadDashboard();
+      handleChildChange(e.target.value);
+      if (childSwitcherMobile) childSwitcherMobile.value = e.target.value;
     });
 
-    logoutBtn?.addEventListener("click", async () => {
+    childSwitcherMobile?.addEventListener("change", async (e) => {
+      handleChildChange(e.target.value);
+      if (childSwitcher) childSwitcher.value = e.target.value;
+    });
+
+    const logoutHandler = async () => {
       if (supabase?.auth) {
         await supabase.auth.signOut();
       }
       window.location.href = "login.html";
-    });
+    };
+
+    logoutBtn?.addEventListener("click", logoutHandler);
+    logoutBtnMobile?.addEventListener("click", logoutHandler);
 
     quickCategoryButtons.forEach((btn) => {
       btn.addEventListener("click", () => {
