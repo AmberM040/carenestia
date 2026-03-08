@@ -5,6 +5,8 @@ document.addEventListener("DOMContentLoaded", async () => {
   const childSwitcher = document.getElementById("childSwitcher");
   const childSummary = document.getElementById("childSummary");
   const saveCarePlanBtn = document.getElementById("saveCarePlanBtn");
+  const logoutBtn = document.getElementById("logoutBtn");
+  const saveStatus = document.getElementById("saveStatus");
 
   const allergies = document.getElementById("allergies");
   const baselineO2 = document.getElementById("baselineO2");
@@ -34,7 +36,9 @@ document.addEventListener("DOMContentLoaded", async () => {
   let carePlanId = null;
 
   function getSupabaseClient() {
-    return window.supabaseClient || null;
+    if (window.supabaseClient) return window.supabaseClient;
+    if (window.supabase?.from) return window.supabase;
+    return null;
   }
 
   function getActiveChildId() {
@@ -48,13 +52,20 @@ document.addEventListener("DOMContentLoaded", async () => {
   function getLocalDB() {
     try {
       return JSON.parse(localStorage.getItem(LOCAL_DB_KEY) || "{}");
-    } catch {
+    } catch (err) {
+      console.error("Failed to parse local DB:", err);
       return {};
     }
   }
 
   function saveLocalDB(db) {
     localStorage.setItem(LOCAL_DB_KEY, JSON.stringify(db));
+  }
+
+  function setStatus(message = "", isError = false) {
+    if (!saveStatus) return;
+    saveStatus.textContent = message;
+    saveStatus.className = isError ? "muted error-text" : "muted";
   }
 
   function clearForm() {
@@ -111,6 +122,8 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
   function renderChildSwitcher() {
+    if (!childSwitcher) return;
+
     childSwitcher.innerHTML = "";
 
     if (!children.length) {
@@ -133,6 +146,8 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
   function renderChildSummary() {
+    if (!childSummary) return;
+
     if (!activeChild) {
       childSummary.textContent = "No child selected";
       return;
@@ -151,13 +166,17 @@ document.addEventListener("DOMContentLoaded", async () => {
     if (!supabase?.auth) return null;
 
     const { data, error } = await supabase.auth.getUser();
-    if (error) return null;
+    if (error) {
+      console.warn("Could not get user:", error.message);
+      return null;
+    }
+
     return data?.user || null;
   }
 
   async function fetchChildren(userId) {
     const supabase = getSupabaseClient();
-    if (!supabase) return [];
+    if (!supabase || !userId) return [];
 
     const { data, error } = await supabase
       .from("children")
@@ -193,6 +212,11 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   function getLocalChildrenFallback() {
     const db = getLocalDB();
+
+    if (Array.isArray(db.children) && db.children.length) {
+      return db.children;
+    }
+
     const child = db.child || null;
     if (!child) return [];
 
@@ -201,8 +225,8 @@ document.addEventListener("DOMContentLoaded", async () => {
         id: "local-child-1",
         name: child.name || "Test Child",
         age: child.age ?? "",
-        diagnoses: Array.isArray(child.diagnoses) ? child.diagnoses : []
-      }
+        diagnoses: Array.isArray(child.diagnoses) ? child.diagnoses : [],
+      },
     ];
   }
 
@@ -244,12 +268,13 @@ document.addEventListener("DOMContentLoaded", async () => {
       preferred_hospital: preferredHospital.value.trim(),
       insurance_notes: insuranceNotes.value.trim(),
       additional_notes: additionalNotes.value.trim(),
-      updated_at: new Date().toISOString()
+      updated_at: new Date().toISOString(),
     };
   }
 
   async function loadCarePlan() {
     renderChildSummary();
+    setStatus("");
 
     if (!activeChild) {
       clearForm();
@@ -281,17 +306,25 @@ document.addEventListener("DOMContentLoaded", async () => {
 
       if (error) {
         console.warn("Could not save care plan:", error.message);
+        setStatus("Saved locally. Supabase save failed.", true);
       } else {
         carePlanId = data?.id || null;
         saved = true;
+        setStatus("Care plan saved.");
       }
     }
 
     if (!saved) {
       saveLocalCarePlan(activeChild.id, { ...payload, id: carePlanId || "local-care-plan" });
+      if (!currentUser?.id) {
+        setStatus("Care plan saved locally.");
+      }
     }
 
-    alert("Care plan saved.");
+    if (!saveStatus) {
+      alert("Care plan saved.");
+    }
+
     await loadCarePlan();
   }
 
@@ -334,6 +367,14 @@ document.addEventListener("DOMContentLoaded", async () => {
     });
 
     saveCarePlanBtn?.addEventListener("click", saveCarePlan);
+
+    logoutBtn?.addEventListener("click", async () => {
+      const supabase = getSupabaseClient();
+      if (supabase?.auth) {
+        await supabase.auth.signOut();
+      }
+      window.location.href = "login.html";
+    });
   }
 
   await init();
