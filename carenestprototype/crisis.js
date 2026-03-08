@@ -1,118 +1,292 @@
-<!doctype html>
-<html lang="en">
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Crisis Mode • CareNest</title>
-  <link rel="stylesheet" href="styles.css" />
-</head>
-<body>
-  <header class="topbar">
-    <div class="container">
-      <div class="topbar-left">
-        <h1>CareNest</h1>
-        <p>Crisis Mode</p>
+document.addEventListener("DOMContentLoaded", async () => {
+
+const ACTIVE_CHILD_KEY = "carenest_active_child_id";
+const LOCAL_DB_KEY = "carenest_prototype_v1";
+const CRISIS_KEY = "carenest_crisis_timeline";
+
+const childSwitcher = document.getElementById("childSwitcher");
+const childSummary = document.getElementById("childSummary");
+const logoutBtn = document.getElementById("logoutBtn");
+
+const protocolBox = document.getElementById("protocolBox");
+const rescueMedBox = document.getElementById("rescueMedBox");
+const emsBox = document.getElementById("emsBox");
+const oxygenBox = document.getElementById("oxygenBox");
+const contactsBox = document.getElementById("contactsBox");
+
+const timelineList = document.getElementById("timelineList");
+
+const btnStartCrisis = document.getElementById("btnStartCrisis");
+const btnEndCrisis = document.getElementById("btnEndCrisis");
+
+const btnLogSeizureStart = document.getElementById("btnLogSeizureStart");
+const btnLogSeizureEnd = document.getElementById("btnLogSeizureEnd");
+const btnLogRescueMed = document.getElementById("btnLogRescueMed");
+const btnLogOxygen = document.getElementById("btnLogOxygen");
+const btnLogCallEms = document.getElementById("btnLogCallEms");
+const btnAddNote = document.getElementById("btnAddNote");
+const btnClearTimeline = document.getElementById("btnClearTimeline");
+
+let currentUser = null;
+let children = [];
+let activeChild = null;
+let carePlan = null;
+
+function getSupabaseClient(){
+  return window.supabaseClient || null;
+}
+
+function getActiveChildId(){
+  return localStorage.getItem(ACTIVE_CHILD_KEY);
+}
+
+function setActiveChildId(id){
+  localStorage.setItem(ACTIVE_CHILD_KEY,id);
+}
+
+function getLocalDB(){
+  try{
+    return JSON.parse(localStorage.getItem(LOCAL_DB_KEY)||"{}");
+  }catch{
+    return {};
+  }
+}
+
+function getTimeline(){
+  const db = getLocalDB();
+  return db.crisisTimeline || [];
+}
+
+function saveTimeline(list){
+  const db = getLocalDB();
+  db.crisisTimeline = list;
+  localStorage.setItem(LOCAL_DB_KEY,JSON.stringify(db));
+}
+
+function logEvent(label){
+
+  const timeline = getTimeline();
+
+  timeline.unshift({
+    label,
+    time:new Date().toISOString()
+  });
+
+  saveTimeline(timeline);
+
+  renderTimeline();
+
+}
+
+function renderTimeline(){
+
+  const timeline = getTimeline();
+
+  timelineList.innerHTML = "";
+
+  if(!timeline.length){
+    timelineList.innerHTML = `<div class="muted">No events yet</div>`;
+    return;
+  }
+
+  timeline.forEach(event=>{
+    const div = document.createElement("div");
+    div.className = "list-item";
+    div.innerHTML = `
+      <div>
+        <strong>${event.label}</strong>
+        <div class="muted">${new Date(event.time).toLocaleString()}</div>
       </div>
+    `;
+    timelineList.appendChild(div);
+  });
 
-      <div class="topbar-right">
-        <select id="childSwitcher" class="child-switcher"></select>
-        <a class="btn btn-ghost" href="index.html">Back</a>
-        <button id="logoutBtn" class="btn btn-ghost" type="button">Log out</button>
-      </div>
-    </div>
-  </header>
+}
 
-  <main class="page">
-    <section class="card">
-      <div class="section-head">
-        <div>
-          <h1 style="margin:0;">Crisis Mode</h1>
-          <p id="childSummary" class="muted" style="margin:6px 0 0;">No child selected</p>
-        </div>
-        <div style="display:flex; gap:8px; flex-wrap:wrap;">
-          <button id="btnStartCrisis" class="btn" type="button">Start Crisis</button>
-          <button id="btnEndCrisis" class="btn btn-ghost" type="button">End Crisis</button>
-        </div>
-      </div>
-      <p id="crisisStatus" class="muted" style="margin-top:10px;">Crisis inactive</p>
-    </section>
+async function fetchUser(){
 
-    <div class="grid-2">
-      <section class="card">
-        <div class="section-head">
-          <h2>Emergency Protocol</h2>
-        </div>
-        <div id="protocolBox" class="muted">No protocol loaded.</div>
-      </section>
+  const supabase = getSupabaseClient();
 
-      <section class="card">
-        <div class="section-head">
-          <h2>Rescue Medication</h2>
-        </div>
-        <div id="rescueMedBox" class="muted">No rescue medication loaded.</div>
-      </section>
-    </div>
+  if(!supabase?.auth) return null;
 
-    <div class="grid-2">
-      <section class="card">
-        <div class="section-head">
-          <h2>When to Call EMS</h2>
-        </div>
-        <div id="emsBox" class="muted">No EMS guidance loaded.</div>
-      </section>
+  const {data,error} = await supabase.auth.getUser();
 
-      <section class="card">
-        <div class="section-head">
-          <h2>Oxygen Guidance</h2>
-        </div>
-        <div id="oxygenBox" class="muted">No oxygen guidance loaded.</div>
-      </section>
-    </div>
+  if(error) return null;
 
-    <section class="card">
-      <div class="section-head">
-        <h2>Quick Actions</h2>
-      </div>
+  return data?.user || null;
 
-      <div class="quick-actions">
-        <button id="btnLogSeizureStart" class="quick-btn" type="button">Seizure Started<span>Start the event timeline</span></button>
-        <button id="btnLogSeizureEnd" class="quick-btn" type="button">Seizure Ended<span>Mark stop time</span></button>
-        <button id="btnLogRescueMed" class="quick-btn" type="button">Rescue Med Given<span>Log medication timing</span></button>
-        <button id="btnLogOxygen" class="quick-btn" type="button">Oxygen Started<span>Log oxygen support</span></button>
-        <button id="btnLogCallEms" class="quick-btn" type="button">Called EMS<span>Mark emergency call time</span></button>
-        <button id="btnAddNote" class="quick-btn" type="button">Add Note<span>Log a custom crisis note</span></button>
-      </div>
-    </section>
+}
 
-    <section class="card">
-      <div class="section-head">
-        <h2>Emergency Contacts</h2>
-      </div>
-      <div id="contactsBox" class="muted">No contacts loaded.</div>
-    </section>
+async function fetchChildren(userId){
 
-    <section class="card">
-      <div class="section-head">
-        <h2>Crisis Timeline</h2>
-        <button id="btnClearTimeline" class="btn btn-ghost" type="button">Clear</button>
-      </div>
-      <div id="timelineList" class="list"></div>
-    </section>
-  </main>
+  const supabase = getSupabaseClient();
 
-  <nav class="bottom-nav">
-    <div class="bottom-nav-inner">
-      <a class="nav-link" href="index.html">Home</a>
-      <a class="nav-link" href="carelog.html">Care Log</a>
-      <a class="nav-link" href="meds.html">Meds</a>
-      <a class="nav-link" href="schedule.html">Schedule</a>
-      <a class="nav-link active" href="more.html">More</a>
-    </div>
-  </nav>
+  if(!supabase) return [];
 
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="supabase.js"></script>
-  <script src="auth.js"></script>
-  <script src="crisis.js"></script>
-</body>
-</html>
+  const {data,error} = await supabase
+  .from("children")
+  .select("*")
+  .eq("parent_id",userId);
+
+  if(error) return [];
+
+  return data || [];
+
+}
+
+async function fetchCarePlan(childId){
+
+  const supabase = getSupabaseClient();
+
+  if(!supabase) return null;
+
+  const {data,error} = await supabase
+  .from("care_plans")
+  .select("*")
+  .eq("child_id",childId)
+  .maybeSingle();
+
+  if(error) return null;
+
+  return data || null;
+
+}
+
+function renderChildSwitcher(){
+
+  childSwitcher.innerHTML="";
+
+  children.forEach(child=>{
+
+    const option=document.createElement("option");
+    option.value=child.id;
+    option.textContent=child.name;
+
+    if(activeChild && child.id===activeChild.id){
+      option.selected=true;
+    }
+
+    childSwitcher.appendChild(option);
+
+  });
+
+}
+
+function renderChildSummary(){
+
+  if(!activeChild){
+    childSummary.textContent="No child selected";
+    return;
+  }
+
+  childSummary.textContent = activeChild.name;
+
+}
+
+function renderCarePlan(){
+
+  if(!carePlan){
+    protocolBox.textContent="No protocol saved";
+    return;
+  }
+
+  protocolBox.textContent = carePlan.seizure_protocol || "No protocol";
+
+  rescueMedBox.innerHTML = `
+  <div><strong>${carePlan.rescue_med_name || "None"}</strong></div>
+  <div>${carePlan.rescue_med_dose || ""}</div>
+  <div>${carePlan.rescue_med_route || ""}</div>
+  `;
+
+  emsBox.textContent = carePlan.ems_when || "No EMS guidance";
+
+  oxygenBox.textContent = carePlan.oxygen_guidance || "No oxygen guidance";
+
+  contactsBox.innerHTML = `
+  <div>${carePlan.emergency_contacts || ""}</div>
+  <div>${carePlan.doctor_contacts || ""}</div>
+  <div>${carePlan.preferred_hospital || ""}</div>
+  `;
+
+}
+
+async function init(){
+
+  currentUser = await fetchUser();
+
+  if(currentUser?.id){
+    children = await fetchChildren(currentUser.id);
+  }
+
+  const savedId = getActiveChildId();
+
+  activeChild =
+    children.find(c=>String(c.id)===String(savedId)) ||
+    children[0] ||
+    null;
+
+  if(activeChild){
+    setActiveChildId(activeChild.id);
+  }
+
+  renderChildSwitcher();
+  renderChildSummary();
+
+  if(activeChild){
+    carePlan = await fetchCarePlan(activeChild.id);
+  }
+
+  renderCarePlan();
+
+  renderTimeline();
+
+}
+
+childSwitcher?.addEventListener("change",async e=>{
+  const id=e.target.value;
+  activeChild=children.find(c=>String(c.id)===String(id));
+  setActiveChildId(id);
+
+  carePlan = await fetchCarePlan(activeChild.id);
+
+  renderChildSummary();
+  renderCarePlan();
+});
+
+btnStartCrisis?.addEventListener("click",()=>logEvent("Crisis Started"));
+
+btnEndCrisis?.addEventListener("click",()=>logEvent("Crisis Ended"));
+
+btnLogSeizureStart?.addEventListener("click",()=>logEvent("Seizure Started"));
+
+btnLogSeizureEnd?.addEventListener("click",()=>logEvent("Seizure Ended"));
+
+btnLogRescueMed?.addEventListener("click",()=>logEvent("Rescue Medication Given"));
+
+btnLogOxygen?.addEventListener("click",()=>logEvent("Oxygen Started"));
+
+btnLogCallEms?.addEventListener("click",()=>logEvent("EMS Called"));
+
+btnAddNote?.addEventListener("click",()=>{
+  const note = prompt("Enter note");
+  if(note){
+    logEvent(note);
+  }
+});
+
+btnClearTimeline?.addEventListener("click",()=>{
+  saveTimeline([]);
+  renderTimeline();
+});
+
+logoutBtn?.addEventListener("click",async ()=>{
+  const supabase=getSupabaseClient();
+  if(supabase?.auth){
+    await supabase.auth.signOut();
+  }
+  window.location.href="login.html";
+});
+
+await init();
+
+});
