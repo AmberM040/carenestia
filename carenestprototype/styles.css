@@ -93,15 +93,14 @@ ul{
   gap:18px;
 }
 
-.sidebar-brand{
-  padding:8px 6px 14px;
-  border-bottom:1px solid var(--border);
+.sidebar-brand {
+  padding: 10px 10px 18px;
 }
 
-.sidebar-wordmark{
-  width:160px;
-  height:auto;
-  object-fit:contain;
+.sidebar-wordmark {
+  width: 210px;
+  height: auto;
+  display: block;
 }
 
 .sidebar-nav{
