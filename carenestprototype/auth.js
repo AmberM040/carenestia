@@ -27,19 +27,55 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
+  async function getPostLoginDestination() {
+    const {
+      data: { user },
+      error: userError,
+    } = await supabaseClient.auth.getUser();
+
+    if (userError || !user) {
+      return "login.html";
+    }
+
+    const { data: children, error: childrenError } = await supabaseClient
+      .from("children")
+      .select("id")
+      .eq("parent_id", user.id)
+      .limit(1);
+
+    if (childrenError) {
+      console.error("Children lookup error:", childrenError);
+      return "onboarding.html";
+    }
+
+    if (!children || children.length === 0) {
+      return "onboarding.html";
+    }
+
+    return "index.html";
+  }
+
   async function redirectIfLoggedIn() {
     const { data, error } = await supabaseClient.auth.getSession();
-    if (error) return;
-    if (data.session) {
-      window.location.href = "index.html";
+    if (error || !data.session) return;
+
+    const currentPage = window.location.pathname.split("/").pop();
+
+    const publicPages = [
+      "",
+      "login.html",
+      "signup.html",
+      "forgot-password.html",
+      "reset-password.html",
+    ];
+
+    if (publicPages.includes(currentPage)) {
+      const destination = await getPostLoginDestination();
+      window.location.href = destination;
     }
   }
 
-  const currentPage = window.location.pathname.split("/").pop();
-
-  if (currentPage === "login.html" || currentPage === "signup.html") {
-    redirectIfLoggedIn();
-  }
+  redirectIfLoggedIn();
 
   const loginForm = document.getElementById("loginForm");
   if (loginForm) {
@@ -66,8 +102,11 @@ document.addEventListener("DOMContentLoaded", () => {
       }
 
       showSuccess("Login successful. Redirecting...");
+
+      const destination = await getPostLoginDestination();
+
       setTimeout(() => {
-        window.location.href = "index.html";
+        window.location.href = destination;
       }, 700);
     });
   }
