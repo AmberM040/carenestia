@@ -976,4 +976,163 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   async function loadDashboard() {
     if (!activeChild) {
-      render
+      renderChildSummaryCard(null);
+      renderTodayList([]);
+      renderUpcomingSchedule([]);
+      renderCareLogs([]);
+      hide(lastVitalsCard);
+      hide(lowSupplyCard);
+      hide(lastSymptomCard);
+      return;
+    }
+
+    renderChildSummaryCard(activeChild);
+
+    const [
+      scheduleItemsRaw,
+      careLogsRaw,
+      symptomRaw,
+      vitalsRaw,
+      inventoryRaw,
+      medicationsRaw,
+      carePlan,
+    ] = await Promise.all([
+      fetchSchedule(activeChild.id),
+      fetchCareLogs(activeChild.id),
+      fetchAllCareLogsForSymptom(activeChild.id),
+      fetchVitals(activeChild.id),
+      fetchInventory(activeChild.id),
+      fetchMedications(activeChild.id),
+      fetchCarePlan(activeChild.id),
+    ]);
+
+    const localSchedule = getLocalScheduleFallback();
+    const localLogs = getLocalCareLogsFallback();
+    const localVitals = getLocalVitalsFallback();
+    const localInventory = getLocalInventoryFallback();
+    const localCarePlan = getLocalCarePlanFallback(activeChild.id);
+
+    const scheduleItems = normalizeScheduleItems(
+      scheduleItemsRaw.length ? scheduleItemsRaw : localSchedule
+    );
+
+    const careLogs = normalizeCareLogs(careLogsRaw.length ? careLogsRaw : localLogs);
+
+    const symptomLog = normalizeCareLogs(
+      symptomRaw.length ? symptomRaw : careLogs.filter((x) => x.category === "symptom").slice(0, 1)
+    )[0];
+
+    const vitals = (vitalsRaw.length ? vitalsRaw : localVitals)[0] || null;
+    const inventory = inventoryRaw.length ? inventoryRaw : localInventory;
+
+    const todayItems = scheduleItems.filter((item) => {
+      if (item.start_at) return isToday(item.start_at);
+      return false;
+    });
+
+    const upcomingItems = scheduleItems
+      .filter((item) => {
+        const d = new Date(item.start_at || item.date || "");
+        return !Number.isNaN(d.getTime()) && d >= new Date();
+      })
+      .slice(0, 5);
+
+    renderTodayList(todayItems.length ? todayItems : scheduleItems.slice(0, 5));
+    renderUpcomingSchedule(upcomingItems.length ? upcomingItems : scheduleItems.slice(0, 5));
+    renderCareLogs(careLogs.slice(0, 5));
+    renderLastVitals(vitals);
+    renderInventory(inventory);
+    renderLastSymptom(symptomLog);
+    renderEmergencySheet(activeChild, carePlan || localCarePlan, medicationsRaw);
+  }
+
+  async function init() {
+    const supabase = getSupabaseClient();
+
+    currentUser = await fetchUser();
+
+    if (currentUser?.email && welcomeText) {
+      welcomeText.textContent = `Welcome back, ${currentUser.email}`;
+    } else if (welcomeText) {
+      welcomeText.textContent = "Welcome back";
+    }
+
+    const localDb = getLocalDB();
+    fillSpecialties(safeArray(localDb.specialties));
+
+    let loadedChildren = [];
+    if (currentUser?.id) {
+      loadedChildren = await fetchChildren(currentUser.id);
+    }
+
+    if (!loadedChildren.length) {
+      loadedChildren = getLocalChildrenFallback();
+    }
+
+    children = loadedChildren;
+
+    const savedId = getActiveChildId();
+    activeChild =
+      children.find((c) => String(c.id) === String(savedId)) ||
+      children[0] ||
+      null;
+
+    if (activeChild) {
+      setActiveChildId(activeChild.id);
+    }
+
+    renderChildSwitcher();
+    await loadDashboard();
+
+    childSwitcher?.addEventListener("change", async (e) => {
+      const selectedId = e.target.value;
+      activeChild = children.find((c) => String(c.id) === String(selectedId)) || null;
+      if (activeChild) {
+        setActiveChildId(activeChild.id);
+      }
+      await loadDashboard();
+    });
+
+    logoutBtn?.addEventListener("click", async () => {
+      if (supabase?.auth) {
+        await supabase.auth.signOut();
+      }
+      window.location.href = "login.html";
+    });
+
+    quickCategoryButtons.forEach((btn) => {
+      btn.addEventListener("click", () => {
+        openQuickLog(btn.dataset.category || "note");
+      });
+    });
+
+    btnCloseModal?.addEventListener("click", closeQuickLog);
+    btnSave?.addEventListener("click", saveCareLog);
+
+    quickVitalButtons.forEach((btn) => {
+      btn.addEventListener("click", () => {
+        openVitalsModal(btn.dataset.quickVital || "full");
+      });
+    });
+
+    btnCloseVitalsModal?.addEventListener("click", closeVitalsModal);
+    btnSaveQuickVitals?.addEventListener("click", saveQuickVitals);
+
+    btnEmergency?.addEventListener("click", () => show(emergencyModal));
+    btnCloseEmergency?.addEventListener("click", () => hide(emergencyModal));
+
+    modal?.addEventListener("click", (e) => {
+      if (e.target === modal) closeQuickLog();
+    });
+
+    vitalsModal?.addEventListener("click", (e) => {
+      if (e.target === vitalsModal) closeVitalsModal();
+    });
+
+    emergencyModal?.addEventListener("click", (e) => {
+      if (e.target === emergencyModal) hide(emergencyModal);
+    });
+  }
+
+  await init();
+});
