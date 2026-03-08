@@ -319,7 +319,7 @@ document.addEventListener("DOMContentLoaded", () => {
         <strong>Child</strong>
         <div class="muted" style="margin-top:6px;">
           <div><strong>Name:</strong> ${escapeHtml(child.name || "—")}</div>
-          <div><strong>Age:</strong> ${escapeHtml((child.age ?? getAgeFromBirthdate(child.birthdate)) || "—"}</div>
+          <div><strong>Age:</strong> ${escapeHtml((child.age ?? getAgeFromBirthdate(child.birthdate)) || "—")}</div>
           <div><strong>Diagnoses:</strong> ${escapeHtml(diagnoses)}</div>
         </div>
       </div>
