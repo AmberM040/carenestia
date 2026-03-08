@@ -3,103 +3,219 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>CareNest • Schedule</title>
+  <title>CareNestia • Schedule</title>
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
 
-  <header class="topbar">
-    <div class="container">
-      <div class="topbar-left">
-        <h1>CareNest</h1>
-        <p>Schedule</p>
+  <div class="app-shell">
+
+    <aside class="app-sidebar">
+      <div class="sidebar-brand">
+        <img src="images/carenestia_logo_wordmark.png" class="sidebar-wordmark" alt="CareNestia">
       </div>
 
-      <div class="topbar-right">
-        <select id="childSwitcher" class="child-switcher"></select>
-        <button id="logoutBtn" class="btn btn-ghost" type="button">Log out</button>
-      </div>
-    </div>
-  </header>
+      <nav class="sidebar-nav">
+        <a class="sidebar-link" href="index.html">Dashboard</a>
+        <a class="sidebar-link active" href="schedule.html">Schedule</a>
+        <a class="sidebar-link" href="meds.html">Medications</a>
+        <a class="sidebar-link" href="carelog.html">Care Log</a>
+        <a class="sidebar-link" href="inventory.html">Inventory</a>
+        <a class="sidebar-link" href="schoolnurse.html">School Nurse</a>
+        <a class="sidebar-link" href="documents.html">Documents</a>
+      </nav>
 
-  <main class="page">
+      <div class="sidebar-actions-card">
+        <div class="sidebar-actions-title">Quick Actions</div>
 
-    <div class="welcome-row">
-      <h1>Schedule</h1>
-      <div id="childSummary" class="badge"></div>
-    </div>
-
-    <section class="card soft">
-      <div class="filter-bar">
-        <div class="segmented" id="scheduleViewTabs">
-          <button type="button" class="active" data-view="today">Today</button>
-          <button type="button" data-view="week">Week</button>
-          <button type="button" data-view="month">Month</button>
-        </div>
-
-        <div class="row">
-          <select id="scheduleCategoryFilter" class="input" style="width:auto; min-width:160px;">
-            <option value="all">All Categories</option>
-            <option value="Medication">Medication</option>
-            <option value="Feeding">Feeding</option>
-            <option value="Therapy">Therapy</option>
-            <option value="Symptom Check">Symptom Check</option>
-            <option value="Respiratory Care">Respiratory Care</option>
-            <option value="Equipment">Equipment</option>
-            <option value="Hygiene">Hygiene</option>
-            <option value="Appointment">Appointment</option>
-            <option value="Other">Other</option>
-          </select>
-
-          <button id="btnClearScheduleFilters" class="btn btn-ghost" type="button">Clear</button>
-          <button id="btnAddTask" class="quick-btn med" type="button">Add Task</button>
+        <div class="sidebar-actions-list">
+          <button id="btnAddTaskSidebar" class="btn btn-primary btn-block" type="button">+ Add Task</button>
+          <a class="btn btn-ghost btn-block" href="meds.html">Open Medications</a>
+          <a class="btn btn-ghost btn-block" href="carelog.html">Open Care Log</a>
+          <a class="btn btn-ghost btn-block" href="inventory.html">Open Inventory</a>
         </div>
       </div>
-    </section>
+    </aside>
 
-    <section id="todayView">
-      <div class="section-head">
-        <h2>Due Now</h2>
-      </div>
-      <section id="dueNowList" class="log-list"></section>
+    <div class="app-main">
 
-      <div class="section-head">
-        <h2>Up Next</h2>
-      </div>
-      <section id="upNextList" class="log-list"></section>
+      <header class="app-topbar">
+        <div class="topbar-child-card">
+          <div class="topbar-child-avatar" id="childAvatar"></div>
 
-      <div class="section-head">
-        <h2>Completed</h2>
-      </div>
-      <section id="completedList" class="log-list"></section>
-    </section>
+          <div class="topbar-child-copy">
+            <label for="childSwitcher" class="sr-only">Select child</label>
+            <select id="childSwitcher" class="topbar-child-select"></select>
+            <div class="topbar-child-meta" id="childSummary">Age —</div>
+          </div>
+        </div>
 
-    <section id="weekView" class="hidden">
-      <div class="section-head">
-        <h2>This Week</h2>
-      </div>
-      <section id="weekList" class="simple-list"></section>
-    </section>
+        <div class="topbar-actions">
+          <button id="btnAddTask" class="btn" type="button">Add Task</button>
+          <button id="logoutBtn" class="btn btn-ghost" type="button">Log out</button>
+        </div>
+      </header>
 
-    <section id="monthView" class="hidden">
-      <div class="section-head">
-        <h2>This Month</h2>
-      </div>
-      <section id="monthList" class="simple-list"></section>
-    </section>
+      <main class="app-content">
 
-    <section id="scheduleEmptyState" class="empty-state hidden">
-      No schedule items yet.
-    </section>
+        <section class="main-column">
 
-  </main>
+          <section class="card">
+            <div class="section-head">
+              <div>
+                <h2>Schedule</h2>
+                <p class="muted">Track daily, weekly, and monthly tasks for care routines and appointments.</p>
+              </div>
+            </div>
+
+            <div class="filter-bar">
+              <div class="segmented" id="scheduleViewTabs">
+                <button type="button" class="active" data-view="today">Today</button>
+                <button type="button" data-view="week">Week</button>
+                <button type="button" data-view="month">Month</button>
+              </div>
+
+              <div class="button-row">
+                <select id="scheduleCategoryFilter" class="input" style="width:auto; min-width:180px;">
+                  <option value="all">All Categories</option>
+                  <option value="Medication">Medication</option>
+                  <option value="Feeding">Feeding</option>
+                  <option value="Therapy">Therapy</option>
+                  <option value="Symptom Check">Symptom Check</option>
+                  <option value="Respiratory Care">Respiratory Care</option>
+                  <option value="Equipment">Equipment</option>
+                  <option value="Hygiene">Hygiene</option>
+                  <option value="Appointment">Appointment</option>
+                  <option value="Other">Other</option>
+                </select>
+
+                <button id="btnClearScheduleFilters" class="btn btn-ghost" type="button">Clear</button>
+              </div>
+            </div>
+          </section>
+
+          <section id="todayView">
+            <div class="section-head">
+              <h2>Due Now</h2>
+            </div>
+            <section id="dueNowList" class="stack-list"></section>
+
+            <div class="section-head">
+              <h2>Up Next</h2>
+            </div>
+            <section id="upNextList" class="stack-list"></section>
+
+            <div class="section-head">
+              <h2>Completed</h2>
+            </div>
+            <section id="completedList" class="stack-list"></section>
+          </section>
+
+          <section id="weekView" class="hidden">
+            <div class="section-head">
+              <h2>This Week</h2>
+            </div>
+            <section id="weekList" class="stack-list"></section>
+          </section>
+
+          <section id="monthView" class="hidden">
+            <div class="section-head">
+              <h2>This Month</h2>
+            </div>
+            <section id="monthList" class="stack-list"></section>
+          </section>
+
+          <section id="scheduleEmptyState" class="card hidden">
+            <div class="empty-state">
+              No schedule items yet.
+            </div>
+          </section>
+        </section>
+
+        <aside class="side-column">
+
+          <section class="card">
+            <div class="section-head">
+              <h2>Schedule Tips</h2>
+            </div>
+
+            <div class="stack-list">
+              <div class="list-item">
+                <div>
+                  <strong>Daily routines</strong>
+                  <div class="muted">Use for medications, feeds, respiratory care, and symptom checks.</div>
+                </div>
+              </div>
+
+              <div class="list-item">
+                <div>
+                  <strong>Weekly tasks</strong>
+                  <div class="muted">Use for therapies, recurring appointments, and equipment maintenance.</div>
+                </div>
+              </div>
+
+              <div class="list-item">
+                <div>
+                  <strong>One-time events</strong>
+                  <div class="muted">Use for specialist visits, labs, scans, and temporary care changes.</div>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <section class="card">
+            <div class="section-head">
+              <h2>Quick Actions</h2>
+            </div>
+
+            <div class="quick-actions">
+              <button class="quick-btn quick-med" type="button" id="btnAddTaskQuick">
+                <strong>+ Add Task</strong>
+                <span>Create a new schedule item</span>
+              </button>
+
+              <a class="quick-btn quick-note" href="meds.html" style="text-decoration:none;">
+                <strong>Open Meds</strong>
+                <span>Review medication details</span>
+              </a>
+
+              <a class="quick-btn quick-symptom" href="carelog.html" style="text-decoration:none;">
+                <strong>Care Log</strong>
+                <span>Review recent care notes</span>
+              </a>
+
+              <a class="quick-btn quick-question" href="index.html" style="text-decoration:none;">
+                <strong>Dashboard</strong>
+                <span>Return to main home view</span>
+              </a>
+            </div>
+          </section>
+
+          <section class="card emergency-card">
+            <div class="section-head">
+              <h2>Emergency Info</h2>
+              <div class="button-row">
+                <button id="btnEmergency" class="btn" type="button">Open</button>
+              </div>
+            </div>
+
+            <p class="muted">
+              Quick access to the child’s emergency details and print-friendly information.
+            </p>
+          </section>
+
+        </aside>
+
+      </main>
+    </div>
+  </div>
 
   <div id="taskModal" class="modal hidden">
     <div class="modal-card">
 
-      <div class="modal-head">
-        <h3>Add Schedule Task</h3>
-        <button id="btnCloseTaskModal" class="btn btn-ghost" type="button">✕</button>
+      <div class="section-head">
+        <h2>Add Schedule Task</h2>
+        <button id="btnCloseTaskModal" class="btn btn-ghost" type="button">Close</button>
       </div>
 
       <div class="form-grid">
@@ -124,7 +240,7 @@
         </div>
       </div>
 
-      <div class="form-grid mt-16">
+      <div class="form-grid mt-12">
         <div class="field">
           <label for="taskDate">Start Date</label>
           <input id="taskDate" type="date" class="input" />
@@ -136,7 +252,7 @@
         </div>
       </div>
 
-      <div class="form-grid mt-16">
+      <div class="form-grid mt-12">
         <div class="field">
           <label for="taskFrequency">Frequency</label>
           <select id="taskFrequency" class="input">
@@ -153,7 +269,7 @@
         </div>
       </div>
 
-      <div class="field mt-16">
+      <div class="field mt-12">
         <label>Days of Week (for weekly tasks)</label>
         <div id="taskDaysOfWeek" class="chip-row">
           <label class="chip"><input type="checkbox" value="0" /> <span>Sun</span></label>
@@ -166,7 +282,7 @@
         </div>
       </div>
 
-      <div class="form-grid mt-16">
+      <div class="form-grid mt-12">
         <div class="field">
           <label for="taskDuration">Duration (minutes)</label>
           <input id="taskDuration" type="number" min="0" class="input" placeholder="20" />
@@ -185,12 +301,12 @@
         </div>
       </div>
 
-      <div class="field mt-16">
+      <div class="field mt-12">
         <label for="taskInstructions">Instructions / Notes</label>
         <textarea id="taskInstructions" class="input" rows="4" placeholder="Dose, steps, care instructions, reminders..."></textarea>
       </div>
 
-      <div class="field mt-16">
+      <div class="field mt-12">
         <label for="taskShareable">Sharing</label>
         <select id="taskShareable" class="input">
           <option value="yes">Shared with caregivers</option>
@@ -198,7 +314,7 @@
         </select>
       </div>
 
-      <div class="modal-actions mt-16">
+      <div class="modal-actions mt-12">
         <button id="btnSaveTask" class="btn" type="button">Save Task</button>
       </div>
 
@@ -209,9 +325,9 @@
 
   <div id="emergencyModal" class="modal hidden">
     <div class="modal-card">
-      <div class="modal-head">
-        <h3>Emergency Info</h3>
-        <button id="btnCloseEmergency" class="btn btn-ghost" type="button">✕</button>
+      <div class="section-head">
+        <h2>Emergency Info</h2>
+        <button id="btnCloseEmergency" class="btn btn-ghost" type="button">Close</button>
       </div>
 
       <div id="emergencyBody" style="display:flex;flex-direction:column;gap:10px;margin-top:10px;"></div>
@@ -232,10 +348,18 @@
     </div>
   </nav>
 
-  <button class="emergency-btn hidden" type="button">Emergency</button>
-
   <script src="storage.js"></script>
   <script src="schedule.js"></script>
   <script src="auth.js"></script>
+
+  <script>
+    document.getElementById("btnAddTaskSidebar")?.addEventListener("click", () => {
+      document.getElementById("btnAddTask")?.click();
+    });
+
+    document.getElementById("btnAddTaskQuick")?.addEventListener("click", () => {
+      document.getElementById("btnAddTask")?.click();
+    });
+  </script>
 </body>
 </html>
