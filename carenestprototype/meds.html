@@ -3,167 +3,276 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Medications • CareNest</title>
+  <title>CareNestia • Medications</title>
   <link rel="stylesheet" href="styles.css" />
 </head>
+<body>
 
-<body class="med-page">
+  <div class="app-shell">
 
-  <header class="topbar">
-    <div class="container">
-      <div class="topbar-left">
-        <h1>CareNest</h1>
-        <p>Medications</p>
+    <aside class="app-sidebar">
+      <div class="sidebar-brand">
+        <img src="images/carenestia_logo_wordmark.png" class="sidebar-wordmark" alt="CareNestia">
       </div>
 
-      <div class="topbar-right">
-        <select id="childSwitcher" class="child-switcher"></select>
-        <button id="logoutBtn" class="btn btn-ghost" type="button">Log out</button>
+      <nav class="sidebar-nav">
+        <a class="sidebar-link" href="index.html">Dashboard</a>
+        <a class="sidebar-link" href="schedule.html">Schedule</a>
+        <a class="sidebar-link active" href="meds.html">Medications</a>
+        <a class="sidebar-link" href="carelog.html">Care Log</a>
+        <a class="sidebar-link" href="inventory.html">Inventory</a>
+        <a class="sidebar-link" href="schoolnurse.html">School Nurse</a>
+        <a class="sidebar-link" href="documents.html">Documents</a>
+      </nav>
+
+      <div class="sidebar-actions-card">
+        <div class="sidebar-actions-title">Quick Actions</div>
+
+        <div class="sidebar-actions-list">
+          <button type="button" id="addMedBtnSidebar" class="btn btn-primary btn-block">+ Add Medication</button>
+          <button type="button" id="refreshBtnSidebar" class="btn btn-ghost btn-block">Refresh Status</button>
+          <button type="button" id="showArchivedBtnSidebar" class="btn btn-ghost btn-block">Show Archived</button>
+          <button type="button" id="exportReportBtnSidebar" class="btn btn-ghost btn-block">Export Report</button>
+        </div>
       </div>
+    </aside>
+
+    <div class="app-main">
+
+      <header class="app-topbar">
+        <div class="topbar-child-card">
+          <div class="topbar-child-avatar" id="childAvatar"></div>
+
+          <div class="topbar-child-copy">
+            <label for="childSwitcher" class="sr-only">Select child</label>
+            <select id="childSwitcher" class="topbar-child-select"></select>
+            <div class="topbar-child-meta" id="childSummary">Age —</div>
+          </div>
+        </div>
+
+        <div class="topbar-actions">
+          <button type="button" id="addMedBtn" class="btn">Add Medication</button>
+          <button id="logoutBtn" class="btn btn-ghost" type="button">Log out</button>
+        </div>
+      </header>
+
+      <main class="app-content">
+
+        <section class="main-column">
+
+          <section class="card">
+            <div class="section-head">
+              <div>
+                <h2>Today’s Medication Schedule</h2>
+                <p class="muted">Track due doses, completed doses, and medication timing for today.</p>
+              </div>
+
+              <div class="button-row">
+                <button type="button" id="refreshBtn" class="btn btn-ghost">Refresh Status</button>
+                <button type="button" id="showArchivedBtn" class="btn btn-ghost">Show Archived</button>
+                <button type="button" id="exportReportBtn" class="btn btn-ghost">Export Report</button>
+              </div>
+            </div>
+
+            <div id="todayMeds"></div>
+          </section>
+
+          <section class="card">
+            <div class="section-head">
+              <h2>All Medications</h2>
+            </div>
+            <div id="medList"></div>
+          </section>
+
+          <section id="medFormCard" class="card hidden">
+            <div class="section-head">
+              <h2 id="formTitle">Add Medication</h2>
+            </div>
+
+            <div class="form-grid">
+              <div class="field">
+                <label for="medName">Medication Name</label>
+                <input id="medName" class="input" placeholder="Keppra" />
+              </div>
+
+              <div class="field">
+                <label for="medDose">Dose</label>
+                <input id="medDose" class="input" placeholder="500 mg / 5 mL" />
+              </div>
+
+              <div class="field">
+                <label for="medRoute">Route</label>
+                <input id="medRoute" class="input" placeholder="PO / G-tube / IV" />
+              </div>
+
+              <div class="field">
+                <label for="medType">Type</label>
+                <select id="medType" class="input">
+                  <option value="scheduled">Scheduled</option>
+                  <option value="prn">PRN</option>
+                </select>
+              </div>
+
+              <div class="field">
+                <label for="medScheduleMode">Schedule Mode</label>
+                <select id="medScheduleMode" class="input">
+                  <option value="standard">Standard Ongoing</option>
+                  <option value="temporary">Temporary Course</option>
+                  <option value="wean">Weaning / Taper</option>
+                </select>
+              </div>
+
+              <div class="field">
+                <label for="medFreq">Frequency</label>
+                <input id="medFreq" class="input" placeholder="BID / Daily / q8h / PRN for seizures" />
+              </div>
+
+              <div class="field js-times-row">
+                <label for="medTimes">Scheduled Times</label>
+                <input id="medTimes" class="input" placeholder="08:00, 20:00" />
+                <div class="muted" style="font-size:.8rem;">Use 24-hour times separated by commas.</div>
+              </div>
+
+              <div class="field">
+                <label for="medMinGap">Minimum Hours Between Doses</label>
+                <input id="medMinGap" class="input" type="number" min="0" step="0.5" placeholder="4" />
+              </div>
+
+              <div class="field">
+                <label for="medStartDate">Start Date</label>
+                <input id="medStartDate" class="input" type="date" />
+              </div>
+
+              <div class="field js-end-date-row hidden">
+                <label for="medEndDate">End Date</label>
+                <input id="medEndDate" class="input" type="date" />
+              </div>
+            </div>
+
+            <section id="weanBuilder" class="card hidden mt-12" style="background:#f9fafb;">
+              <div class="section-head">
+                <h2 style="font-size:1rem;">Weaning Schedule</h2>
+                <button type="button" id="addWeanStepBtn" class="btn btn-ghost">+ Add Step</button>
+              </div>
+
+              <div id="weanStepsList"></div>
+
+              <div class="muted" style="font-size:.8rem;">
+                Add each taper step with its own date range, dose, and times.
+              </div>
+            </section>
+
+            <div class="field mt-12">
+              <label for="medNotes">Notes</label>
+              <textarea id="medNotes" class="input" placeholder="Take with food, hold if vomiting, seizure rescue instructions, taper directions, etc."></textarea>
+            </div>
+
+            <div class="modal-actions">
+              <button type="button" id="saveMedBtn" class="btn">Save Medication</button>
+              <button type="button" id="cancelMedBtn" class="btn btn-ghost">Cancel</button>
+            </div>
+          </section>
+
+          <section class="card">
+            <div class="section-head">
+              <h2>Dose Timeline</h2>
+            </div>
+            <div id="timeline"></div>
+          </section>
+
+          <section class="card">
+            <div class="section-head">
+              <h2>Medication Change History</h2>
+            </div>
+            <div id="changeHistory"></div>
+          </section>
+
+          <section id="reportCard" class="card hidden">
+            <div class="section-head">
+              <h2>Doctor Visit Report</h2>
+              <div class="button-row">
+                <button type="button" id="copyReportBtn" class="btn btn-ghost">Copy</button>
+              </div>
+            </div>
+            <pre id="reportOutput" class="report-box"></pre>
+          </section>
+
+        </section>
+
+        <aside class="side-column">
+
+          <section class="card">
+            <div class="section-head">
+              <h2>Medication Tips</h2>
+            </div>
+
+            <div class="stack-list">
+              <div class="list-item">
+                <div>
+                  <strong>Scheduled meds</strong>
+                  <div class="muted">Use for routine daily medications with standard dosing times.</div>
+                </div>
+              </div>
+
+              <div class="list-item">
+                <div>
+                  <strong>PRN meds</strong>
+                  <div class="muted">Use for rescue or as-needed medication instructions.</div>
+                </div>
+              </div>
+
+              <div class="list-item">
+                <div>
+                  <strong>Weans and tapers</strong>
+                  <div class="muted">Track step-by-step dose changes with dates and notes.</div>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <section class="card">
+            <div class="section-head">
+              <h2>Quick Actions</h2>
+            </div>
+
+            <div class="quick-actions">
+              <button class="quick-btn quick-med" type="button" id="addMedBtnQuick">
+                <strong>+ Add Medication</strong>
+                <span>Create a new medication entry</span>
+              </button>
+
+              <button class="quick-btn quick-note" type="button" id="exportReportBtnQuick">
+                <strong>Export Report</strong>
+                <span>Prepare a doctor visit summary</span>
+              </button>
+
+              <a class="quick-btn quick-symptom" href="schedule.html" style="text-decoration:none;">
+                <strong>Open Schedule</strong>
+                <span>Review medication timing and tasks</span>
+              </a>
+
+              <a class="quick-btn quick-question" href="index.html" style="text-decoration:none;">
+                <strong>Dashboard</strong>
+                <span>Return to the main overview</span>
+              </a>
+            </div>
+          </section>
+
+          <section class="card emergency-card">
+            <div class="section-head">
+              <h2>Medication Summary</h2>
+            </div>
+
+            <p class="muted">
+              Keep scheduled, PRN, temporary, and taper medications organized in one place for daily care and visits.
+            </p>
+          </section>
+
+        </aside>
+
+      </main>
     </div>
-  </header>
-
-  <main class="page">
-
-    <div class="welcome-row">
-      <h1>Medications</h1>
-      <div id="childSummary" class="badge"></div>
-    </div>
-
-    <section class="card">
-      <div class="section-head">
-        <h2>Today's Medication Schedule</h2>
-        <div class="toolbar">
-          <button type="button" id="refreshBtn" class="btn btn-ghost">Refresh Status</button>
-          <button type="button" id="showArchivedBtn" class="btn btn-ghost">Show Archived</button>
-          <button type="button" id="addMedBtn" class="btn">+ Add Medication</button>
-          <button type="button" id="exportReportBtn" class="btn btn-ghost">Export Report</button>
-        </div>
-      </div>
-      <div id="todayMeds"></div>
-    </section>
-
-    <section class="card">
-      <div class="section-head">
-        <h2>All Medications</h2>
-      </div>
-      <div id="medList"></div>
-    </section>
-
-    <section id="medFormCard" class="card hidden">
-      <div class="section-head">
-        <h2 id="formTitle">Add Medication</h2>
-      </div>
-
-      <div class="grid-2">
-        <div class="field">
-          <label for="medName">Medication Name</label>
-          <input id="medName" class="input" placeholder="Keppra" />
-        </div>
-
-        <div class="field">
-          <label for="medDose">Dose</label>
-          <input id="medDose" class="input" placeholder="500 mg / 5 mL" />
-        </div>
-
-        <div class="field">
-          <label for="medRoute">Route</label>
-          <input id="medRoute" class="input" placeholder="PO / G-tube / IV" />
-        </div>
-
-        <div class="field">
-          <label for="medType">Type</label>
-          <select id="medType" class="input">
-            <option value="scheduled">Scheduled</option>
-            <option value="prn">PRN</option>
-          </select>
-        </div>
-
-        <div class="field">
-          <label for="medScheduleMode">Schedule Mode</label>
-          <select id="medScheduleMode" class="input">
-            <option value="standard">Standard Ongoing</option>
-            <option value="temporary">Temporary Course</option>
-            <option value="wean">Weaning / Taper</option>
-          </select>
-        </div>
-
-        <div class="field">
-          <label for="medFreq">Frequency</label>
-          <input id="medFreq" class="input" placeholder="BID / Daily / q8h / PRN for seizures" />
-        </div>
-
-        <div class="field js-times-row">
-          <label for="medTimes">Scheduled Times</label>
-          <input id="medTimes" class="input" placeholder="08:00, 20:00" />
-          <div class="muted tiny">Use 24-hour times separated by commas.</div>
-        </div>
-
-        <div class="field">
-          <label for="medMinGap">Minimum Hours Between Doses</label>
-          <input id="medMinGap" class="input" type="number" min="0" step="0.5" placeholder="4" />
-        </div>
-
-        <div class="field">
-          <label for="medStartDate">Start Date</label>
-          <input id="medStartDate" class="input" type="date" />
-        </div>
-
-        <div class="field js-end-date-row hidden">
-          <label for="medEndDate">End Date</label>
-          <input id="medEndDate" class="input" type="date" />
-        </div>
-      </div>
-
-      <section id="weanBuilder" class="card hidden mt-12" style="background:#f9fafb;">
-        <div class="section-head">
-          <h3>Weaning Schedule</h3>
-          <button type="button" id="addWeanStepBtn" class="btn btn-ghost">+ Add Step</button>
-        </div>
-
-        <div id="weanStepsList"></div>
-
-        <div class="muted tiny">
-          Add each taper step with its own date range, dose, and times.
-        </div>
-      </section>
-
-      <div class="field mt-16">
-        <label for="medNotes">Notes</label>
-        <textarea id="medNotes" class="input" placeholder="Take with food, hold if vomiting, seizure rescue instructions, taper directions, etc."></textarea>
-      </div>
-
-      <div class="modal-actions">
-        <button type="button" id="saveMedBtn" class="btn">Save Medication</button>
-        <button type="button" id="cancelMedBtn" class="btn btn-ghost">Cancel</button>
-      </div>
-    </section>
-
-    <section class="card">
-      <div class="section-head">
-        <h2>Dose Timeline</h2>
-      </div>
-      <div id="timeline"></div>
-    </section>
-
-    <section class="card">
-      <div class="section-head">
-        <h2>Medication Change History</h2>
-      </div>
-      <div id="changeHistory"></div>
-    </section>
-
-    <section id="reportCard" class="card hidden">
-      <div class="section-head">
-        <h2>Doctor Visit Report</h2>
-        <div class="toolbar">
-          <button type="button" id="copyReportBtn" class="btn btn-ghost">Copy</button>
-        </div>
-      </div>
-      <pre id="reportOutput" class="report-box"></pre>
-    </section>
-
-  </main>
+  </div>
 
   <nav class="bottom-nav">
     <div class="bottom-nav-inner">
@@ -175,10 +284,34 @@
     </div>
   </nav>
 
-  <button class="emergency-btn hidden" type="button">Emergency</button>
-
   <script src="storage.js"></script>
   <script src="meds.js"></script>
   <script src="auth.js"></script>
+
+  <script>
+    document.getElementById("addMedBtnSidebar")?.addEventListener("click", () => {
+      document.getElementById("addMedBtn")?.click();
+    });
+
+    document.getElementById("refreshBtnSidebar")?.addEventListener("click", () => {
+      document.getElementById("refreshBtn")?.click();
+    });
+
+    document.getElementById("showArchivedBtnSidebar")?.addEventListener("click", () => {
+      document.getElementById("showArchivedBtn")?.click();
+    });
+
+    document.getElementById("exportReportBtnSidebar")?.addEventListener("click", () => {
+      document.getElementById("exportReportBtn")?.click();
+    });
+
+    document.getElementById("addMedBtnQuick")?.addEventListener("click", () => {
+      document.getElementById("addMedBtn")?.click();
+    });
+
+    document.getElementById("exportReportBtnQuick")?.addEventListener("click", () => {
+      document.getElementById("exportReportBtn")?.click();
+    });
+  </script>
 </body>
 </html>
