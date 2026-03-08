@@ -106,14 +106,14 @@ document.addEventListener("DOMContentLoaded", () => {
       return false;
     }
 
-    const { data: children, error } = await supabaseClient
+    const { data: children, error: childrenError } = await supabaseClient
       .from("children")
       .select("*")
       .eq("parent_id", user.id)
       .order("created_at", { ascending: true });
 
-    if (error) {
-      console.error("Error loading children from Supabase:", error);
+    if (childrenError) {
+      console.error("Error loading children from Supabase:", childrenError);
       alert("Could not load child profile from Supabase.");
       return false;
     }
@@ -123,19 +123,62 @@ document.addEventListener("DOMContentLoaded", () => {
       return false;
     }
 
-    db.children = children.map((child) => ({
-      id: child.id,
-      name: child.name || "Child",
-      age: child.birthdate ? calculateAge(child.birthdate) : "—",
-      diagnoses: child.diagnoses
-        ? child.diagnoses.split(",").map((d) => d.trim()).filter(Boolean)
-        : [],
-      allergies: child.allergies || "",
-      notes: child.notes || "",
-      emergency: {
-        allergies: child.allergies || ""
-      }
-    }));
+    const childIds = children.map((child) => child.id);
+
+    const { data: careProfiles, error: careError } = await supabaseClient
+      .from("child_care_profiles")
+      .select("*")
+      .in("child_id", childIds);
+
+    if (careError) {
+      console.error("Error loading care profiles:", careError);
+    }
+
+    const { data: equipmentProfiles, error: equipmentError } = await supabaseClient
+      .from("child_equipment_profiles")
+      .select("*")
+      .in("child_id", childIds);
+
+    if (equipmentError) {
+      console.error("Error loading equipment profiles:", equipmentError);
+    }
+
+    db.children = children.map((child) => {
+      const careProfile =
+        (careProfiles || []).find((row) => row.child_id === child.id) || {};
+
+      const equipmentProfile =
+        (equipmentProfiles || []).find((row) => row.child_id === child.id) || {};
+
+      return {
+        id: child.id,
+        name: child.name || "Child",
+        age: child.birthdate ? calculateAge(child.birthdate) : "—",
+        diagnoses: child.diagnoses
+          ? child.diagnoses.split(",").map((d) => d.trim()).filter(Boolean)
+          : [],
+        allergies: child.allergies || "",
+        notes: child.notes || "",
+        complexityLevel: child.complexity_level || "moderate",
+        careProfile,
+        equipmentProfile,
+        emergency: {
+          allergies: child.allergies || "",
+          trach: {
+            hasTrach: !!equipmentProfile.trach
+          },
+          vent: {
+            onVent: !!equipmentProfile.ventilator
+          },
+          gTube: {
+            hasGTube: !!equipmentProfile.g_tube
+          },
+          oxygen: {
+            hasOxygen: !!equipmentProfile.oxygen
+          }
+        }
+      };
+    });
 
     if (!db.activeChildId || !db.children.find((c) => c.id === db.activeChildId)) {
       db.activeChildId = db.children[0].id;
@@ -250,16 +293,41 @@ document.addEventListener("DOMContentLoaded", () => {
 
   function getAllowedSpecialties() {
     const child = activeChild();
+    const care = child?.careProfile || {};
+    const equipment = child?.equipmentProfile || {};
 
     if (Array.isArray(child?.selectedSpecialties) && child.selectedSpecialties.length) {
       return child.selectedSpecialties;
     }
 
-    if (Array.isArray(db.specialties) && db.specialties.length) {
-      return db.specialties;
+    const derived = ["General"];
+
+    if (care.has_respiratory || equipment.oxygen || equipment.trach || equipment.ventilator) {
+      derived.push("Pulmonology");
     }
 
-    return ["General"];
+    if (care.has_cardiology || equipment.heart_rate_monitoring || equipment.blood_pressure_monitoring) {
+      derived.push("Cardiology");
+    }
+
+    if (care.has_feeds || equipment.g_tube || equipment.j_tube || equipment.feeding_pump) {
+      derived.push("GI");
+    }
+
+    if (care.has_therapies) {
+      derived.push("PT/OT");
+    }
+
+    if (care.has_symptoms) {
+      derived.push("Neurology");
+    }
+
+    if (Array.isArray(db.specialties) && db.specialties.length) {
+      const merged = [...new Set([...derived, ...db.specialties])];
+      return merged;
+    }
+
+    return [...new Set(derived)];
   }
 
   function renderSpecialtyChecks(defaultSelected = []) {
@@ -449,6 +517,10 @@ document.addEventListener("DOMContentLoaded", () => {
   function getMedicationScheduleOccurrences(fromDate = new Date(), daysAhead = 7) {
     const child = activeChild();
     if (!child) return [];
+
+    if (typeof generateMedicationScheduleItems !== "function") {
+      return [];
+    }
 
     const occurrences = [];
 
@@ -682,9 +754,19 @@ document.addEventListener("DOMContentLoaded", () => {
 
   function renderHeader() {
     const child = activeChild();
+    const care = child?.careProfile || {};
 
     if (welcomeText) {
-      welcomeText.textContent = "Welcome back";
+      const activeAreas = [
+        care.has_medications ? "meds" : null,
+        care.has_feeds ? "feeds" : null,
+        care.has_respiratory ? "respiratory" : null,
+        care.has_cardiology ? "cardiology" : null
+      ].filter(Boolean);
+
+      welcomeText.textContent = activeAreas.length
+        ? `Managing ${activeAreas.join(", ")}`
+        : "Welcome back";
     }
 
     if (!child) return;
@@ -707,6 +789,52 @@ document.addEventListener("DOMContentLoaded", () => {
         pill.textContent = dx;
         diagnosisPills.appendChild(pill);
       });
+    }
+  }
+
+  function applyAdaptiveUI() {
+    const child = activeChild();
+    if (!child) return;
+
+    const care = child.careProfile || {};
+    const equipment = child.equipmentProfile || {};
+
+    const showVitals =
+      !!care.has_respiratory ||
+      !!care.has_cardiology ||
+      !!equipment.oxygen ||
+      !!equipment.pulse_ox ||
+      !!equipment.heart_rate_monitoring ||
+      !!equipment.blood_pressure_monitoring ||
+      !!equipment.cardiac_monitor;
+
+    const showInventory = !!care.has_inventory;
+    const showSymptoms = !!care.has_symptoms;
+
+    if (lastVitalsCard && !showVitals) {
+      lastVitalsCard.classList.add("hidden");
+    }
+
+    if (lowSupplyCard && !showInventory) {
+      lowSupplyCard.classList.add("hidden");
+    }
+
+    if (lastSymptomCard && !showSymptoms) {
+      lastSymptomCard.classList.add("hidden");
+    }
+
+    const emergencyButtonShouldShow =
+      !!care.has_respiratory ||
+      !!care.has_cardiology ||
+      !!care.has_feeds ||
+      !!care.has_medications ||
+      !!equipment.trach ||
+      !!equipment.ventilator ||
+      !!equipment.g_tube ||
+      !!equipment.oxygen;
+
+    if (bottomEmergencyBtn) {
+      bottomEmergencyBtn.classList.toggle("hidden", !emergencyButtonShouldShow);
     }
   }
 
@@ -1029,6 +1157,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const child = activeChild();
     renderHeader();
+    applyAdaptiveUI();
 
     if (!child) {
       childSummary.textContent = "No child selected";
