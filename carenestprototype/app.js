@@ -1,6 +1,13 @@
 document.addEventListener("DOMContentLoaded", () => {
-  let db = ensureDB(loadDB());
-  saveDB(db);
+  const state = {
+    user: null,
+    children: [],
+    activeChildId: null,
+    activeChild: null,
+    careProfile: null,
+    equipmentProfile: null,
+    careLogs: []
+  };
 
   // Elements
   const welcomeText = document.getElementById("welcomeText");
@@ -95,214 +102,156 @@ document.addEventListener("DOMContentLoaded", () => {
     return age;
   }
 
-  async function syncChildrenFromSupabase() {
+  function fmtDateTime(value) {
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return "Unknown time";
+
+    return date.toLocaleString([], {
+      month: "short",
+      day: "numeric",
+      hour: "numeric",
+      minute: "2-digit"
+    });
+  }
+
+  function categoryLabel(value) {
+    const map = {
+      symptom: "Symptom",
+      question: "Question",
+      note: "Care Note",
+      med: "Medication"
+    };
+    return map[value] || "Entry";
+  }
+
+  async function loadUser() {
     const {
       data: { user },
-      error: userError
+      error
     } = await supabaseClient.auth.getUser();
 
-    if (userError || !user) {
+    if (error || !user) {
       window.location.href = "login.html";
       return false;
     }
 
-    const { data: children, error: childrenError } = await supabaseClient
+    state.user = user;
+    return true;
+  }
+
+  async function loadChildren() {
+    const { data, error } = await supabaseClient
       .from("children")
       .select("*")
-      .eq("parent_id", user.id)
+      .eq("parent_id", state.user.id)
       .order("created_at", { ascending: true });
 
-    if (childrenError) {
-      console.error("Error loading children from Supabase:", childrenError);
-      alert("Could not load child profile from Supabase.");
+    if (error) {
+      console.error("Error loading children:", error);
+      alert("Could not load children.");
       return false;
     }
 
-    if (!children || children.length === 0) {
+    if (!data || !data.length) {
       window.location.href = "onboarding.html";
       return false;
     }
 
-    const childIds = children.map((child) => child.id);
-
-    const { data: careProfiles, error: careError } = await supabaseClient
-      .from("child_care_profiles")
-      .select("*")
-      .in("child_id", childIds);
-
-    if (careError) {
-      console.error("Error loading care profiles:", careError);
-    }
-
-    const { data: equipmentProfiles, error: equipmentError } = await supabaseClient
-      .from("child_equipment_profiles")
-      .select("*")
-      .in("child_id", childIds);
-
-    if (equipmentError) {
-      console.error("Error loading equipment profiles:", equipmentError);
-    }
-
-    db.children = children.map((child) => {
-      const careProfile =
-        (careProfiles || []).find((row) => row.child_id === child.id) || {};
-
-      const equipmentProfile =
-        (equipmentProfiles || []).find((row) => row.child_id === child.id) || {};
-
-      return {
-        id: child.id,
-        name: child.name || "Child",
-        age: child.birthdate ? calculateAge(child.birthdate) : "—",
-        diagnoses: child.diagnoses
-          ? child.diagnoses.split(",").map((d) => d.trim()).filter(Boolean)
-          : [],
-        allergies: child.allergies || "",
-        notes: child.notes || "",
-        complexityLevel: child.complexity_level || "moderate",
-        careProfile,
-        equipmentProfile,
-        emergency: {
-          allergies: child.allergies || "",
-          trach: {
-            hasTrach: !!equipmentProfile.trach
-          },
-          vent: {
-            onVent: !!equipmentProfile.ventilator
-          },
-          gTube: {
-            hasGTube: !!equipmentProfile.g_tube
-          },
-          oxygen: {
-            hasOxygen: !!equipmentProfile.oxygen
-          }
-        }
-      };
-    });
-
-    const validActiveChild = db.children.find((c) => c.id === db.activeChildId);
-
-    if (!validActiveChild) {
-      db.activeChildId = db.children[0].id;
-    }
-
-    db.currentChildId = db.activeChildId;
-
-    saveDB(db);
+    state.children = data;
     return true;
   }
 
-  function activeChild() {
-    const children = Array.isArray(db.children) ? db.children : [];
-    if (!children.length) return null;
-    return children.find((c) => c.id === db.activeChildId) || children[0];
-  }
-
-  function activeLogs() {
-    if (!db.logs || typeof db.logs !== "object") db.logs = {};
-    if (!db.activeChildId) return [];
-    if (!Array.isArray(db.logs[db.activeChildId])) db.logs[db.activeChildId] = [];
-    return db.logs[db.activeChildId];
-  }
-
-  function activeSchedules() {
-    if (!db.schedules || typeof db.schedules !== "object") db.schedules = {};
-    if (!db.activeChildId) return [];
-    if (!Array.isArray(db.schedules[db.activeChildId])) db.schedules[db.activeChildId] = [];
-    return db.schedules[db.activeChildId];
-  }
-
-  function activeLowSupplies() {
-    if (!db.dashboard || typeof db.dashboard !== "object") db.dashboard = {};
-    if (!Array.isArray(db.dashboard.lowSupplies)) db.dashboard.lowSupplies = [];
-    return db.dashboard.lowSupplies;
-  }
-
-  function activeVitals() {
-    if (!db.vitals || typeof db.vitals !== "object") db.vitals = {};
-    if (!db.activeChildId) return [];
-    if (!Array.isArray(db.vitals[db.activeChildId])) db.vitals[db.activeChildId] = [];
-    return db.vitals[db.activeChildId];
-  }
-
-  function activeLastKnownVitals() {
-    if (!db.lastKnownVitals || typeof db.lastKnownVitals !== "object") {
-      db.lastKnownVitals = {};
+  function setInitialActiveChild() {
+    if (!state.children.length) {
+      state.activeChildId = null;
+      state.activeChild = null;
+      return;
     }
 
-    if (!db.activeChildId) return createEmptyLastKnownVitals();
+    const firstChild = state.children[0];
+    state.activeChildId = firstChild.id;
+    state.activeChild = firstChild;
 
-    if (!db.lastKnownVitals[db.activeChildId]) {
-      db.lastKnownVitals[db.activeChildId] = createEmptyLastKnownVitals();
+    console.log("Active child set:", firstChild);
+  }
+
+  async function loadActiveChildProfiles() {
+    if (!state.activeChildId) return;
+
+    const { data: careProfile, error: careError } = await supabaseClient
+      .from("child_care_profiles")
+      .select("*")
+      .eq("child_id", state.activeChildId)
+      .maybeSingle();
+
+    if (careError) {
+      console.error("Error loading care profile:", careError);
     }
 
-    return db.lastKnownVitals[db.activeChildId];
-  }
+    const { data: equipmentProfile, error: equipmentError } = await supabaseClient
+      .from("child_equipment_profiles")
+      .select("*")
+      .eq("child_id", state.activeChildId)
+      .maybeSingle();
 
-  function createEmptyLastKnownVitals() {
-    return {
-      o2: null,
-      temp: null,
-      bpSys: null,
-      bpDia: null,
-      hr: null,
-      rr: null
-    };
-  }
-
-  function activeSymptoms() {
-    if (!db.symptoms || typeof db.symptoms !== "object") db.symptoms = {};
-    if (!db.activeChildId) return [];
-    if (!Array.isArray(db.symptoms[db.activeChildId])) db.symptoms[db.activeChildId] = [];
-    return db.symptoms[db.activeChildId];
-  }
-
-  function activeVitalThresholds() {
-    if (!db.vitalThresholds || typeof db.vitalThresholds !== "object") db.vitalThresholds = {};
-    if (!db.activeChildId) return {};
-
-    if (!db.vitalThresholds[db.activeChildId]) {
-      db.vitalThresholds[db.activeChildId] = {
-        o2Min: 92,
-        tempMin: 97.0,
-        tempMax: 100.4,
-        bpSysMin: 90,
-        bpSysMax: 120,
-        bpDiaMin: 60,
-        bpDiaMax: 80,
-        hrMin: 60,
-        hrMax: 100,
-        rrMin: 12,
-        rrMax: 20
-      };
+    if (equipmentError) {
+      console.error("Error loading equipment profile:", equipmentError);
     }
 
-    return db.vitalThresholds[db.activeChildId];
+    state.careProfile = careProfile || {};
+    state.equipmentProfile = equipmentProfile || {};
+  }
+
+  async function loadActiveChildCareLogs() {
+    if (!state.activeChildId) return;
+
+    const { data, error } = await supabaseClient
+      .from("care_logs")
+      .select("*")
+      .eq("child_id", state.activeChildId)
+      .order("created_at", { ascending: false })
+      .limit(3);
+
+    if (error) {
+      console.error("Error loading care logs:", error);
+      state.careLogs = [];
+      return;
+    }
+
+    state.careLogs = data || [];
+  }
+
+  async function selectChild(childId) {
+    const child = state.children.find((c) => c.id === childId);
+    if (!child) return;
+
+    state.activeChildId = child.id;
+    state.activeChild = child;
+
+    console.log("Switched child:", child);
+
+    await loadActiveChildProfiles();
+    await loadActiveChildCareLogs();
+
+    render();
   }
 
   function fillChildSwitcher() {
     childSwitcher.innerHTML = "";
-    const children = Array.isArray(db.children) ? db.children : [];
 
-    children.forEach((c) => {
+    state.children.forEach((child) => {
       const opt = document.createElement("option");
-      opt.value = c.id;
-      opt.textContent = c.name;
+      opt.value = child.id;
+      opt.textContent = child.name;
       childSwitcher.appendChild(opt);
     });
 
-    childSwitcher.value = db.activeChildId || "";
+    childSwitcher.value = state.activeChildId || "";
   }
 
   function getAllowedSpecialties() {
-    const child = activeChild();
-    const care = child?.careProfile || {};
-    const equipment = child?.equipmentProfile || {};
-
-    if (Array.isArray(child?.selectedSpecialties) && child.selectedSpecialties.length) {
-      return child.selectedSpecialties;
-    }
-
+    const care = state.careProfile || {};
+    const equipment = state.equipmentProfile || {};
     const derived = ["General"];
 
     if (care.has_respiratory || equipment.oxygen || equipment.trach || equipment.ventilator) {
@@ -323,11 +272,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
     if (care.has_symptoms) {
       derived.push("Neurology");
-    }
-
-    if (Array.isArray(db.specialties) && db.specialties.length) {
-      const merged = [...new Set([...derived, ...db.specialties])];
-      return merged;
     }
 
     return [...new Set(derived)];
@@ -370,394 +314,9 @@ document.addEventListener("DOMContentLoaded", () => {
     return checked.length ? checked : ["General"];
   }
 
-  function categoryLabel(value) {
-    const map = {
-      symptom: "Symptom",
-      question: "Question",
-      note: "Care Note",
-      med: "Medication"
-    };
-
-    return map[value] || "Entry";
-  }
-
-  function fmtDateTime(value) {
-    const date = new Date(value);
-    if (Number.isNaN(date.getTime())) return "Unknown time";
-
-    return date.toLocaleString([], {
-      month: "short",
-      day: "numeric",
-      hour: "numeric",
-      minute: "2-digit"
-    });
-  }
-
-  function parseISODateLocal(dateStr) {
-    const [year, month, day] = dateStr.split("-").map(Number);
-    return new Date(year, month - 1, day);
-  }
-
-  function startOfDay(date) {
-    return new Date(date.getFullYear(), date.getMonth(), date.getDate());
-  }
-
-  function isSameDay(a, b) {
-    return (
-      a.getFullYear() === b.getFullYear() &&
-      a.getMonth() === b.getMonth() &&
-      a.getDate() === b.getDate()
-    );
-  }
-
-  function isTaskScheduledOnDate(task, date) {
-    if (task.active === false) return false;
-
-    const startDate = task.startDate
-      ? parseISODateLocal(task.startDate)
-      : new Date(task.startAt);
-
-    const targetDate = startOfDay(date);
-    const taskStartDay = startOfDay(startDate);
-
-    if (targetDate < taskStartDay) return false;
-
-    if (task.frequency === "once") return isSameDay(taskStartDay, targetDate);
-    if (task.frequency === "daily") return true;
-
-    if (task.frequency === "weekly") {
-      const weekdays = Array.isArray(task.weekdays) ? task.weekdays : [];
-      return weekdays.includes(targetDate.getDay());
-    }
-
-    if (task.frequency === "monthly") {
-      return taskStartDay.getDate() === targetDate.getDate();
-    }
-
-    return false;
-  }
-
-  function getOccurrenceDate(task, baseDate) {
-    return new Date(
-      baseDate.getFullYear(),
-      baseDate.getMonth(),
-      baseDate.getDate(),
-      Number(task.time?.split(":")[0] || 0),
-      Number(task.time?.split(":")[1] || 0),
-      0,
-      0
-    );
-  }
-
-  function formatTaskTime(timeValue) {
-    if (!timeValue) return "No time";
-
-    const [h, m] = timeValue.split(":").map(Number);
-    const date = new Date();
-    date.setHours(h || 0, m || 0, 0, 0);
-
-    return date.toLocaleTimeString([], {
-      hour: "numeric",
-      minute: "2-digit"
-    });
-  }
-
-  function getTaskMeta(category) {
-    const map = {
-      Medication: { cls: "med", icon: "💊" },
-      Feeding: { cls: "gi", icon: "🍼" },
-      Therapy: { cls: "general", icon: "🤸" },
-      "Symptom Check": { cls: "neuro", icon: "🩺" },
-      "Respiratory Care": { cls: "pulm", icon: "🫁" },
-      Equipment: { cls: "card", icon: "🧰" },
-      Hygiene: { cls: "general", icon: "🧼" },
-      Appointment: { cls: "card", icon: "📅" },
-      Other: { cls: "general", icon: "📝" }
-    };
-
-    return map[category] || { cls: "general", icon: "📝" };
-  }
-
-  function toDateKey(date) {
-    const y = date.getFullYear();
-    const m = String(date.getMonth() + 1).padStart(2, "0");
-    const d = String(date.getDate()).padStart(2, "0");
-    return `${y}-${m}-${d}`;
-  }
-
-  function getManualScheduleOccurrences(fromDate = new Date(), daysAhead = 7) {
-    const tasks = activeSchedules();
-    const occurrences = [];
-
-    for (let offset = 0; offset < daysAhead; offset++) {
-      const date = new Date(fromDate);
-      date.setDate(fromDate.getDate() + offset);
-
-      tasks.forEach((task) => {
-        if (!isTaskScheduledOnDate(task, date)) return;
-
-        const occurrenceDate = getOccurrenceDate(task, date);
-        if (occurrenceDate.getTime() < fromDate.getTime()) return;
-
-        occurrences.push({
-          id: `manual_${task.id}_${toDateKey(date)}_${task.time || ""}`,
-          source: "manual",
-          title: task.title || "Task",
-          category: task.category || "Other",
-          instructions: task.instructions || "",
-          assignedTo: task.assignedTo || "",
-          time: task.time || "",
-          occurrenceDate,
-          dateKey: toDateKey(date),
-          rawTask: task
-        });
-      });
-    }
-
-    return occurrences;
-  }
-
-  function getMedicationScheduleOccurrences(fromDate = new Date(), daysAhead = 7) {
-    const child = activeChild();
-    if (!child) return [];
-
-    if (typeof generateMedicationScheduleItems !== "function") {
-      return [];
-    }
-
-    const occurrences = [];
-
-    for (let offset = 0; offset < daysAhead; offset++) {
-      const date = new Date(fromDate);
-      date.setDate(fromDate.getDate() + offset);
-
-      const dateKey = toDateKey(date);
-      const medItems = generateMedicationScheduleItems(db, child.id, dateKey);
-
-      medItems.forEach((item) => {
-        const [h, m] = String(item.time || "00:00").split(":").map(Number);
-
-        const occurrenceDate = new Date(
-          date.getFullYear(),
-          date.getMonth(),
-          date.getDate(),
-          Number.isFinite(h) ? h : 0,
-          Number.isFinite(m) ? m : 0,
-          0,
-          0
-        );
-
-        if (occurrenceDate.getTime() < fromDate.getTime()) return;
-
-        occurrences.push({
-          id: item.id,
-          source: "medication",
-          medId: item.medId,
-          title: item.title || "Medication",
-          category: item.category || "Medication",
-          instructions: item.instructions || item.note || "",
-          assignedTo: "",
-          time: item.time || "",
-          occurrenceDate,
-          dateKey,
-          rawTask: item
-        });
-      });
-    }
-
-    return occurrences;
-  }
-
-  function getMergedUpcomingSchedule(fromDate = new Date(), daysAhead = 7) {
-    const manual = getManualScheduleOccurrences(fromDate, daysAhead);
-    const meds = getMedicationScheduleOccurrences(fromDate, daysAhead);
-    return [...manual, ...meds].sort((a, b) => a.occurrenceDate - b.occurrenceDate);
-  }
-
-  function getDoseEventForMedicationAndTime(medId, dateKey, scheduledTime) {
-    return (db.doseEvents || []).find((log) => {
-      if (log.medId !== medId) return false;
-      if (log.scheduledTime !== scheduledTime) return false;
-      if (log.type !== "scheduled" && log.type !== "skip") return false;
-
-      const stamp = log.time || log.loggedAt || log.scheduledFor;
-      if (!stamp) return false;
-
-      const logDate = new Date(stamp);
-      if (Number.isNaN(logDate.getTime())) return false;
-
-      return toDateKey(logDate) === dateKey;
-    }) || null;
-  }
-
-  function logMedicationDoseFromDashboard(item) {
-    const child = activeChild();
-    if (!child) return;
-
-    if (!Array.isArray(db.doseEvents)) db.doseEvents = [];
-
-    const existing = getDoseEventForMedicationAndTime(item.medId, item.dateKey, item.time);
-    if (existing?.type === "scheduled") {
-      alert("This dose is already logged.");
-      return;
-    }
-
-    if (existing?.type === "skip") {
-      db.doseEvents = db.doseEvents.filter((evt) => evt.id !== existing.id);
-    }
-
-    db.doseEvents.unshift({
-      id: crypto?.randomUUID ? crypto.randomUUID() : `dose_${Date.now()}`,
-      childId: child.id,
-      medId: item.medId,
-      type: "scheduled",
-      scheduledTime: item.time,
-      time: new Date().toISOString(),
-      loggedAt: new Date().toISOString(),
-      note: item.instructions || "",
-      medicationName: item.title || "",
-      scheduledFor: item.occurrenceDate.toISOString()
-    });
-
-    saveDB(db);
-    render();
-  }
-
-  function skipMedicationDoseFromDashboard(item) {
-    const child = activeChild();
-    if (!child) return;
-
-    if (!Array.isArray(db.doseEvents)) db.doseEvents = [];
-
-    const existing = getDoseEventForMedicationAndTime(item.medId, item.dateKey, item.time);
-    if (existing?.type === "skip") {
-      alert("This dose is already marked skipped.");
-      return;
-    }
-
-    if (existing?.type === "scheduled") {
-      db.doseEvents = db.doseEvents.filter((evt) => evt.id !== existing.id);
-    }
-
-    db.doseEvents.unshift({
-      id: crypto?.randomUUID ? crypto.randomUUID() : `dose_${Date.now()}`,
-      childId: child.id,
-      medId: item.medId,
-      type: "skip",
-      scheduledTime: item.time,
-      time: new Date().toISOString(),
-      loggedAt: new Date().toISOString(),
-      note: item.instructions ? `Skipped • ${item.instructions}` : "Skipped from dashboard",
-      medicationName: item.title || "",
-      scheduledFor: item.occurrenceDate.toISOString()
-    });
-
-    saveDB(db);
-    render();
-  }
-
-  function undoMedicationDoseFromDashboard(item) {
-    const existing = getDoseEventForMedicationAndTime(item.medId, item.dateKey, item.time);
-    if (!existing) return;
-
-    db.doseEvents = (db.doseEvents || []).filter((evt) => evt.id !== existing.id);
-    saveDB(db);
-    render();
-  }
-
-  function updateLastKnownVitalField(field, value, createdAt, notes = "") {
-    const snapshot = activeLastKnownVitals();
-
-    snapshot[field] = {
-      value,
-      createdAt,
-      notes
-    };
-  }
-
-  function buildVitalHistoryEntries(payload) {
-    const createdAt = Date.now();
-    const notes = payload.notes || "";
-    const entries = [];
-
-    if (payload.o2 != null) {
-      entries.push({
-        id: crypto?.randomUUID ? crypto.randomUUID() : String(Date.now() + Math.random()),
-        createdAt,
-        type: "o2",
-        label: "Oxygen Saturation",
-        value: Number(payload.o2),
-        unit: "%",
-        notes
-      });
-      updateLastKnownVitalField("o2", Number(payload.o2), createdAt, notes);
-    }
-
-    if (payload.temp != null) {
-      entries.push({
-        id: crypto?.randomUUID ? crypto.randomUUID() : String(Date.now() + Math.random()),
-        createdAt,
-        type: "temp",
-        label: "Temperature",
-        value: Number(payload.temp),
-        unit: "°F",
-        notes
-      });
-      updateLastKnownVitalField("temp", Number(payload.temp), createdAt, notes);
-    }
-
-    if (payload.bpSys != null || payload.bpDia != null) {
-      const sys = payload.bpSys != null ? Number(payload.bpSys) : null;
-      const dia = payload.bpDia != null ? Number(payload.bpDia) : null;
-
-      entries.push({
-        id: crypto?.randomUUID ? crypto.randomUUID() : String(Date.now() + Math.random()),
-        createdAt,
-        type: "bp",
-        label: "Blood Pressure",
-        value: `${sys ?? "—"}/${dia ?? "—"}`,
-        unit: "",
-        bpSys: sys,
-        bpDia: dia,
-        notes
-      });
-
-      if (sys != null) updateLastKnownVitalField("bpSys", sys, createdAt, notes);
-      if (dia != null) updateLastKnownVitalField("bpDia", dia, createdAt, notes);
-    }
-
-    if (payload.hr != null) {
-      entries.push({
-        id: crypto?.randomUUID ? crypto.randomUUID() : String(Date.now() + Math.random()),
-        createdAt,
-        type: "hr",
-        label: "Heart Rate",
-        value: Number(payload.hr),
-        unit: "bpm",
-        notes
-      });
-      updateLastKnownVitalField("hr", Number(payload.hr), createdAt, notes);
-    }
-
-    if (payload.rr != null) {
-      entries.push({
-        id: crypto?.randomUUID ? crypto.randomUUID() : String(Date.now() + Math.random()),
-        createdAt,
-        type: "rr",
-        label: "Respiratory Rate",
-        value: Number(payload.rr),
-        unit: "/min",
-        notes
-      });
-      updateLastKnownVitalField("rr", Number(payload.rr), createdAt, notes);
-    }
-
-    return entries;
-  }
-
   function renderHeader() {
-    const child = activeChild();
-    const care = child?.careProfile || {};
+    const child = state.activeChild;
+    const care = state.careProfile || {};
 
     if (welcomeText) {
       const activeAreas = [
@@ -779,13 +338,18 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     if (childSummary) {
-      const diagnoses = Array.isArray(child.diagnoses) ? child.diagnoses : [];
-      childSummary.textContent = `Age ${child.age ?? "—"}${diagnoses.length ? ` • ${diagnoses.join(" • ")}` : ""}`;
+      const diagnoses = child.diagnoses
+        ? child.diagnoses.split(",").map((d) => d.trim()).filter(Boolean)
+        : [];
+      childSummary.textContent = `Age ${child.birthdate ? calculateAge(child.birthdate) : "—"}${diagnoses.length ? ` • ${diagnoses.join(" • ")}` : ""}`;
     }
 
     if (diagnosisPills) {
       diagnosisPills.innerHTML = "";
-      const diagnoses = Array.isArray(child.diagnoses) ? child.diagnoses : [];
+      const diagnoses = child.diagnoses
+        ? child.diagnoses.split(",").map((d) => d.trim()).filter(Boolean)
+        : [];
+
       diagnoses.forEach((dx) => {
         const pill = document.createElement("span");
         pill.className = "pill";
@@ -796,11 +360,8 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   function applyAdaptiveUI() {
-    const child = activeChild();
-    if (!child) return;
-
-    const care = child.careProfile || {};
-    const equipment = child.equipmentProfile || {};
+    const care = state.careProfile || {};
+    const equipment = state.equipmentProfile || {};
 
     const showVitals =
       !!care.has_respiratory ||
@@ -814,16 +375,16 @@ document.addEventListener("DOMContentLoaded", () => {
     const showInventory = !!care.has_inventory;
     const showSymptoms = !!care.has_symptoms;
 
-    if (lastVitalsCard && !showVitals) {
-      lastVitalsCard.classList.add("hidden");
+    if (lastVitalsCard) {
+      lastVitalsCard.classList.toggle("hidden", !showVitals);
     }
 
-    if (lowSupplyCard && !showInventory) {
-      lowSupplyCard.classList.add("hidden");
+    if (lowSupplyCard) {
+      lowSupplyCard.classList.toggle("hidden", !showInventory);
     }
 
-    if (lastSymptomCard && !showSymptoms) {
-      lastSymptomCard.classList.add("hidden");
+    if (lastSymptomCard) {
+      lastSymptomCard.classList.toggle("hidden", !showSymptoms);
     }
 
     const emergencyButtonShouldShow =
@@ -841,248 +402,127 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
+  function renderToday() {
+    todayList.innerHTML = `<li class="muted tiny">Schedule sync comes next.</li>`;
+  }
+
   function renderHomeSchedule() {
-    if (!homeScheduleList) return;
-
-    const now = new Date();
-    const upcoming = getMergedUpcomingSchedule(now, 7);
-
-    homeScheduleList.innerHTML = "";
-
-    if (!upcoming.length) {
-      homeScheduleList.innerHTML = `<div class="empty-state">No upcoming schedule items.</div>`;
-      return;
-    }
-
-    upcoming.slice(0, 3).forEach((item) => {
-      const meta = getTaskMeta(item.category);
-      const card = document.createElement("div");
-      card.className = "log-card";
-
-      const dateLabel = item.occurrenceDate.toLocaleDateString([], {
-        month: "short",
-        day: "numeric"
-      });
-
-      const medSourceText = item.source === "medication" ? " • Medication" : "";
-      const existingLog =
-        item.source === "medication"
-          ? getDoseEventForMedicationAndTime(item.medId, item.dateKey, item.time)
-          : null;
-
-      let statusLabel = item.category;
-      if (item.source === "medication") {
-        if (existingLog?.type === "scheduled") statusLabel = "Dose Logged";
-        else if (existingLog?.type === "skip") statusLabel = "Skipped";
-      }
-
-      card.innerHTML = `
-        <div class="log-icon ${meta.cls}">${meta.icon}</div>
-        <div class="log-main">
-          <h3>
-            ${item.title}
-            <span class="time">${formatTaskTime(item.time)}</span>
-          </h3>
-          <p>${item.instructions || "Scheduled care task."}</p>
-          <p class="muted mt-8">
-            ${dateLabel} • ${item.category}${item.assignedTo ? ` • ${item.assignedTo}` : ""}${medSourceText}
-          </p>
-        </div>
-        <div class="log-side">
-          <span class="log-tag ${meta.cls}">${statusLabel}</span>
-        </div>
-      `;
-
-      const actions = document.createElement("div");
-      actions.className = "row";
-      actions.style.marginTop = "12px";
-
-      if (item.source === "medication") {
-        if (existingLog?.type === "scheduled") {
-          const undoBtn = document.createElement("button");
-          undoBtn.className = "btn btn-ghost";
-          undoBtn.type = "button";
-          undoBtn.textContent = "Undo Log";
-          undoBtn.addEventListener("click", () => undoMedicationDoseFromDashboard(item));
-          actions.appendChild(undoBtn);
-        } else if (existingLog?.type === "skip") {
-          const undoBtn = document.createElement("button");
-          undoBtn.className = "btn btn-ghost";
-          undoBtn.type = "button";
-          undoBtn.textContent = "Undo Skip";
-          undoBtn.addEventListener("click", () => undoMedicationDoseFromDashboard(item));
-          actions.appendChild(undoBtn);
-        } else {
-          const logBtn = document.createElement("button");
-          logBtn.className = "btn";
-          logBtn.type = "button";
-          logBtn.textContent = "Log Dose";
-          logBtn.addEventListener("click", () => logMedicationDoseFromDashboard(item));
-          actions.appendChild(logBtn);
-
-          const skipBtn = document.createElement("button");
-          skipBtn.className = "btn btn-ghost";
-          skipBtn.type = "button";
-          skipBtn.textContent = "Skip";
-          skipBtn.addEventListener("click", () => skipMedicationDoseFromDashboard(item));
-          actions.appendChild(skipBtn);
-        }
-
-        const openMedsBtn = document.createElement("a");
-        openMedsBtn.className = "btn btn-ghost";
-        openMedsBtn.href = "meds.html";
-        openMedsBtn.textContent = "Open Meds";
-        actions.appendChild(openMedsBtn);
-      }
-
-      card.querySelector(".log-main").appendChild(actions);
-      homeScheduleList.appendChild(card);
-    });
+    homeScheduleList.innerHTML = `<div class="empty-state">Schedule sync comes next.</div>`;
   }
 
   function renderLowSupplies() {
     if (!lowSupplyCard || !lowSupplySummary || !lowSupplyDashboardList) return;
 
-    const lowSupplies = activeLowSupplies();
-
-    if (!lowSupplies.length) {
-      lowSupplyCard.classList.add("hidden");
+    if (state.careProfile?.has_inventory) {
+      lowSupplySummary.textContent = "Inventory sync comes next.";
+      lowSupplyDashboardList.innerHTML = `<div class="muted tiny">No inventory alerts yet.</div>`;
+    } else {
       lowSupplySummary.textContent = "";
       lowSupplyDashboardList.innerHTML = "";
-      return;
     }
-
-    lowSupplyCard.classList.remove("hidden");
-
-    lowSupplySummary.textContent =
-      lowSupplies.length === 1
-        ? "1 item needs attention."
-        : `${lowSupplies.length} items need attention.`;
-
-    lowSupplyDashboardList.innerHTML = lowSupplies
-      .map((item) => {
-        const isOut = item.status === "out" || Number(item.quantity) <= 0;
-        const statusText = isOut
-          ? "Out of stock"
-          : `${item.quantity} ${item.unit || "count"} left`;
-
-        return `
-          <div class="log-card">
-            <div class="log-icon ${isOut ? "med" : "general"}">${isOut ? "⚠️" : "📦"}</div>
-            <div class="log-main">
-              <h3>${item.name}</h3>
-              <p>${item.category || "Supply"}</p>
-              <p class="muted mt-8">Low alert at ${item.low}</p>
-            </div>
-            <div class="log-side">
-              <span class="log-tag ${isOut ? "med" : "general"}">${statusText}</span>
-            </div>
-          </div>
-        `;
-      })
-      .join("");
   }
 
   function renderLastVitals() {
     if (!lastVitalsCard || !lastVitalsContent) return;
-
-    const snapshot = activeLastKnownVitals();
-    const t = activeVitalThresholds();
-
-    const hasAny =
-      snapshot.o2 || snapshot.temp || snapshot.bpSys ||
-      snapshot.bpDia || snapshot.hr || snapshot.rr;
-
-    if (!hasAny) {
-      lastVitalsCard.classList.add("hidden");
-      lastVitalsContent.innerHTML = "";
-      return;
-    }
-
-    const o2 = snapshot.o2?.value ?? "—";
-    const temp = snapshot.temp?.value ?? "—";
-    const bpSys = snapshot.bpSys?.value ?? "—";
-    const bpDia = snapshot.bpDia?.value ?? "—";
-    const hr = snapshot.hr?.value ?? "—";
-    const rr = snapshot.rr?.value ?? "—";
-
-    const latestTimes = [
-      snapshot.o2?.createdAt,
-      snapshot.temp?.createdAt,
-      snapshot.bpSys?.createdAt,
-      snapshot.bpDia?.createdAt,
-      snapshot.hr?.createdAt,
-      snapshot.rr?.createdAt
-    ].filter(Boolean);
-
-    const newestTime = latestTimes.length ? Math.max(...latestTimes) : null;
-    const flags = [];
-
-    if (snapshot.o2?.value != null && snapshot.o2.value < t.o2Min) flags.push("Low O2");
-    if (snapshot.temp?.value != null && (snapshot.temp.value < t.tempMin || snapshot.temp.value > t.tempMax)) flags.push("Temp");
-    if (snapshot.bpSys?.value != null && (snapshot.bpSys.value < t.bpSysMin || snapshot.bpSys.value > t.bpSysMax)) flags.push("Sys BP");
-    if (snapshot.bpDia?.value != null && (snapshot.bpDia.value < t.bpDiaMin || snapshot.bpDia.value > t.bpDiaMax)) flags.push("Dia BP");
-    if (snapshot.hr?.value != null && (snapshot.hr.value < t.hrMin || snapshot.hr.value > t.hrMax)) flags.push("HR");
-    if (snapshot.rr?.value != null && (snapshot.rr.value < t.rrMin || snapshot.rr.value > t.rrMax)) flags.push("RR");
-
-    lastVitalsCard.classList.remove("hidden");
-    lastVitalsContent.innerHTML = `
-      <div class="strong" style="margin-bottom:8px;">
-        O2 ${o2}% • Temp ${temp}°F • BP ${bpSys}/${bpDia} • HR ${hr} • RR ${rr}
-      </div>
-      <div class="muted tiny" style="margin-bottom:8px;">
-        ${newestTime ? `Last updated ${fmtDateTime(newestTime)}` : "No time available"}
-      </div>
-      ${
-        flags.length
-          ? `<div class="badge" style="background:#fee2e2;color:#991b1b;">Alert: ${flags.join(", ")}</div>`
-          : `<div class="badge">Within thresholds</div>`
-      }
-    `;
+    lastVitalsContent.innerHTML = `<div class="muted tiny">Vitals sync comes next.</div>`;
   }
 
   function renderLastSymptom() {
     if (!lastSymptomCard || !lastSymptomContent) return;
+    lastSymptomContent.innerHTML = `<div class="muted tiny">Symptom sync comes next.</div>`;
+  }
 
-    const rows = activeSymptoms().slice().sort((a, b) => {
-      const aTime = new Date(a.createdAt || a.time || 0).getTime();
-      const bTime = new Date(b.createdAt || b.time || 0).getTime();
-      return bTime - aTime;
-    });
+  function renderCareLogs() {
+    careLogList.innerHTML = "";
 
-    const latest = rows[0];
-
-    if (!latest) {
-      lastSymptomCard.classList.add("hidden");
-      lastSymptomContent.innerHTML = "";
+    if (!state.careLogs.length) {
+      careLogList.innerHTML = `<li class="muted tiny">No entries yet. Try Quick Log.</li>`;
       return;
     }
 
-    const severity = latest.severity || "Mild";
-    const tagClass =
-      severity === "Severe"
-        ? "med"
-        : severity === "Moderate"
-        ? "gi"
-        : "general";
+    state.careLogs.forEach((entry) => {
+      const specs = Array.isArray(entry.specialties) && entry.specialties.length
+        ? entry.specialties.join(", ")
+        : "General";
 
-    lastSymptomCard.classList.remove("hidden");
-    lastSymptomContent.innerHTML = `
-      <div class="strong" style="margin-bottom:8px;">
-        ${latest.symptom || latest.note || "Symptom"}
-      </div>
-      <div class="muted tiny" style="margin-bottom:8px;">
-        ${fmtDateTime(latest.createdAt || latest.time)} • ${latest.specialty || "General"}
-      </div>
-      <div style="margin-bottom:8px;">
-        <span class="log-tag ${tagClass}">${severity}</span>
-      </div>
-      ${
-        latest.note
-          ? `<div class="muted">${latest.note}</div>`
-          : ``
-      }
-    `;
+      const li = document.createElement("li");
+      li.className = "item";
+      li.innerHTML = `
+        <div class="left">
+          <span class="badge">${categoryLabel(entry.category)}</span>
+          <div>
+            <div class="strong">${entry.note}</div>
+            <div class="muted tiny">${entry.author || "Caregiver"} • ${fmtDateTime(entry.created_at)} • ${specs}</div>
+          </div>
+        </div>
+      `;
+      careLogList.appendChild(li);
+    });
+  }
+
+  function render() {
+    renderHeader();
+    applyAdaptiveUI();
+    renderToday();
+    renderHomeSchedule();
+    renderLowSupplies();
+    renderLastVitals();
+    renderLastSymptom();
+    renderCareLogs();
+  }
+
+  function openModal(categoryValue) {
+    categorySelect.value = categoryValue;
+    noteInput.value = "";
+    authorInput.value = "Mom";
+    renderSpecialtyChecks([]);
+    modal.classList.remove("hidden");
+    noteInput.focus();
+  }
+
+  function closeModal() {
+    modal.classList.add("hidden");
+  }
+
+  async function saveQuickLog() {
+    const note = noteInput.value.trim();
+    const author = authorInput.value.trim() || "Caregiver";
+    const category = categorySelect.value;
+    const specialties = getSelectedSpecialties();
+
+    if (!note) {
+      alert("Please type a note.");
+      return;
+    }
+
+    if (!state.activeChildId || !state.user) {
+      alert("No active child selected.");
+      return;
+    }
+
+    const { error } = await supabaseClient
+      .from("care_logs")
+      .insert([
+        {
+          child_id: state.activeChildId,
+          parent_id: state.user.id,
+          category,
+          note,
+          author,
+          specialties,
+          created_at: new Date().toISOString()
+        }
+      ]);
+
+    if (error) {
+      console.error("Quick log save error:", error);
+      alert(error.message);
+      return;
+    }
+
+    closeModal();
+    await loadActiveChildCareLogs();
+    render();
   }
 
   function resetQuickVitalsForm() {
@@ -1154,193 +594,50 @@ document.addEventListener("DOMContentLoaded", () => {
     vitalsModal.classList.add("hidden");
   }
 
-  function render() {
-    const child = activeChild();
-    renderHeader();
-    applyAdaptiveUI();
-
-    if (!child) {
-      childSummary.textContent = "No child selected";
-      todayList.innerHTML = `<li class="muted tiny">No child available.</li>`;
-      careLogList.innerHTML = `<li class="muted tiny">No care log entries yet.</li>`;
-      if (homeScheduleList) homeScheduleList.innerHTML = `<div class="empty-state">No upcoming schedule items.</div>`;
-      if (lowSupplyCard) lowSupplyCard.classList.add("hidden");
-      if (lastVitalsCard) lastVitalsCard.classList.add("hidden");
-      if (lastSymptomCard) lastSymptomCard.classList.add("hidden");
-      return;
-    }
-
-    todayList.innerHTML = "";
-
-    const now = new Date();
-    const todayKey = toDateKey(now);
-
-    const todayItems = getMergedUpcomingSchedule(now, 1).filter(
-      (item) => item.dateKey === todayKey
-    );
-
-    if (!todayItems.length) {
-      todayList.innerHTML = `<li class="muted tiny">Nothing scheduled today.</li>`;
-    } else {
-      todayItems.slice(0, 5).forEach((item) => {
-        const li = document.createElement("li");
-        li.className = "item";
-
-        const existingLog =
-          item.source === "medication"
-            ? getDoseEventForMedicationAndTime(item.medId, item.dateKey, item.time)
-            : null;
-
-        const content = document.createElement("div");
-        content.style.width = "100%";
-
-        content.innerHTML = `
-          <div class="left" style="justify-content:space-between; width:100%;">
-            <div class="left">
-              <span class="badge">${formatTaskTime(item.time)}</span>
-              <div>
-                <div class="strong">${item.title}</div>
-                <div class="muted tiny">
-                  ${item.category}${item.source === "medication" ? " • Medication" : ""}
-                  ${item.instructions ? ` • ${item.instructions}` : ""}
-                </div>
-              </div>
-            </div>
-          </div>
-        `;
-
-        if (item.source === "medication") {
-          const actions = document.createElement("div");
-          actions.className = "row";
-          actions.style.marginTop = "10px";
-
-          if (existingLog?.type === "scheduled") {
-            const undoBtn = document.createElement("button");
-            undoBtn.className = "btn btn-ghost";
-            undoBtn.type = "button";
-            undoBtn.textContent = "Undo Log";
-            undoBtn.addEventListener("click", () => undoMedicationDoseFromDashboard(item));
-            actions.appendChild(undoBtn);
-          } else if (existingLog?.type === "skip") {
-            const undoBtn = document.createElement("button");
-            undoBtn.className = "btn btn-ghost";
-            undoBtn.type = "button";
-            undoBtn.textContent = "Undo Skip";
-            undoBtn.addEventListener("click", () => undoMedicationDoseFromDashboard(item));
-            actions.appendChild(undoBtn);
-          } else {
-            const logBtn = document.createElement("button");
-            logBtn.className = "btn";
-            logBtn.type = "button";
-            logBtn.textContent = "Log Dose";
-            logBtn.addEventListener("click", () => logMedicationDoseFromDashboard(item));
-            actions.appendChild(logBtn);
-
-            const skipBtn = document.createElement("button");
-            skipBtn.className = "btn btn-ghost";
-            skipBtn.type = "button";
-            skipBtn.textContent = "Skip";
-            skipBtn.addEventListener("click", () => skipMedicationDoseFromDashboard(item));
-            actions.appendChild(skipBtn);
-          }
-
-          content.appendChild(actions);
-        }
-
-        li.appendChild(content);
-        todayList.appendChild(li);
-      });
-    }
-
-    renderHomeSchedule();
-    renderLowSupplies();
-    renderLastVitals();
-    renderLastSymptom();
-
-    careLogList.innerHTML = "";
-    const logs = activeLogs();
-
-    if (!logs.length) {
-      careLogList.innerHTML = `<li class="muted tiny">No entries yet. Try Quick Add.</li>`;
-    } else {
-      logs.slice(0, 3).forEach((entry) => {
-        const specs = Array.isArray(entry.specialties) && entry.specialties.length
-          ? entry.specialties.join(", ")
-          : "General";
-
-        const li = document.createElement("li");
-        li.className = "item";
-        li.innerHTML = `
-          <div class="left">
-            <span class="badge">${categoryLabel(entry.category)}</span>
-            <div>
-              <div class="strong">${entry.note}</div>
-              <div class="muted tiny">${entry.author || "Caregiver"} • ${fmtDateTime(entry.createdAt)} • ${specs}</div>
-            </div>
-          </div>
-        `;
-        careLogList.appendChild(li);
-      });
-    }
-  }
-
-  function openModal(category) {
-    categorySelect.value = category;
-    noteInput.value = "";
-    authorInput.value = "Mom";
-    renderSpecialtyChecks([]);
-    modal.classList.remove("hidden");
-    noteInput.focus();
-  }
-
-  function closeModal() {
-    modal.classList.add("hidden");
-  }
-
   function openEmergency() {
-    const child = activeChild();
-    if (!child) return;
+    if (!state.activeChild) return;
 
-    const em = child.emergency || {};
-    const tr = em.trach || {};
-    const ve = em.vent || {};
-    const gt = em.gTube || {};
-    const ox = em.oxygen || {};
+    const child = state.activeChild;
+    const equipment = state.equipmentProfile || {};
+
+    const diagnoses = child.diagnoses
+      ? child.diagnoses.split(",").map((d) => d.trim()).filter(Boolean)
+      : [];
 
     emergencyBody.innerHTML = `
       <div class="card" style="margin:0;border-radius:12px;">
         <div class="strong" style="font-size:18px;">${child.name}</div>
-        <div class="muted">Age ${child.age ?? "—"}</div>
+        <div class="muted">Age ${child.birthdate ? calculateAge(child.birthdate) : "—"}</div>
       </div>
 
       <div>
         <div class="strong">Diagnoses</div>
-        <div class="muted">${(child.diagnoses || []).join(", ") || "None listed"}</div>
+        <div class="muted">${diagnoses.join(", ") || "None listed"}</div>
       </div>
 
       <div>
         <div class="strong">Allergies</div>
-        <div class="muted">${em.allergies || "(Add later)"}</div>
+        <div class="muted">${child.allergies || "(Add later)"}</div>
       </div>
 
       <div>
         <div class="strong">Trach</div>
-        <div class="muted">${tr.hasTrach ? "Yes" : "No / Not listed"}</div>
+        <div class="muted">${equipment.trach ? "Yes" : "No / Not listed"}</div>
       </div>
 
       <div>
         <div class="strong">Vent</div>
-        <div class="muted">${ve.onVent ? "Yes" : "No / Not listed"}</div>
+        <div class="muted">${equipment.ventilator ? "Yes" : "No / Not listed"}</div>
       </div>
 
       <div>
         <div class="strong">G-Tube</div>
-        <div class="muted">${gt.hasGTube ? "Yes" : "No / Not listed"}</div>
+        <div class="muted">${equipment.g_tube ? "Yes" : "No / Not listed"}</div>
       </div>
 
       <div>
         <div class="strong">Oxygen</div>
-        <div class="muted">${ox.hasOxygen ? "Yes" : "No / Not listed"}</div>
+        <div class="muted">${equipment.oxygen ? "Yes" : "No / Not listed"}</div>
       </div>
     `;
 
@@ -1377,66 +674,12 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  btnSave.addEventListener("click", () => {
-    const note = noteInput.value.trim();
-    const author = authorInput.value.trim() || "Caregiver";
-    const category = categorySelect.value;
-    const specialties = getSelectedSpecialties();
-
-    if (!note) {
-      alert("Please type a note.");
-      return;
-    }
-
-    if (!db.logs || typeof db.logs !== "object") db.logs = {};
-    if (!Array.isArray(db.logs[db.activeChildId])) db.logs[db.activeChildId] = [];
-
-    db.logs[db.activeChildId].unshift({
-      id: crypto?.randomUUID ? crypto.randomUUID() : String(Date.now()),
-      createdAt: Date.now(),
-      author,
-      category,
-      note,
-      specialties
-    });
-
-    saveDB(db);
-    closeModal();
-    render();
-  });
+  btnSave.addEventListener("click", saveQuickLog);
 
   if (btnSaveQuickVitals) {
     btnSaveQuickVitals.addEventListener("click", () => {
-      if (
-        !quickO2?.value && !quickTemp?.value && !quickBpSys?.value &&
-        !quickBpDia?.value && !quickHr?.value && !quickRr?.value
-      ) {
-        alert("Enter at least one vital.");
-        return;
-      }
-
-      const payload = {
-        o2: quickO2?.value ? Number(quickO2.value) : null,
-        temp: quickTemp?.value ? Number(quickTemp.value) : null,
-        bpSys: quickBpSys?.value ? Number(quickBpSys.value) : null,
-        bpDia: quickBpDia?.value ? Number(quickBpDia.value) : null,
-        hr: quickHr?.value ? Number(quickHr.value) : null,
-        rr: quickRr?.value ? Number(quickRr.value) : null,
-        notes: quickVitalNotes?.value.trim() || ""
-      };
-
-      const newEntries = buildVitalHistoryEntries(payload);
-
-      if (!newEntries.length) {
-        alert("Enter at least one vital.");
-        return;
-      }
-
-      activeVitals().unshift(...newEntries);
-
-      saveDB(db);
+      alert("Vitals save is the next Supabase step.");
       closeVitalsModal();
-      render();
     });
   }
 
@@ -1449,22 +692,24 @@ document.addEventListener("DOMContentLoaded", () => {
     if (e.target === emergencyModal) closeEmergency();
   });
 
-  childSwitcher.addEventListener("change", () => {
-    db.activeChildId = childSwitcher.value;
-    db.currentChildId = childSwitcher.value;
-    saveDB(db);
-    render();
+  childSwitcher.addEventListener("change", async () => {
+    await selectChild(childSwitcher.value);
   });
 
-  (async function initDashboard() {
-    const ok = await syncChildrenFromSupabase();
-    if (!ok) return;
+  async function initDashboard() {
+    const okUser = await loadUser();
+    if (!okUser) return;
 
-    console.log("Loaded children:", db.children);
-    console.log("Active child ID:", db.activeChildId);
-    console.log("Active child object:", activeChild());
+    const okChildren = await loadChildren();
+    if (!okChildren) return;
+
+    setInitialActiveChild();
+    await loadActiveChildProfiles();
+    await loadActiveChildCareLogs();
 
     fillChildSwitcher();
     render();
-  })();
+  }
+
+  initDashboard();
 });
