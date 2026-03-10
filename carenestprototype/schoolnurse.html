@@ -49,7 +49,7 @@
           <div class="section-head">
             <div>
               <h2>School Nurse Dashboard</h2>
-              <p class="muted">View the school-day plan, log events, and access emergency information quickly.</p>
+              <p class="muted">Track school-day care, view emergency information, and generate a parent handoff summary.</p>
             </div>
           </div>
 
@@ -73,6 +73,26 @@
               <strong>+ Feed / Therapy</strong>
               <span>Track school-day care tasks</span>
             </button>
+
+            <button class="quick-btn quick-note" data-log-type="bathroom" type="button">
+              <strong>+ Bathroom / Output</strong>
+              <span>Track output or diapering</span>
+            </button>
+
+            <button class="quick-btn quick-symptom" data-log-type="seizure" type="button">
+              <strong>+ Seizure</strong>
+              <span>Document seizure activity</span>
+            </button>
+
+            <button class="quick-btn quick-question" data-log-type="therapy" type="button">
+              <strong>+ Therapy</strong>
+              <span>Log school therapies or supports</span>
+            </button>
+
+            <button class="quick-btn quick-med" data-log-type="missed" type="button">
+              <strong>+ Missed Task</strong>
+              <span>Document skipped or delayed care</span>
+            </button>
           </div>
         </section>
 
@@ -85,7 +105,7 @@
 
         <section class="card">
           <div class="section-head">
-            <h2>Recent School Activity</h2>
+            <h2>Live School Timeline</h2>
           </div>
           <section id="schoolActivityList" class="log-list"></section>
         </section>
@@ -103,9 +123,14 @@
 
         <section class="card">
           <div class="section-head">
-            <h2>School-Day Notes</h2>
+            <h2>End-of-Day Handoff</h2>
+            <div class="button-row">
+              <button id="btnGenerateHandoff" class="btn" type="button">Generate</button>
+              <button id="btnSaveHandoff" class="btn btn-ghost" type="button">Save to Care Log</button>
+            </div>
           </div>
-          <div id="schoolNotesPanel" class="stack-list"></div>
+
+          <div id="handoffSummary" class="empty-state">No handoff summary generated yet.</div>
         </section>
 
       </aside>
@@ -128,7 +153,8 @@
           <option value="note">School Note</option>
           <option value="symptom">Symptom</option>
           <option value="med">Medication</option>
-          <option value="feed">Feed / Therapy</option>
+          <option value="feed">Feed</option>
+          <option value="therapy">Therapy</option>
           <option value="bathroom">Bathroom / Output</option>
           <option value="missed">Missed Task</option>
           <option value="seizure">Seizure</option>
