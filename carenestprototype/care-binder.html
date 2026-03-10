@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Care Binder • CareNestia</title>
   <link rel="stylesheet" href="styles.css" />
   <style>
@@ -113,7 +113,7 @@
       align-items: center;
       gap: 12px;
       padding: 14px 16px;
-      border-bottom: 1px solid var(--line);
+      border-bottom: 1px solid var(--border);
       background: rgba(111, 93, 255, 0.03);
     }
 
@@ -156,28 +156,13 @@
       color: var(--muted);
     }
 
-    .pill-row {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 8px;
-    }
-
-    .pill {
-      padding: 6px 10px;
-      border-radius: 999px;
-      background: rgba(111, 93, 255, 0.1);
-      color: var(--primary);
-      font-weight: 700;
-      font-size: 0.92rem;
-    }
-
     .entry-list {
       display: grid;
       gap: 10px;
     }
 
     .entry-item {
-      border: 1px solid var(--line);
+      border: 1px solid var(--border);
       border-radius: 14px;
       padding: 12px;
       background: #fff;
@@ -186,11 +171,6 @@
     .entry-item strong {
       display: block;
       margin-bottom: 4px;
-    }
-
-    .empty-state {
-      color: var(--muted);
-      font-style: italic;
     }
 
     .modal-backdrop {
@@ -215,12 +195,12 @@
       border-radius: 24px;
       background: #fff;
       box-shadow: 0 24px 60px rgba(30, 30, 60, 0.18);
-      border: 1px solid var(--line);
+      border: 1px solid var(--border);
     }
 
     .modal-head {
       padding: 18px 20px;
-      border-bottom: 1px solid var(--line);
+      border-bottom: 1px solid var(--border);
       display: flex;
       justify-content: space-between;
       align-items: center;
@@ -251,7 +231,7 @@
       align-items: center;
       gap: 14px;
       padding: 14px;
-      border: 1px solid var(--line);
+      border: 1px solid var(--border);
       border-radius: 16px;
       background: #fff;
     }
@@ -313,7 +293,7 @@
       justify-content: space-between;
       gap: 12px;
       flex-wrap: wrap;
-      border-top: 1px solid var(--line);
+      border-top: 1px solid var(--border);
       padding-top: 16px;
     }
 
@@ -349,54 +329,91 @@
   </style>
 </head>
 <body>
-  <header class="topbar">
-    <div class="topbar-inner">
-      <div class="brand">
-        <div class="brand-logo">💙</div>
-        <div class="brand-text">CareNestia</div>
+  <div class="app-shell">
+
+    <aside class="app-sidebar">
+      <div class="sidebar-brand">
+        <img src="images/carenestia_logo_wordmark.png" class="sidebar-wordmark" alt="CareNestia" />
       </div>
 
-      <div class="topbar-actions">
-        <select id="childSwitcher" class="child-switcher"></select>
-        <a class="btn btn-ghost" href="more.html">← Back</a>
+      <nav class="sidebar-nav">
+        <a class="sidebar-link" href="index.html">Dashboard</a>
+        <a class="sidebar-link" href="schedule.html">Schedule</a>
+        <a class="sidebar-link" href="meds.html">Medications</a>
+        <a class="sidebar-link" href="carelog.html">Care Log</a>
+        <a class="sidebar-link" href="inventory.html">Inventory</a>
+        <a class="sidebar-link" href="schoolnurse.html">School Nurse</a>
+        <a class="sidebar-link active" href="documents.html">Care Binder</a>
+      </nav>
+
+      <div class="sidebar-actions-card">
+        <div class="sidebar-actions-title">Quick Actions</div>
+        <div class="sidebar-actions-list">
+          <button id="manageSectionsBtnSidebar" class="btn btn-primary btn-block" type="button">Manage Sections</button>
+          <a class="btn btn-ghost btn-block" href="careplan.html">Edit Child Profile</a>
+          <a class="btn btn-ghost btn-block" href="emergency-sheet.html">Open Emergency Sheet</a>
+        </div>
       </div>
-    </div>
-  </header>
+    </aside>
 
-  <main class="page">
-    <div class="binder-shell">
-      <aside class="binder-sidebar">
-        <section class="card binder-profile">
-          <img id="binderPhoto" class="binder-photo" alt="Child photo" />
-          <div class="binder-profile-body">
-            <h2 id="binderName" class="binder-name">Child Name</h2>
-            <p id="binderSub" class="binder-sub">Age • Diagnoses</p>
-          </div>
-        </section>
+    <div class="app-main">
 
-        <button id="manageSectionsBtn" class="btn binder-manage-btn" type="button">
-          ⚙️ Manage Sections
-        </button>
+      <header class="app-topbar">
+        <div class="topbar-child-card">
+          <div class="topbar-child-avatar" id="childAvatar"></div>
 
-        <nav id="binderNav" class="card binder-nav"></nav>
-      </aside>
-
-      <section class="binder-main">
-        <div class="card binder-header">
-          <div>
-            <h1 id="sectionTitle">Care Binder</h1>
-            <p id="sectionDesc" class="binder-section-desc">Select a section from the binder.</p>
-          </div>
-          <div class="binder-actions">
-            <button id="editSectionBtn" class="btn btn-ghost" type="button">Edit Section</button>
-            <a class="btn btn-primary" href="emergency-sheet.html">Open Emergency Sheet</a>
+          <div class="topbar-child-copy">
+            <label for="childSwitcher" class="sr-only">Select child</label>
+            <select id="childSwitcher" class="topbar-child-select"></select>
+            <div class="topbar-child-meta" id="childSummary">Age —</div>
           </div>
         </div>
 
-        <div id="binderSectionContent"></div>
-      </section>
+        <div class="topbar-actions">
+          <a class="btn btn-soft" href="careplan.html">Edit Child Profile</a>
+          <button id="logoutBtn" class="btn btn-ghost" type="button">Log out</button>
+        </div>
+      </header>
+
+      <main class="app-content">
+        <div class="main-column" style="grid-column: 1 / -1;">
+          <div class="binder-shell">
+            <aside class="binder-sidebar">
+              <section class="card binder-profile">
+                <img id="binderPhoto" class="binder-photo" alt="Child photo" />
+                <div class="binder-profile-body">
+                  <h2 id="binderName" class="binder-name">Child Name</h2>
+                  <p id="binderSub" class="binder-sub">Age • Diagnoses</p>
+                </div>
+              </section>
+
+              <button id="manageSectionsBtn" class="btn binder-manage-btn" type="button">
+                ⚙️ Manage Sections
+              </button>
+
+              <nav id="binderNav" class="card binder-nav"></nav>
+            </aside>
+
+            <section class="binder-main">
+              <div class="card binder-header">
+                <div>
+                  <h1 id="sectionTitle">Care Binder</h1>
+                  <p id="sectionDesc" class="binder-section-desc">Select a section from the binder.</p>
+                </div>
+                <div class="binder-actions">
+                  <button id="editSectionBtn" class="btn btn-ghost" type="button">Edit Section</button>
+                  <a class="btn btn-primary" href="emergency-sheet.html">Open Emergency Sheet</a>
+                </div>
+              </div>
+
+              <div id="binderSectionContent"></div>
+            </section>
+          </div>
+        </div>
+      </main>
+
     </div>
-  </main>
+  </div>
 
   <div id="sectionsModal" class="modal-backdrop" aria-hidden="true">
     <div class="modal-card">
@@ -429,7 +446,27 @@
     </div>
   </div>
 
+  <nav class="bottom-nav">
+    <div class="bottom-nav-inner">
+      <a class="nav-link" href="index.html">Home</a>
+      <a class="nav-link" href="carelog.html">Care Log</a>
+      <a class="nav-link" href="meds.html">Meds</a>
+      <a class="nav-link" href="schedule.html">Schedule</a>
+      <a class="nav-link active" href="documents.html">More</a>
+    </div>
+  </nav>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="supabase.js"></script>
   <script src="storage.js"></script>
   <script src="care-binder.js"></script>
+  <script src="auth.js"></script>
+  <script>
+    requireAuth();
+
+    document.getElementById("manageSectionsBtnSidebar")?.addEventListener("click", () => {
+      document.getElementById("manageSectionsBtn")?.click();
+    });
+  </script>
 </body>
 </html>
