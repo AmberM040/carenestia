@@ -35,12 +35,12 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   let editingSection = null;
   let currentGroup = "overview";
-  let currentSectionKey = "overview";
+  let currentSectionKey = "aboutMe";
 
   const GROUPS = {
     overview: {
       label: "Overview",
-      sections: ["overview"]
+      sections: ["aboutMe"]
     },
     medical: {
       label: "Medical",
@@ -69,9 +69,9 @@ document.addEventListener("DOMContentLoaded", async () => {
   };
 
   const SECTION_CONFIG = {
-    overview: {
-      label: "Overview",
-      desc: "Quick snapshot of the child and baseline details."
+    aboutMe: {
+      label: "About Me",
+      desc: "A quick, human-centered snapshot of the child for caregivers, school staff, and emergency teams."
     },
     medicalHistory: {
       label: "Medical History",
@@ -172,7 +172,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     });
 
     manageSectionsBtn?.addEventListener("click", () => {
-      alert("Section manager can be the next step. First we’re making sections properly editable.");
+      alert("We can build the section manager next. For now, About Me is fully editable.");
     });
 
     editSectionBtn?.addEventListener("click", () => {
@@ -246,28 +246,32 @@ document.addEventListener("DOMContentLoaded", async () => {
     if (!db.careBinder) db.careBinder = {};
     if (!db.careBinder.sections) db.careBinder.sections = {};
 
-    if (!db.careBinder.sections.overview || typeof db.careBinder.sections.overview !== "object") {
-      db.careBinder.sections.overview = {};
+    if (!db.careBinder.sections.aboutMe || typeof db.careBinder.sections.aboutMe !== "object") {
+      db.careBinder.sections.aboutMe = {};
     }
 
-    const overview = db.careBinder.sections.overview;
-    if (typeof overview.legalName !== "string") overview.legalName = "";
-    if (typeof overview.dob !== "string") overview.dob = "";
-    if (typeof overview.age !== "string") overview.age = "";
-    if (typeof overview.sex !== "string") overview.sex = "";
-    if (typeof overview.communication !== "string") overview.communication = "";
-    if (typeof overview.mobility !== "string") overview.mobility = "";
-    if (typeof overview.feedingMethod !== "string") overview.feedingMethod = "";
-    if (typeof overview.preferredHospital !== "string") overview.preferredHospital = "";
-    if (typeof overview.baselineStatus !== "string") overview.baselineStatus = "";
-    if (typeof overview.specialEquipment !== "string") overview.specialEquipment = "";
-    if (typeof overview.emergencyNotes !== "string") overview.emergencyNotes = "";
+    const aboutMe = db.careBinder.sections.aboutMe;
+
+    if (typeof aboutMe.preferredName !== "string") aboutMe.preferredName = "";
+    if (typeof aboutMe.legalName !== "string") aboutMe.legalName = "";
+    if (typeof aboutMe.dob !== "string") aboutMe.dob = "";
+    if (typeof aboutMe.age !== "string") aboutMe.age = "";
+    if (typeof aboutMe.communication !== "string") aboutMe.communication = "";
+    if (typeof aboutMe.likes !== "string") aboutMe.likes = "";
+    if (typeof aboutMe.calming !== "string") aboutMe.calming = "";
+    if (typeof aboutMe.dislikes !== "string") aboutMe.dislikes = "";
+    if (typeof aboutMe.mobility !== "string") aboutMe.mobility = "";
+    if (typeof aboutMe.feedingMethod !== "string") aboutMe.feedingMethod = "";
+    if (typeof aboutMe.baselineStatus !== "string") aboutMe.baselineStatus = "";
+    if (typeof aboutMe.specialEquipment !== "string") aboutMe.specialEquipment = "";
+    if (typeof aboutMe.criticalNotes !== "string") aboutMe.criticalNotes = "";
 
     Object.keys(SECTION_CONFIG).forEach((key) => {
+      if (key === "aboutMe") return;
       if (!db.careBinder.sections[key] || typeof db.careBinder.sections[key] !== "object") {
         db.careBinder.sections[key] = { notes: "" };
       }
-      if (key !== "overview" && typeof db.careBinder.sections[key].notes !== "string") {
+      if (typeof db.careBinder.sections[key].notes !== "string") {
         db.careBinder.sections[key].notes = "";
       }
     });
@@ -326,6 +330,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   function renderSidebarProfile() {
     const child = getActiveChild();
+    const aboutMe = db.careBinder?.sections?.aboutMe || {};
 
     if (!child) {
       binderPhoto.removeAttribute("src");
@@ -336,9 +341,9 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     binderPhoto.src = child.photo_url || "https://via.placeholder.com/600x400?text=Child+Photo";
     binderPhoto.alt = child.name ? `${child.name} photo` : "Child photo";
-    binderName.textContent = child.name || "Child";
+    binderName.textContent = aboutMe.preferredName || child.name || "Child";
 
-    const ageText = child.age ? `Age ${child.age}` : "Age —";
+    const ageText = aboutMe.age || child.age ? `Age ${aboutMe.age || child.age}` : "Age —";
     const dx =
       Array.isArray(child.diagnoses) && child.diagnoses.length
         ? child.diagnoses.join(" • ")
@@ -356,7 +361,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   function ensureValidCurrentSection() {
     const available = getSectionsForGroup(currentGroup);
     if (!available.includes(currentSectionKey)) {
-      currentSectionKey = available[0] || "overview";
+      currentSectionKey = available[0] || "aboutMe";
     }
   }
 
@@ -416,23 +421,26 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
   function getSectionStatus(key) {
-    if (key === "overview") {
-      const section = db.careBinder?.sections?.overview || {};
+    if (key === "aboutMe") {
+      const section = db.careBinder?.sections?.aboutMe || {};
       const fields = [
+        section.preferredName,
         section.legalName,
         section.dob,
-        section.sex,
+        section.age,
         section.communication,
+        section.likes,
+        section.calming,
+        section.dislikes,
         section.mobility,
         section.feedingMethod,
-        section.preferredHospital,
         section.baselineStatus,
         section.specialEquipment,
-        section.emergencyNotes
+        section.criticalNotes
       ].filter((v) => String(v || "").trim());
 
       if (!fields.length) return { label: "Empty", className: "status-empty" };
-      if (fields.length < 5) return { label: "Partial", className: "status-partial" };
+      if (fields.length < 6) return { label: "Partial", className: "status-partial" };
       return { label: "Complete", className: "status-complete" };
     }
 
@@ -456,8 +464,11 @@ document.addEventListener("DOMContentLoaded", async () => {
     sectionTitle.textContent = cfg.label;
     sectionDesc.textContent = cfg.desc;
 
-    if (key === "overview") {
-      binderSectionContent.innerHTML = renderOverviewSection();
+    if (key === "aboutMe") {
+      binderSectionContent.innerHTML = renderAboutMeSection();
+      document.getElementById("inlineEditBtn")?.addEventListener("click", () => {
+        openEdit("aboutMe");
+      });
     } else {
       const notes = db.careBinder?.sections?.[key]?.notes || "";
 
@@ -491,29 +502,30 @@ document.addEventListener("DOMContentLoaded", async () => {
     renderStatusPanel();
   }
 
-  function renderOverviewSection() {
+  function renderAboutMeSection() {
     const child = getActiveChild();
-    const overview = db.careBinder?.sections?.overview || {};
+    const aboutMe = db.careBinder?.sections?.aboutMe || {};
 
     const rows = [
-      ["Preferred Name", child?.name || "—"],
-      ["Legal Name", overview.legalName || "—"],
-      ["DOB", overview.dob || child?.birthdate || "—"],
-      ["Age", overview.age || (child?.age ? String(child.age) : "—")],
-      ["Sex", overview.sex || "—"],
-      ["Communication", overview.communication || "—"],
-      ["Mobility", overview.mobility || "—"],
-      ["Feeding Method", overview.feedingMethod || "—"],
-      ["Preferred Hospital", overview.preferredHospital || "—"],
-      ["Baseline Status", overview.baselineStatus || "—"],
-      ["Special Equipment", overview.specialEquipment || "—"],
-      ["Emergency Notes", overview.emergencyNotes || "—"]
+      ["Preferred Name", aboutMe.preferredName || child?.name || "—"],
+      ["Legal Name", aboutMe.legalName || "—"],
+      ["DOB", aboutMe.dob || child?.birthdate || "—"],
+      ["Age", aboutMe.age || (child?.age ? String(child.age) : "—")],
+      ["Communication", aboutMe.communication || "—"],
+      ["Likes", aboutMe.likes || "—"],
+      ["Calming", aboutMe.calming || "—"],
+      ["Dislikes", aboutMe.dislikes || "—"],
+      ["Mobility", aboutMe.mobility || "—"],
+      ["Feeding Method", aboutMe.feedingMethod || "—"],
+      ["Baseline Status", aboutMe.baselineStatus || "—"],
+      ["Special Equipment", aboutMe.specialEquipment || "—"],
+      ["Critical Notes", aboutMe.criticalNotes || "—"]
     ];
 
     return `
       <section class="chart-card">
         <div class="chart-card-head">
-          <h3>Overview</h3>
+          <h3>About Me</h3>
           <div class="button-row">
             <button class="btn btn-ghost" type="button" id="inlineEditBtn">Edit</button>
           </div>
@@ -540,84 +552,98 @@ document.addEventListener("DOMContentLoaded", async () => {
   function openEdit(key) {
     editingSection = key;
 
-    if (key === "overview") {
-      openOverviewEditor();
+    if (key === "aboutMe") {
+      openAboutMeEditor();
       return;
     }
 
     editTitle.textContent = `Edit ${SECTION_CONFIG[key].label}`;
-    editNotes.value = db.careBinder?.sections?.[key]?.notes || "";
+    const notesField = document.getElementById("editNotes");
+    if (notesField) notesField.value = db.careBinder?.sections?.[key]?.notes || "";
     editModal.classList.add("open");
-    editNotes.focus();
+    notesField?.focus();
   }
 
-  function openOverviewEditor() {
+  function openAboutMeEditor() {
     const child = getActiveChild();
-    const overview = db.careBinder?.sections?.overview || {};
+    const aboutMe = db.careBinder?.sections?.aboutMe || {};
 
-    editTitle.textContent = "Edit Overview";
+    editTitle.textContent = "Edit About Me";
 
-    editNotes.outerHTML = `
-      <div id="overviewEditForm" class="form-grid" style="margin-top:12px;">
-        <div class="field">
-          <label for="ovLegalName">Legal Name</label>
-          <input id="ovLegalName" class="input" value="${escapeAttr(overview.legalName || "")}">
+    const currentNotesField = document.getElementById("editNotes");
+    if (currentNotesField) {
+      currentNotesField.outerHTML = `
+        <div id="aboutMeEditForm" class="form-grid" style="margin-top:12px;">
+          <div class="field">
+            <label for="amPreferredName">Preferred Name</label>
+            <input id="amPreferredName" class="input" value="${escapeAttr(aboutMe.preferredName || child?.name || "")}">
+          </div>
+
+          <div class="field">
+            <label for="amLegalName">Legal Name</label>
+            <input id="amLegalName" class="input" value="${escapeAttr(aboutMe.legalName || "")}">
+          </div>
+
+          <div class="field">
+            <label for="amDob">DOB</label>
+            <input id="amDob" class="input" value="${escapeAttr(aboutMe.dob || child?.birthdate || "")}">
+          </div>
+
+          <div class="field">
+            <label for="amAge">Age</label>
+            <input id="amAge" class="input" value="${escapeAttr(aboutMe.age || (child?.age ? String(child.age) : ""))}">
+          </div>
+
+          <div class="field">
+            <label for="amCommunication">Communication</label>
+            <textarea id="amCommunication" class="input" rows="3">${escapeHtml(aboutMe.communication || "")}</textarea>
+          </div>
+
+          <div class="field">
+            <label for="amLikes">Likes</label>
+            <textarea id="amLikes" class="input" rows="3">${escapeHtml(aboutMe.likes || "")}</textarea>
+          </div>
+
+          <div class="field">
+            <label for="amCalming">Things That Calm Me</label>
+            <textarea id="amCalming" class="input" rows="3">${escapeHtml(aboutMe.calming || "")}</textarea>
+          </div>
+
+          <div class="field">
+            <label for="amDislikes">Dislikes / Triggers</label>
+            <textarea id="amDislikes" class="input" rows="3">${escapeHtml(aboutMe.dislikes || "")}</textarea>
+          </div>
+
+          <div class="field">
+            <label for="amMobility">Mobility</label>
+            <textarea id="amMobility" class="input" rows="3">${escapeHtml(aboutMe.mobility || "")}</textarea>
+          </div>
+
+          <div class="field">
+            <label for="amFeedingMethod">Feeding Method</label>
+            <textarea id="amFeedingMethod" class="input" rows="3">${escapeHtml(aboutMe.feedingMethod || "")}</textarea>
+          </div>
+
+          <div class="field">
+            <label for="amBaselineStatus">Baseline Status</label>
+            <textarea id="amBaselineStatus" class="input" rows="4">${escapeHtml(aboutMe.baselineStatus || "")}</textarea>
+          </div>
+
+          <div class="field">
+            <label for="amSpecialEquipment">Special Equipment</label>
+            <textarea id="amSpecialEquipment" class="input" rows="4">${escapeHtml(aboutMe.specialEquipment || "")}</textarea>
+          </div>
+
+          <div class="field" style="grid-column:1 / -1;">
+            <label for="amCriticalNotes">Critical Notes</label>
+            <textarea id="amCriticalNotes" class="input" rows="5">${escapeHtml(aboutMe.criticalNotes || "")}</textarea>
+          </div>
         </div>
-
-        <div class="field">
-          <label for="ovDob">DOB</label>
-          <input id="ovDob" class="input" value="${escapeAttr(overview.dob || child?.birthdate || "")}">
-        </div>
-
-        <div class="field">
-          <label for="ovAge">Age</label>
-          <input id="ovAge" class="input" value="${escapeAttr(overview.age || (child?.age ? String(child.age) : ""))}">
-        </div>
-
-        <div class="field">
-          <label for="ovSex">Sex</label>
-          <input id="ovSex" class="input" value="${escapeAttr(overview.sex || "")}">
-        </div>
-
-        <div class="field">
-          <label for="ovCommunication">Communication</label>
-          <textarea id="ovCommunication" class="input" rows="3">${escapeHtml(overview.communication || "")}</textarea>
-        </div>
-
-        <div class="field">
-          <label for="ovMobility">Mobility</label>
-          <textarea id="ovMobility" class="input" rows="3">${escapeHtml(overview.mobility || "")}</textarea>
-        </div>
-
-        <div class="field">
-          <label for="ovFeedingMethod">Feeding Method</label>
-          <textarea id="ovFeedingMethod" class="input" rows="3">${escapeHtml(overview.feedingMethod || "")}</textarea>
-        </div>
-
-        <div class="field">
-          <label for="ovPreferredHospital">Preferred Hospital</label>
-          <textarea id="ovPreferredHospital" class="input" rows="3">${escapeHtml(overview.preferredHospital || "")}</textarea>
-        </div>
-
-        <div class="field">
-          <label for="ovBaselineStatus">Baseline Status</label>
-          <textarea id="ovBaselineStatus" class="input" rows="4">${escapeHtml(overview.baselineStatus || "")}</textarea>
-        </div>
-
-        <div class="field">
-          <label for="ovSpecialEquipment">Special Equipment</label>
-          <textarea id="ovSpecialEquipment" class="input" rows="4">${escapeHtml(overview.specialEquipment || "")}</textarea>
-        </div>
-
-        <div class="field" style="grid-column:1 / -1;">
-          <label for="ovEmergencyNotes">Emergency Notes</label>
-          <textarea id="ovEmergencyNotes" class="input" rows="5">${escapeHtml(overview.emergencyNotes || "")}</textarea>
-        </div>
-      </div>
-    `;
+      `;
+    }
 
     editModal.classList.add("open");
-    document.getElementById("ovLegalName")?.focus();
+    document.getElementById("amPreferredName")?.focus();
   }
 
   function closeEdit() {
@@ -626,17 +652,17 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
   function restoreDefaultEditBody() {
-    const overviewEditForm = document.getElementById("overviewEditForm");
-    if (overviewEditForm) {
-      overviewEditForm.outerHTML = `<textarea id="editNotes" class="input" rows="6"></textarea>`;
+    const aboutMeForm = document.getElementById("aboutMeEditForm");
+    if (aboutMeForm) {
+      aboutMeForm.outerHTML = `<textarea id="editNotes" class="input" rows="6"></textarea>`;
     }
   }
 
   function saveEdit() {
     if (!editingSection) return;
 
-    if (editingSection === "overview") {
-      saveOverviewEdit();
+    if (editingSection === "aboutMe") {
+      saveAboutMeEdit();
       return;
     }
 
@@ -652,27 +678,30 @@ document.addEventListener("DOMContentLoaded", async () => {
     closeEdit();
   }
 
-  function saveOverviewEdit() {
+  function saveAboutMeEdit() {
     if (!db.careBinder) db.careBinder = {};
     if (!db.careBinder.sections) db.careBinder.sections = {};
-    if (!db.careBinder.sections.overview) db.careBinder.sections.overview = {};
+    if (!db.careBinder.sections.aboutMe) db.careBinder.sections.aboutMe = {};
 
-    const overview = db.careBinder.sections.overview;
+    const aboutMe = db.careBinder.sections.aboutMe;
 
-    overview.legalName = getValue("ovLegalName");
-    overview.dob = getValue("ovDob");
-    overview.age = getValue("ovAge");
-    overview.sex = getValue("ovSex");
-    overview.communication = getValue("ovCommunication");
-    overview.mobility = getValue("ovMobility");
-    overview.feedingMethod = getValue("ovFeedingMethod");
-    overview.preferredHospital = getValue("ovPreferredHospital");
-    overview.baselineStatus = getValue("ovBaselineStatus");
-    overview.specialEquipment = getValue("ovSpecialEquipment");
-    overview.emergencyNotes = getValue("ovEmergencyNotes");
+    aboutMe.preferredName = getValue("amPreferredName");
+    aboutMe.legalName = getValue("amLegalName");
+    aboutMe.dob = getValue("amDob");
+    aboutMe.age = getValue("amAge");
+    aboutMe.communication = getValue("amCommunication");
+    aboutMe.likes = getValue("amLikes");
+    aboutMe.calming = getValue("amCalming");
+    aboutMe.dislikes = getValue("amDislikes");
+    aboutMe.mobility = getValue("amMobility");
+    aboutMe.feedingMethod = getValue("amFeedingMethod");
+    aboutMe.baselineStatus = getValue("amBaselineStatus");
+    aboutMe.specialEquipment = getValue("amSpecialEquipment");
+    aboutMe.criticalNotes = getValue("amCriticalNotes");
 
     saveDB(db);
-    renderSection("overview");
+    renderSidebarProfile();
+    renderSection("aboutMe");
     closeEdit();
   }
 
