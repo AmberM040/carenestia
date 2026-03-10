@@ -1,9 +1,12 @@
 document.addEventListener("DOMContentLoaded", () => {
-  let db = ensureDB(loadDB());
-  seedCareBinderIfMissing(db);
-  saveDB(db);
+  let db = loadDB();
+  const supabase = window.supabaseClient || null;
 
   const childSwitcher = document.getElementById("childSwitcher");
+  const childAvatar = document.getElementById("childAvatar");
+  const childSummary = document.getElementById("childSummary");
+  const logoutBtn = document.getElementById("logoutBtn");
+
   const binderPhoto = document.getElementById("binderPhoto");
   const binderName = document.getElementById("binderName");
   const binderSub = document.getElementById("binderSub");
@@ -95,14 +98,26 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   };
 
-  let currentSectionKey = getInitialSectionKey();
-  let draftEnabledSections = JSON.parse(JSON.stringify(db.careBinder.enabledSections));
-  let draftSectionOptions = JSON.parse(JSON.stringify(db.careBinder.sectionOptions || {}));
+  let currentSectionKey = "overview";
+  let draftEnabledSections = {};
+  let draftSectionOptions = {};
 
   init();
 
-  function init() {
+  async function init() {
+    db = loadDB();
+    await syncChildrenFromSupabase();
+
+    db = ensureDB(db);
+    seedCareBinderIfMissing(db);
+    saveDB(db);
+
+    currentSectionKey = getInitialSectionKey();
+    draftEnabledSections = JSON.parse(JSON.stringify(db.careBinder.enabledSections));
+    draftSectionOptions = JSON.parse(JSON.stringify(db.careBinder.sectionOptions || {}));
+
     renderChildSwitcher();
+    renderHeaderChildSummary();
     renderSidebarProfile();
     renderBinderNav();
     renderSection();
@@ -111,18 +126,21 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   function wireEvents() {
-    childSwitcher.addEventListener("change", () => {
-      db.activeChildId = childSwitcher.value;
-      saveDB(db);
+    childSwitcher?.addEventListener("change", () => {
+      setActiveChildId(childSwitcher.value);
+      renderChildSwitcher();
+      renderHeaderChildSummary();
       renderSidebarProfile();
       renderBinderNav();
+
       if (!isSectionEnabled(currentSectionKey)) {
         currentSectionKey = getInitialSectionKey();
       }
+
       renderSection();
     });
 
-    manageSectionsBtn.addEventListener("click", () => {
+    manageSectionsBtn?.addEventListener("click", () => {
       draftEnabledSections = JSON.parse(JSON.stringify(db.careBinder.enabledSections));
       draftSectionOptions = JSON.parse(JSON.stringify(db.careBinder.sectionOptions || {}));
       renderSectionsModal();
@@ -130,14 +148,14 @@ document.addEventListener("DOMContentLoaded", () => {
       sectionsModal.setAttribute("aria-hidden", "false");
     });
 
-    closeModalBtn.addEventListener("click", closeModal);
-    cancelModalBtn.addEventListener("click", closeModal);
+    closeModalBtn?.addEventListener("click", closeModal);
+    cancelModalBtn?.addEventListener("click", closeModal);
 
-    sectionsModal.addEventListener("click", (e) => {
+    sectionsModal?.addEventListener("click", (e) => {
       if (e.target === sectionsModal) closeModal();
     });
 
-    saveSectionsBtn.addEventListener("click", () => {
+    saveSectionsBtn?.addEventListener("click", () => {
       db.careBinder.enabledSections = JSON.parse(JSON.stringify(draftEnabledSections));
       db.careBinder.sectionOptions = JSON.parse(JSON.stringify(draftSectionOptions));
       saveDB(db);
@@ -151,7 +169,7 @@ document.addEventListener("DOMContentLoaded", () => {
       closeModal();
     });
 
-    restoreLayoutBtn.addEventListener("click", () => {
+    restoreLayoutBtn?.addEventListener("click", () => {
       db.careBinder.enabledSections = getRecommendedEnabledSections();
       db.careBinder.sectionOptions = getDefaultSectionOptions();
       draftEnabledSections = JSON.parse(JSON.stringify(db.careBinder.enabledSections));
@@ -165,11 +183,76 @@ document.addEventListener("DOMContentLoaded", () => {
       renderSection();
     });
 
-    editSectionBtn.addEventListener("click", () => {
+    editSectionBtn?.addEventListener("click", () => {
       alert(
         `Next step: open an edit form for "${SECTION_CONFIG[currentSectionKey]?.label || "this section"}".\n\nFor now this binder is fully viewable and section-managed.`
       );
     });
+
+    logoutBtn?.addEventListener("click", async () => {
+      if (window.supabaseClient?.auth) {
+        try {
+          await window.supabaseClient.auth.signOut();
+        } catch (err) {
+          console.warn("Supabase sign out failed:", err);
+        }
+      }
+      window.location.href = "login.html";
+    });
+  }
+
+  async function fetchCurrentUser() {
+    if (!supabase?.auth) return null;
+
+    const {
+      data: { user },
+      error
+    } = await supabase.auth.getUser();
+
+    if (error) {
+      console.warn("Could not get user:", error.message);
+      return null;
+    }
+
+    return user || null;
+  }
+
+  async function syncChildrenFromSupabase() {
+    const user = await fetchCurrentUser();
+
+    if (!user) return;
+
+    const { data: children, error } = await supabase
+      .from("children")
+      .select("*")
+      .eq("parent_id", user.id)
+      .order("created_at", { ascending: true });
+
+    if (error) {
+      console.warn("Could not load children:", error.message);
+      return;
+    }
+
+    if (!children || !children.length) {
+      db.children = [];
+      db.activeChildId = null;
+      db.currentChildId = null;
+      return;
+    }
+
+    db.children = children.map((child) => ({
+      ...child,
+      diagnoses: normalizeDiagnoses(child.diagnoses),
+      age: child.age ?? getAgeFromBirthdate(child.birthdate)
+    }));
+
+    const validActive =
+      db.children.find((c) => String(c.id) === String(db.activeChildId || db.currentChildId)) ||
+      db.children[0] ||
+      null;
+
+    db.activeChildId = validActive ? validActive.id : null;
+    db.currentChildId = db.activeChildId;
   }
 
   function closeModal() {
@@ -177,21 +260,90 @@ document.addEventListener("DOMContentLoaded", () => {
     sectionsModal.setAttribute("aria-hidden", "true");
   }
 
+  function getChildren() {
+    return Array.isArray(db.children) ? db.children : [];
+  }
+
+  function getActiveChild() {
+    const children = getChildren();
+    if (!children.length) return null;
+
+    const preferredId = db.activeChildId || db.currentChildId || null;
+    if (preferredId) {
+      const match = children.find((c) => String(c.id) === String(preferredId));
+      if (match) return match;
+    }
+
+    return children[0] || null;
+  }
+
+  function setActiveChildId(id) {
+    const child = getChildren().find((c) => String(c.id) === String(id));
+    db.activeChildId = child ? child.id : null;
+    db.currentChildId = db.activeChildId;
+    saveDB(db);
+  }
+
   function renderChildSwitcher() {
     const children = getChildren();
+    childSwitcher.innerHTML = "";
+
+    if (!children.length) {
+      childSwitcher.innerHTML = `<option value="">No children yet</option>`;
+      return;
+    }
+
     childSwitcher.innerHTML = children
-      .map(
-        (child) =>
-          `<option value="${escapeHtml(child.id)}" ${
-            child.id === getActiveChild().id ? "selected" : ""
-          }>${escapeHtml(child.name || "Child")}</option>`
-      )
+      .map((child) => {
+        const selected = String(child.id) === String(getActiveChild()?.id) ? "selected" : "";
+        return `<option value="${escapeHtml(child.id)}" ${selected}>${escapeHtml(child.name || "Child")}</option>`;
+      })
       .join("");
+  }
+
+  function renderHeaderChildSummary() {
+    const child = getActiveChild();
+
+    if (!child) {
+      if (childSummary) childSummary.textContent = "No child selected";
+      if (childAvatar) childAvatar.innerHTML = "";
+      return;
+    }
+
+    const diagnoses = normalizeDiagnoses(child.diagnoses);
+    const childAge = child.age ?? getAgeFromBirthdate(child.birthdate);
+
+    let summaryText =
+      childAge !== null && childAge !== undefined && childAge !== ""
+        ? `Age ${childAge}`
+        : "Age —";
+
+    if (diagnoses.length) {
+      summaryText += ` • ${diagnoses.slice(0, 2).join(" • ")}`;
+    }
+
+    if (childSummary) childSummary.textContent = summaryText;
+
+    if (childAvatar) {
+      if (child.photo_url) {
+        childAvatar.innerHTML = `<img src="${escapeHtml(child.photo_url)}" alt="${escapeHtml(child.name || "Child")}">`;
+      } else {
+        childAvatar.innerHTML = "";
+      }
+    }
   }
 
   function renderSidebarProfile() {
     const child = getActiveChild();
-    binderPhoto.src = child.photo || "https://via.placeholder.com/600x400?text=Child+Photo";
+
+    if (!child) {
+      binderPhoto.src = "";
+      binderName.textContent = "No child selected";
+      binderSub.textContent = "Add a child profile to continue";
+      return;
+    }
+
+    binderPhoto.src = child.photo_url || child.photo || "https://via.placeholder.com/600x400?text=Child+Photo";
     binderPhoto.alt = child.name ? `${child.name} photo` : "Child photo";
     binderName.textContent = child.name || "Child";
     binderSub.textContent = getChildSummaryText(child);
@@ -335,21 +487,21 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   function renderOverviewSection() {
-    const child = getActiveChild();
+    const child = getActiveChild() || {};
     const overview = db.careBinder.sections.overview || {};
 
     return `
       ${renderKVCard("Basic Information", [
         ["Preferred Name", child.name || "—"],
         ["Legal Name", overview.legalName || child.name || "—"],
-        ["DOB", overview.dob || child.dob || "—"],
+        ["DOB", overview.dob || child.dob || child.birthdate || "—"],
         ["Age", overview.age || child.age || "—"],
         ["Sex", overview.sex || "—"]
       ])}
 
       ${renderKVCard("Baseline Snapshot", [
-        ["Diagnoses Summary", child.diagnoses?.join(", ") || "—"],
-        ["Allergies", getAllergySummary() || "—"],
+        ["Diagnoses Summary", normalizeDiagnoses(child.diagnoses).join(", ") || "—"],
+        ["Allergies", getAllergySummary() || child.allergies || "—"],
         ["Communication", overview.communication || "—"],
         ["Mobility", overview.mobility || "—"],
         ["Feeding Method", overview.feedingMethod || "—"],
@@ -423,12 +575,12 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   function renderMedicationsSection() {
-    const meds = db.careBinder.sections.medications || {};
+    const s = db.careBinder.sections.medications || {};
     return `
-      ${renderEntryCard("Daily Medications", meds.daily)}
-      ${renderEntryCard("PRN Medications", meds.prn)}
-      ${renderEntryCard("Rescue Medications", meds.rescue)}
-      ${renderEntryCard("Medication Change History", meds.history)}
+      ${renderEntryCard("Daily Medications", s.daily)}
+      ${renderEntryCard("PRN Medications", s.prn)}
+      ${renderEntryCard("Rescue Medications", s.rescue)}
+      ${renderEntryCard("Medication Change History", s.history)}
     `;
   }
 
@@ -540,16 +692,12 @@ document.addEventListener("DOMContentLoaded", () => {
 
   function renderSchoolPaperworkSection() {
     const s = db.careBinder.sections.schoolPaperwork || {};
-    return `
-      ${renderEntryCard("School Documents", s.docs)}
-    `;
+    return `${renderEntryCard("School Documents", s.docs)}`;
   }
 
   function renderLabsSection() {
     const s = db.careBinder.sections.labs || {};
-    return `
-      ${renderEntryCard("Labs & Test Results", s.results)}
-    `;
+    return `${renderEntryCard("Labs & Test Results", s.results)}`;
   }
 
   function renderGoBagSection() {
@@ -710,20 +858,9 @@ document.addEventListener("DOMContentLoaded", () => {
     return !!db.careBinder.enabledSections[key];
   }
 
-  function getChildren() {
-    if (Array.isArray(db.children) && db.children.length) return db.children;
-    if (db.child) return [{ id: "default-child", ...db.child }];
-    return [{ id: "default-child", name: "Test Child", age: 6, diagnoses: [] }];
-  }
-
-  function getActiveChild() {
-    const children = getChildren();
-    return children.find((c) => c.id === db.activeChildId) || children[0];
-  }
-
   function getChildSummaryText(child) {
-    const age = child.age ? `Age ${child.age}` : "Age —";
-    const dx = Array.isArray(child.diagnoses) && child.diagnoses.length
+    const age = child?.age ? `Age ${child.age}` : "Age —";
+    const dx = Array.isArray(child?.diagnoses) && child.diagnoses.length
       ? child.diagnoses.join(" • ")
       : "No diagnoses listed";
     return `${age} • ${dx}`;
@@ -763,15 +900,6 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   function seedCareBinderIfMissing(dbRef) {
-    if (!dbRef.activeChildId) {
-      const firstChild = Array.isArray(dbRef.children) && dbRef.children.length
-        ? dbRef.children[0]
-        : dbRef.child
-        ? { id: "default-child", ...dbRef.child }
-        : { id: "default-child" };
-      dbRef.activeChildId = firstChild.id || "default-child";
-    }
-
     if (!dbRef.careBinder) dbRef.careBinder = {};
 
     if (!dbRef.careBinder.enabledSections) {
@@ -1062,6 +1190,87 @@ document.addEventListener("DOMContentLoaded", () => {
         }
       };
     }
+  }
+
+  function getRecommendedEnabledSections() {
+    return {
+      overview: true,
+      medicalHistory: true,
+      seizureProfile: false,
+      medications: true,
+      feedingNutrition: true,
+      carePlans: true,
+      emergencyPlans: true,
+      careTeam: true,
+      nursingMedicaid: false,
+      schoolInfo: true,
+      schoolPaperwork: false,
+      labs: false,
+      goBag: false,
+      documents: false
+    };
+  }
+
+  function getDefaultSectionOptions() {
+    return {
+      seizureProfile: {
+        allowKetoDiet: false,
+        allowVNS: false
+      }
+    };
+  }
+
+  function getInitialSectionKey() {
+    const enabled = getEnabledSectionKeys();
+    return enabled[0] || "overview";
+  }
+
+  function getEnabledSectionKeys() {
+    return Object.keys(SECTION_CONFIG).filter((key) => isSectionEnabled(key));
+  }
+
+  function isSectionEnabled(key) {
+    return !!db.careBinder.enabledSections[key];
+  }
+
+  function getChildSummaryText(child) {
+    const age = child?.age ? `Age ${child.age}` : "Age —";
+    const dx = Array.isArray(child?.diagnoses) && child.diagnoses.length
+      ? child.diagnoses.join(" • ")
+      : "No diagnoses listed";
+    return `${age} • ${dx}`;
+  }
+
+  function getAllergySummary() {
+    const allergies = db.careBinder.sections.medicalHistory?.allergies || [];
+    return allergies.map((a) => a.title).join(", ");
+  }
+
+  function normalizeDiagnoses(value) {
+    if (Array.isArray(value)) return value.filter(Boolean);
+    if (typeof value === "string" && value.trim()) {
+      return value
+        .split(",")
+        .map((item) => item.trim())
+        .filter(Boolean);
+    }
+    return [];
+  }
+
+  function getAgeFromBirthdate(birthdate) {
+    if (!birthdate) return "";
+    const dob = new Date(birthdate);
+    if (Number.isNaN(dob.getTime())) return "";
+
+    const now = new Date();
+    let age = now.getFullYear() - dob.getFullYear();
+    const monthDiff = now.getMonth() - dob.getMonth();
+
+    if (monthDiff < 0 || (monthDiff === 0 && now.getDate() < dob.getDate())) {
+      age--;
+    }
+
+    return age;
   }
 
   function escapeHtml(value) {
