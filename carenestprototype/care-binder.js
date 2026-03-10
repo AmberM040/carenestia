@@ -180,7 +180,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     });
 
     cancelEditBtn?.addEventListener("click", closeEdit);
-
     saveEditBtn?.addEventListener("click", saveEdit);
 
     editModal?.addEventListener("click", (e) => {
@@ -270,6 +269,8 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   function renderChildSwitcher() {
     const children = getChildren();
+    if (!childSwitcher) return;
+
     childSwitcher.innerHTML = "";
 
     if (!children.length) {
@@ -289,8 +290,8 @@ document.addEventListener("DOMContentLoaded", async () => {
     const child = getActiveChild();
 
     if (!child) {
-      childSummary.textContent = "No child selected";
-      childAvatar.innerHTML = "";
+      if (childSummary) childSummary.textContent = "No child selected";
+      if (childAvatar) childAvatar.innerHTML = "";
       return;
     }
 
@@ -299,38 +300,41 @@ document.addEventListener("DOMContentLoaded", async () => {
       ? child.diagnoses.slice(0, 2).join(" • ")
       : "No diagnoses listed";
 
-    childSummary.textContent = `${ageText} • ${dx}`;
+    if (childSummary) childSummary.textContent = `${ageText} • ${dx}`;
 
-    childAvatar.innerHTML = child.photo_url
-      ? `<img src="${escapeHtml(child.photo_url)}" alt="${escapeHtml(child.name || "Child")}">`
-      : "";
+    if (childAvatar) {
+      childAvatar.innerHTML = child.photo_url
+        ? `<img src="${escapeHtml(child.photo_url)}" alt="${escapeHtml(child.name || "Child")}">`
+        : "";
+    }
   }
 
   function renderSidebarProfile() {
     const child = getActiveChild();
 
     if (!child) {
-      binderPhoto.removeAttribute("src");
-      binderName.textContent = "No child selected";
-      binderSub.textContent = "Add a child profile to continue";
+      if (binderPhoto) binderPhoto.removeAttribute("src");
+      if (binderName) binderName.textContent = "No child selected";
+      if (binderSub) binderSub.textContent = "Add a child profile to continue";
       return;
     }
 
-    if (child.photo_url) {
-      binderPhoto.src = child.photo_url;
-    } else {
-      binderPhoto.src = "https://via.placeholder.com/600x400?text=Child+Photo";
+    if (binderPhoto) {
+      binderPhoto.src = child.photo_url || "https://via.placeholder.com/600x400?text=Child+Photo";
+      binderPhoto.alt = child.name ? `${child.name} photo` : "Child photo";
+      binderPhoto.onerror = () => {
+        binderPhoto.src = "https://via.placeholder.com/600x400?text=Child+Photo";
+      };
     }
 
-    binderPhoto.alt = child.name ? `${child.name} photo` : "Child photo";
-    binderName.textContent = child.name || "Child";
+    if (binderName) binderName.textContent = child.name || "Child";
 
     const ageText = child.age ? `Age ${child.age}` : "Age —";
     const dx = Array.isArray(child.diagnoses) && child.diagnoses.length
       ? child.diagnoses.join(" • ")
       : "No diagnoses listed";
 
-    binderSub.textContent = `${ageText} • ${dx}`;
+    if (binderSub) binderSub.textContent = `${ageText} • ${dx}`;
   }
 
   function renderGroupNav() {
@@ -352,6 +356,8 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   function renderSubnav() {
     const sectionKeys = getSectionsForGroup(currentGroup);
+
+    if (!binderSubnav) return;
 
     binderSubnav.innerHTML = sectionKeys
       .map((key) => {
@@ -384,6 +390,8 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
   function renderStatusPanel() {
+    if (!binderStatusList) return;
+
     const allSections = Object.keys(SECTION_CONFIG);
 
     binderStatusList.innerHTML = allSections
@@ -428,8 +436,10 @@ document.addEventListener("DOMContentLoaded", async () => {
     const cfg = SECTION_CONFIG[key];
     const notes = db.careBinder?.sections?.[key]?.notes || "";
 
-    sectionTitle.textContent = cfg.label;
-    sectionDesc.textContent = cfg.desc;
+    if (sectionTitle) sectionTitle.textContent = cfg.label;
+    if (sectionDesc) sectionDesc.textContent = cfg.desc;
+
+    if (!binderSectionContent) return;
 
     binderSectionContent.innerHTML = `
       <section class="chart-card">
@@ -455,21 +465,24 @@ document.addEventListener("DOMContentLoaded", async () => {
       openEdit(key);
     });
 
-    editSectionBtn.onclick = () => openEdit(key);
+    if (editSectionBtn) {
+      editSectionBtn.onclick = () => openEdit(key);
+    }
+
     renderStats();
     renderStatusPanel();
   }
 
   function openEdit(key) {
     editingSection = key;
-    editTitle.textContent = `Edit ${SECTION_CONFIG[key].label}`;
-    editNotes.value = db.careBinder?.sections?.[key]?.notes || "";
-    editModal.classList.add("open");
-    editNotes.focus();
+    if (editTitle) editTitle.textContent = `Edit ${SECTION_CONFIG[key].label}`;
+    if (editNotes) editNotes.value = db.careBinder?.sections?.[key]?.notes || "";
+    editModal?.classList.add("open");
+    editNotes?.focus();
   }
 
   function closeEdit() {
-    editModal.classList.remove("open");
+    editModal?.classList.remove("open");
   }
 
   function saveEdit() {
@@ -479,7 +492,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     if (!db.careBinder.sections) db.careBinder.sections = {};
     if (!db.careBinder.sections[editingSection]) db.careBinder.sections[editingSection] = {};
 
-    db.careBinder.sections[editingSection].notes = editNotes.value.trim();
+    db.careBinder.sections[editingSection].notes = editNotes?.value.trim() || "";
     saveDB(db);
 
     renderSection(editingSection);
