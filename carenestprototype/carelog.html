@@ -2,83 +2,185 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>CareNest • Care Log</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>CareNestia • Care Log</title>
   <link rel="stylesheet" href="styles.css" />
 </head>
-
 <body>
 
-  <header class="topbar">
-    <div class="container">
-      <div class="topbar-left">
-        <h1>CareNest</h1>
-        <p>Care Log</p>
+  <div class="app-shell">
+
+    <aside class="app-sidebar">
+      <div class="sidebar-brand">
+        <img src="images/carenestia_logo_wordmark.png" class="sidebar-wordmark" alt="CareNestia" />
       </div>
 
-      <div class="topbar-right">
-        <select id="childSwitcher" class="child-switcher"></select>
-        <button id="logoutBtn" class="btn btn-ghost" type="button">Log out</button>
+      <nav class="sidebar-nav">
+        <a class="sidebar-link" href="index.html">Dashboard</a>
+        <a class="sidebar-link" href="schedule.html">Schedule</a>
+        <a class="sidebar-link" href="meds.html">Medications</a>
+        <a class="sidebar-link active" href="carelog.html">Care Log</a>
+        <a class="sidebar-link" href="inventory.html">Inventory</a>
+        <a class="sidebar-link" href="schoolnurse.html">School Nurse</a>
+        <a class="sidebar-link" href="documents.html">Documents</a>
+      </nav>
+
+      <div class="sidebar-actions-card">
+        <div class="sidebar-actions-title">Quick Actions</div>
+
+        <div class="sidebar-actions-list">
+          <button id="btnAddLogSidebar" class="btn btn-primary btn-block" type="button">+ Add Log</button>
+          <a class="btn btn-ghost btn-block" href="meds.html">Open Medications</a>
+          <a class="btn btn-ghost btn-block" href="schedule.html">Open Schedule</a>
+          <a class="btn btn-ghost btn-block" href="inventory.html">Open Inventory</a>
+        </div>
       </div>
+    </aside>
+
+    <div class="app-main">
+
+      <header class="app-topbar">
+        <div class="topbar-child-card">
+          <div class="topbar-child-avatar" id="childAvatar"></div>
+
+          <div class="topbar-child-copy">
+            <label for="childSwitcher" class="sr-only">Select child</label>
+            <select id="childSwitcher" class="topbar-child-select"></select>
+            <div class="topbar-child-meta" id="childSummary">Age —</div>
+          </div>
+        </div>
+
+        <div class="topbar-actions">
+          <button id="btnAddLog" class="btn" type="button">Add Log</button>
+          <button id="logoutBtn" class="btn btn-ghost" type="button">Log out</button>
+        </div>
+      </header>
+
+      <main class="app-content">
+
+        <div class="main-column">
+
+          <section class="card">
+            <div class="section-head">
+              <div>
+                <h2>Care Log</h2>
+                <p class="muted">Track symptoms, notes, questions, medication notes, and daily care updates.</p>
+              </div>
+            </div>
+
+            <div class="filter-bar">
+              <input
+                id="searchInput"
+                class="input"
+                placeholder="Search notes..."
+                style="flex:1"
+              />
+
+              <select id="specialtyFilter" class="input" style="width:auto; min-width:180px;">
+                <option value="all">All Specialties</option>
+              </select>
+
+              <select id="daysFilter" class="input" style="width:auto; min-width:160px;">
+                <option value="all">All Time</option>
+                <option value="1">Today</option>
+                <option value="7">Last 7 Days</option>
+                <option value="30">Last 30 Days</option>
+              </select>
+
+              <button id="btnClearFilters" class="btn btn-ghost" type="button">Clear</button>
+            </div>
+          </section>
+
+          <section class="card">
+            <div class="section-head">
+              <h2>Entries</h2>
+            </div>
+
+            <section id="timeline" class="log-list"></section>
+
+            <section id="emptyState" class="empty-state hidden">
+              No care log entries yet.
+            </section>
+          </section>
+
+        </div>
+
+        <aside class="side-column">
+
+          <section class="card">
+            <div class="section-head">
+              <h2>Quick Actions</h2>
+            </div>
+
+            <div class="quick-actions">
+              <button class="quick-btn quick-note" type="button" id="btnAddLogQuick">
+                <strong>+ Add Entry</strong>
+                <span>Create a new care log entry</span>
+              </button>
+
+              <a class="quick-btn quick-med" href="meds.html" style="text-decoration:none;">
+                <strong>Open Meds</strong>
+                <span>Review medication details</span>
+              </a>
+
+              <a class="quick-btn quick-symptom" href="schedule.html" style="text-decoration:none;">
+                <strong>Open Schedule</strong>
+                <span>Review upcoming routines</span>
+              </a>
+
+              <a class="quick-btn quick-question" href="index.html" style="text-decoration:none;">
+                <strong>Dashboard</strong>
+                <span>Return to main home view</span>
+              </a>
+            </div>
+          </section>
+
+          <section class="card">
+            <div class="section-head">
+              <h2>Care Log Tips</h2>
+            </div>
+
+            <div class="stack-list">
+              <div class="list-item">
+                <div>
+                  <strong>Use for symptoms</strong>
+                  <div class="muted">Track trends like seizures, vomiting, pain, respiratory changes, or sleep concerns.</div>
+                </div>
+              </div>
+
+              <div class="list-item">
+                <div>
+                  <strong>Use for questions</strong>
+                  <div class="muted">Save doctor questions so nothing gets forgotten before visits.</div>
+                </div>
+              </div>
+
+              <div class="list-item">
+                <div>
+                  <strong>Use for notes</strong>
+                  <div class="muted">Log daily changes, school updates, nurse observations, and care events.</div>
+                </div>
+              </div>
+            </div>
+          </section>
+
+        </aside>
+
+      </main>
     </div>
-  </header>
-
-  <main class="page">
-
-    <div class="welcome-row">
-      <h1>Care Log</h1>
-      <div id="childSummary" class="badge"></div>
-    </div>
-
-    <section class="card soft">
-      <div class="filter-bar">
-
-        <input
-          id="searchInput"
-          class="input"
-          placeholder="Search notes..."
-          style="flex:1"
-        />
-
-        <select id="specialtyFilter" class="input">
-          <option value="all">All Specialties</option>
-        </select>
-
-        <select id="daysFilter" class="input">
-          <option value="all">All Time</option>
-          <option value="1">Today</option>
-          <option value="7">Last 7 Days</option>
-          <option value="30">Last 30 Days</option>
-        </select>
-
-        <button id="btnClearFilters" class="btn btn-ghost" type="button">Clear</button>
-        <button id="btnAddLog" class="quick-btn med" type="button">Add Log</button>
-      </div>
-    </section>
-
-    <section class="section-head">
-      <h2>Entries</h2>
-    </section>
-
-    <section id="timeline" class="log-list"></section>
-
-    <section id="emptyState" class="empty-state hidden">
-      No care log entries yet.
-    </section>
-
-  </main>
+  </div>
 
   <div id="modal" class="modal hidden">
     <div class="modal-card">
 
-      <div class="modal-head">
-        <h3>Add Care Log Entry</h3>
-        <button id="btnCloseModal" class="btn btn-ghost" type="button">✕</button>
+      <div class="section-head">
+        <h2>Add Care Log Entry</h2>
+        <button id="btnCloseModal" class="btn btn-ghost" type="button">Close</button>
       </div>
 
       <div class="form-grid">
         <div class="field">
-          <label>Category</label>
+          <label for="category">Category</label>
           <select id="category" class="input">
             <option value="note">Care Note</option>
             <option value="symptom">Symptom</option>
@@ -88,34 +190,34 @@
         </div>
 
         <div class="field">
-          <label>Date</label>
+          <label for="logDate">Date</label>
           <input id="logDate" type="date" class="input" />
         </div>
       </div>
 
-      <div class="form-grid mt-16">
+      <div class="form-grid mt-12">
         <div class="field">
-          <label>Time</label>
+          <label for="logTime">Time</label>
           <input id="logTime" type="time" class="input" />
         </div>
 
         <div class="field">
-          <label>Author</label>
+          <label for="author">Author</label>
           <input id="author" class="input" value="Mom" />
         </div>
       </div>
 
-      <div class="field mt-16">
-        <label>Note</label>
+      <div class="field mt-12">
+        <label for="note">Note</label>
         <textarea id="note" class="input" rows="4"></textarea>
       </div>
 
-      <div class="field mt-16">
+      <div class="field mt-12">
         <label>Specialties</label>
         <div id="carelogSpecialtyChecks" class="chip-row"></div>
       </div>
 
-      <div class="modal-actions">
+      <div class="modal-actions mt-12">
         <button id="saveBtn" class="btn" type="button">Save Entry</button>
       </div>
 
@@ -133,14 +235,21 @@
     </div>
   </nav>
 
-  <button class="emergency-btn hidden" type="button">Emergency</button>
-
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="supabase.js"></script>
-  <script src="auth.js"></script>
+  <script src="storage.js"></script>
   <script src="carelog.js"></script>
+  <script src="auth.js"></script>
   <script>
     requireAuth();
+
+    document.getElementById("btnAddLogSidebar")?.addEventListener("click", () => {
+      document.getElementById("btnAddLog")?.click();
+    });
+
+    document.getElementById("btnAddLogQuick")?.addEventListener("click", () => {
+      document.getElementById("btnAddLog")?.click();
+    });
   </script>
 
 </body>
