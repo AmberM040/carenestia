@@ -1,202 +1,534 @@
 document.addEventListener("DOMContentLoaded", async () => {
-
-let db = ensureDB(loadDB())
-const supabase = window.supabaseClient
-
-const childSwitcher=document.getElementById("childSwitcher")
-const childAvatar=document.getElementById("childAvatar")
-const childSummary=document.getElementById("childSummary")
-
-const binderPhoto=document.getElementById("binderPhoto")
-const binderName=document.getElementById("binderName")
-const binderSub=document.getElementById("binderSub")
-
-const binderNav=document.getElementById("binderNav")
-const binderSectionContent=document.getElementById("binderSectionContent")
-
-const sectionTitle=document.getElementById("sectionTitle")
-const sectionDesc=document.getElementById("sectionDesc")
-
-const editSectionBtn=document.getElementById("editSectionBtn")
-
-const editModal=document.getElementById("editModal")
-const editTitle=document.getElementById("editTitle")
-const editNotes=document.getElementById("editNotes")
-
-const saveEditBtn=document.getElementById("saveEditBtn")
-const cancelEditBtn=document.getElementById("cancelEditBtn")
-
-let editingSection=null
-
-const SECTIONS={
-
-overview:{
-label:"Overview",
-desc:"Basic snapshot of the child"
-},
-
-medicalHistory:{
-label:"Medical History",
-desc:"Diagnoses surgeries hospitalizations"
-},
-
-careTeam:{
-label:"Care Team",
-desc:"Doctors therapists pharmacy contacts"
-},
-
-documents:{
-label:"Documents",
-desc:"Notes and uploaded summaries"
-}
-
-}
-
-init()
-
-async function init(){
-
-await loadChildren()
-
-renderChildSwitcher()
-
-renderHeader()
-
-renderSidebarProfile()
-
-renderBinderNav()
-
-renderSection("overview")
-
-}
-
-async function loadChildren(){
-
-const {data:{user}}=await supabase.auth.getUser()
-
-const {data}=await supabase
-.from("children")
-.select("*")
-.eq("parent_id",user.id)
-
-db.children=data||[]
-
-db.activeChildId=db.children[0]?.id
-
-}
-
-function getActiveChild(){
-
-return db.children.find(c=>c.id==db.activeChildId)
-
-}
-
-function renderChildSwitcher(){
-
-childSwitcher.innerHTML=db.children
-.map(c=>`<option value="${c.id}">${c.name}</option>`)
-.join("")
-
-childSwitcher.addEventListener("change",()=>{
-db.activeChildId=childSwitcher.value
-renderHeader()
-renderSidebarProfile()
-})
-
-}
-
-function renderHeader(){
-
-const child=getActiveChild()
-
-if(!child)return
-
-childSummary.innerText=`Age ${child.age||"—"}`
-
-childAvatar.innerHTML=child.photo_url
-?`<img src="${child.photo_url}">`
-:""
-
-}
-
-function renderSidebarProfile(){
-
-const child=getActiveChild()
-
-binderPhoto.src=child.photo_url||"https://via.placeholder.com/600x400"
-
-binderName.innerText=child.name
-
-binderSub.innerText=`Age ${child.age||"—"}`
-
-}
-
-function renderBinderNav(){
-
-binderNav.innerHTML=Object.keys(SECTIONS)
-.map(k=>`<a data-section="${k}">${SECTIONS[k].label}</a>`)
-.join("")
-
-binderNav.querySelectorAll("a").forEach(link=>{
-link.onclick=()=>{
-renderSection(link.dataset.section)
-}
-})
-
-}
-
-function renderSection(key){
-
-const cfg=SECTIONS[key]
-
-sectionTitle.innerText=cfg.label
-
-sectionDesc.innerText=cfg.desc
-
-const notes=db.careBinder?.sections?.[key]?.notes||""
-
-binderSectionContent.innerHTML=
-
-`<div class="card">
-<div class="kv-row">
-<div class="muted">Notes</div>
-<div>${notes||"No notes yet"}</div>
-</div>
-</div>`
-
-editSectionBtn.onclick=()=>openEdit(key)
-
-}
-
-function openEdit(key){
-
-editingSection=key
-
-editTitle.innerText=`Edit ${SECTIONS[key].label}`
-
-editNotes.value=db.careBinder?.sections?.[key]?.notes||""
-
-editModal.classList.add("open")
-
-}
-
-cancelEditBtn.onclick=()=>editModal.classList.remove("open")
-
-saveEditBtn.onclick=()=>{
-
-if(!db.careBinder)db.careBinder={sections:{}}
-
-if(!db.careBinder.sections[editingSection])
-db.careBinder.sections[editingSection]={}
-
-db.careBinder.sections[editingSection].notes=editNotes.value
-
-saveDB(db)
-
-renderSection(editingSection)
-
-editModal.classList.remove("open")
-
-}
-
-})
+  let db = ensureDB(loadDB());
+  const supabase = window.supabaseClient || null;
+
+  const childSwitcher = document.getElementById("childSwitcher");
+  const childAvatar = document.getElementById("childAvatar");
+  const childSummary = document.getElementById("childSummary");
+  const logoutBtn = document.getElementById("logoutBtn");
+
+  const binderPhoto = document.getElementById("binderPhoto");
+  const binderName = document.getElementById("binderName");
+  const binderSub = document.getElementById("binderSub");
+
+  const binderGroupNav = document.getElementById("binderGroupNav");
+  const binderSubnav = document.getElementById("binderSubnav");
+  const binderSectionContent = document.getElementById("binderSectionContent");
+  const binderStatusList = document.getElementById("binderStatusList");
+
+  const binderStatDiagnoses = document.getElementById("binderStatDiagnoses");
+  const binderStatAllergies = document.getElementById("binderStatAllergies");
+  const binderStatMeds = document.getElementById("binderStatMeds");
+  const binderStatComplete = document.getElementById("binderStatComplete");
+
+  const sectionTitle = document.getElementById("sectionTitle");
+  const sectionDesc = document.getElementById("sectionDesc");
+
+  const editSectionBtn = document.getElementById("editSectionBtn");
+  const manageSectionsBtn = document.getElementById("manageSectionsBtn");
+
+  const editModal = document.getElementById("editModal");
+  const editTitle = document.getElementById("editTitle");
+  const editNotes = document.getElementById("editNotes");
+  const saveEditBtn = document.getElementById("saveEditBtn");
+  const cancelEditBtn = document.getElementById("cancelEditBtn");
+
+  let editingSection = null;
+  let currentGroup = "overview";
+  let currentSectionKey = "overview";
+
+  const GROUPS = {
+    overview: {
+      label: "Overview",
+      sections: ["overview"]
+    },
+    medical: {
+      label: "Medical",
+      sections: ["medicalHistory", "medications", "labs"]
+    },
+    dailyCare: {
+      label: "Daily Care",
+      sections: ["feedingNutrition", "carePlans", "nursingMedicaid"]
+    },
+    emergency: {
+      label: "Emergency",
+      sections: ["emergencyPlans", "goBag", "seizureProfile"]
+    },
+    school: {
+      label: "School",
+      sections: ["schoolInfo", "schoolPaperwork"]
+    },
+    contacts: {
+      label: "Contacts",
+      sections: ["careTeam"]
+    },
+    documents: {
+      label: "Documents",
+      sections: ["documents"]
+    }
+  };
+
+  const SECTION_CONFIG = {
+    overview: {
+      label: "Overview",
+      desc: "Quick snapshot of the child and baseline details."
+    },
+    medicalHistory: {
+      label: "Medical History",
+      desc: "Diagnoses, surgeries, hospitalizations, allergies, and birth history."
+    },
+    seizureProfile: {
+      label: "Seizure Profile",
+      desc: "Seizure information, rescue protocol, keto option, and VNS tracking."
+    },
+    medications: {
+      label: "Medications",
+      desc: "Active medication information and rescue medications."
+    },
+    feedingNutrition: {
+      label: "Feeding & Nutrition",
+      desc: "Feeding schedule, formula, tube details, and hydration notes."
+    },
+    carePlans: {
+      label: "Care Plans",
+      desc: "Daily plan, sick day plan, seizure plan, and more."
+    },
+    emergencyPlans: {
+      label: "Emergency Plans",
+      desc: "Medical and non-medical emergency planning and evacuation notes."
+    },
+    careTeam: {
+      label: "Care Team",
+      desc: "Doctors, therapists, pharmacy, DME, and emergency contacts."
+    },
+    nursingMedicaid: {
+      label: "Nursing & Medicaid",
+      desc: "Agency, waiver, nursing hours, and Medicaid information."
+    },
+    schoolInfo: {
+      label: "School Info",
+      desc: "School care details, accommodations, nurse contacts, and instructions."
+    },
+    schoolPaperwork: {
+      label: "School Paperwork",
+      desc: "IEP, 504, medication forms, physician orders, and school documents."
+    },
+    labs: {
+      label: "Labs & Tests",
+      desc: "Recent labs, test results, imaging, and follow-up notes."
+    },
+    goBag: {
+      label: "Go Bag",
+      desc: "Emergency checklists and go bag preparedness."
+    },
+    documents: {
+      label: "Documents & Notes",
+      desc: "Uploaded summaries, letters, visit notes, and general notes."
+    }
+  };
+
+  await init();
+
+  async function init() {
+    await loadChildren();
+    ensureBinderStructure();
+    renderChildSwitcher();
+    renderHeader();
+    renderSidebarProfile();
+    renderGroupNav();
+    ensureValidCurrentSection();
+    renderSubnav();
+    renderStats();
+    renderStatusPanel();
+    renderSection(currentSectionKey);
+    wireEvents();
+  }
+
+  function wireEvents() {
+    childSwitcher?.addEventListener("change", () => {
+      db.activeChildId = childSwitcher.value;
+      db.currentChildId = childSwitcher.value;
+      saveDB(db);
+      renderChildSwitcher();
+      renderHeader();
+      renderSidebarProfile();
+      renderStats();
+      renderStatusPanel();
+      renderSection(currentSectionKey);
+    });
+
+    binderGroupNav?.querySelectorAll("[data-group]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        currentGroup = btn.dataset.group;
+        ensureValidCurrentSection();
+        renderGroupNav();
+        renderSubnav();
+        renderSection(currentSectionKey);
+      });
+    });
+
+    manageSectionsBtn?.addEventListener("click", () => {
+      alert("Manage Sections is the next upgrade. Right now this chart layout is active and editable per section.");
+    });
+
+    editSectionBtn?.addEventListener("click", () => {
+      openEdit(currentSectionKey);
+    });
+
+    cancelEditBtn?.addEventListener("click", closeEdit);
+
+    saveEditBtn?.addEventListener("click", () => {
+      saveEdit();
+    });
+
+    editModal?.addEventListener("click", (e) => {
+      if (e.target === editModal) closeEdit();
+    });
+
+    logoutBtn?.addEventListener("click", async () => {
+      if (supabase?.auth) {
+        try {
+          await supabase.auth.signOut();
+        } catch (err) {
+          console.warn("Supabase sign out failed:", err);
+        }
+      }
+      window.location.href = "login.html";
+    });
+  }
+
+  async function loadChildren() {
+    if (!supabase?.auth) {
+      if (!Array.isArray(db.children)) db.children = [];
+      return;
+    }
+
+    const {
+      data: { user }
+    } = await supabase.auth.getUser();
+
+    if (!user) {
+      if (!Array.isArray(db.children)) db.children = [];
+      return;
+    }
+
+    const { data, error } = await supabase
+      .from("children")
+      .select("*")
+      .eq("parent_id", user.id)
+      .order("created_at", { ascending: true });
+
+    if (error) {
+      console.warn("Could not load children:", error.message);
+      if (!Array.isArray(db.children)) db.children = [];
+      return;
+    }
+
+    db.children = (data || []).map((child) => ({
+      ...child,
+      diagnoses: normalizeDiagnoses(child.diagnoses),
+      age: child.age ?? getAgeFromBirthdate(child.birthdate)
+    }));
+
+    const validActive =
+      db.children.find((c) => String(c.id) === String(db.activeChildId || db.currentChildId)) ||
+      db.children[0] ||
+      null;
+
+    db.activeChildId = validActive ? validActive.id : null;
+    db.currentChildId = db.activeChildId;
+    saveDB(db);
+  }
+
+  function ensureBinderStructure() {
+    if (!db.careBinder) db.careBinder = {};
+    if (!db.careBinder.sections) {
+      db.careBinder.sections = {
+        overview: { notes: "" },
+        medicalHistory: { notes: "" },
+        seizureProfile: { notes: "" },
+        medications: { notes: "" },
+        feedingNutrition: { notes: "" },
+        carePlans: { notes: "" },
+        emergencyPlans: { notes: "" },
+        careTeam: { notes: "" },
+        nursingMedicaid: { notes: "" },
+        schoolInfo: { notes: "" },
+        schoolPaperwork: { notes: "" },
+        labs: { notes: "" },
+        goBag: { notes: "" },
+        documents: { notes: "" }
+      };
+      saveDB(db);
+    }
+  }
+
+  function getChildren() {
+    return Array.isArray(db.children) ? db.children : [];
+  }
+
+  function getActiveChild() {
+    const children = getChildren();
+    if (!children.length) return null;
+    return children.find((c) => String(c.id) === String(db.activeChildId)) || children[0] || null;
+  }
+
+  function renderChildSwitcher() {
+    const children = getChildren();
+    childSwitcher.innerHTML = "";
+
+    if (!children.length) {
+      childSwitcher.innerHTML = `<option value="">No children yet</option>`;
+      return;
+    }
+
+    childSwitcher.innerHTML = children
+      .map((c) => {
+        const selected = String(c.id) === String(db.activeChildId) ? "selected" : "";
+        return `<option value="${escapeHtml(c.id)}" ${selected}>${escapeHtml(c.name || "Child")}</option>`;
+      })
+      .join("");
+  }
+
+  function renderHeader() {
+    const child = getActiveChild();
+
+    if (!child) {
+      childSummary.textContent = "No child selected";
+      childAvatar.innerHTML = "";
+      return;
+    }
+
+    const ageText = child.age ? `Age ${child.age}` : "Age —";
+    const dx = Array.isArray(child.diagnoses) && child.diagnoses.length
+      ? child.diagnoses.slice(0, 2).join(" • ")
+      : "No diagnoses listed";
+
+    childSummary.textContent = `${ageText} • ${dx}`;
+
+    childAvatar.innerHTML = child.photo_url
+      ? `<img src="${escapeHtml(child.photo_url)}" alt="${escapeHtml(child.name || "Child")}">`
+      : "";
+  }
+
+  function renderSidebarProfile() {
+    const child = getActiveChild();
+
+    if (!child) {
+      binderPhoto.src = "";
+      binderName.textContent = "No child selected";
+      binderSub.textContent = "Add a child profile to continue";
+      return;
+    }
+
+    binderPhoto.src = child.photo_url || "https://via.placeholder.com/600x400?text=Child+Photo";
+    binderPhoto.alt = child.name ? `${child.name} photo` : "Child photo";
+    binderName.textContent = child.name || "Child";
+
+    const ageText = child.age ? `Age ${child.age}` : "Age —";
+    const dx = Array.isArray(child.diagnoses) && child.diagnoses.length
+      ? child.diagnoses.join(" • ")
+      : "No diagnoses listed";
+
+    binderSub.textContent = `${ageText} • ${dx}`;
+  }
+
+  function renderGroupNav() {
+    binderGroupNav?.querySelectorAll("[data-group]").forEach((btn) => {
+      btn.classList.toggle("active", btn.dataset.group === currentGroup);
+    });
+  }
+
+  function ensureValidCurrentSection() {
+    const available = getSectionsForGroup(currentGroup);
+    if (!available.includes(currentSectionKey)) {
+      currentSectionKey = available[0] || "overview";
+    }
+  }
+
+  function getSectionsForGroup(groupKey) {
+    return GROUPS[groupKey]?.sections || [];
+  }
+
+  function renderSubnav() {
+    const sectionKeys = getSectionsForGroup(currentGroup);
+
+    binderSubnav.innerHTML = sectionKeys
+      .map((key) => {
+        const cfg = SECTION_CONFIG[key];
+        const activeClass = key === currentSectionKey ? "active" : "";
+        return `<button class="binder-subtab ${activeClass}" data-subtab="${key}" type="button">${escapeHtml(cfg.label)}</button>`;
+      })
+      .join("");
+
+    binderSubnav.querySelectorAll("[data-subtab]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        currentSectionKey = btn.dataset.subtab;
+        renderSubnav();
+        renderSection(currentSectionKey);
+      });
+    });
+  }
+
+  function renderStats() {
+    const child = getActiveChild();
+    const diagnosesCount = Array.isArray(child?.diagnoses) ? child.diagnoses.length : 0;
+    const allergyCount = getSectionEntryCount("medicalHistory");
+    const medCount = getSectionEntryCount("medications");
+    const completeCount = getCompleteSectionCount();
+
+    if (binderStatDiagnoses) binderStatDiagnoses.textContent = diagnosesCount;
+    if (binderStatAllergies) binderStatAllergies.textContent = allergyCount;
+    if (binderStatMeds) binderStatMeds.textContent = medCount;
+    if (binderStatComplete) binderStatComplete.textContent = completeCount;
+  }
+
+  function renderStatusPanel() {
+    const allSections = Object.keys(SECTION_CONFIG);
+
+    binderStatusList.innerHTML = allSections
+      .map((key) => {
+        const status = getSectionStatus(key);
+        const label = SECTION_CONFIG[key].label;
+
+        return `
+          <div class="binder-status-row">
+            <div>${escapeHtml(label)}</div>
+            <span class="status-badge ${status.className}">${escapeHtml(status.label)}</span>
+          </div>
+        `;
+      })
+      .join("");
+  }
+
+  function getSectionStatus(key) {
+    const section = db.careBinder?.sections?.[key];
+
+    if (!section) {
+      return { label: "Empty", className: "status-empty" };
+    }
+
+    const values = Object.values(section).filter(Boolean);
+
+    if (!values.length) {
+      return { label: "Empty", className: "status-empty" };
+    }
+
+    if (values.length === 1 && typeof values[0] === "string") {
+      return values[0].trim()
+        ? { label: "Partial", className: "status-partial" }
+        : { label: "Empty", className: "status-empty" };
+    }
+
+    return { label: "Complete", className: "status-complete" };
+  }
+
+  function getCompleteSectionCount() {
+    return Object.keys(SECTION_CONFIG).filter((key) => getSectionStatus(key).label !== "Empty").length;
+  }
+
+  function getSectionEntryCount(key) {
+    const section = db.careBinder?.sections?.[key];
+    if (!section) return 0;
+
+    const values = Object.values(section).filter(Boolean);
+    return values.length;
+  }
+
+  function renderSection(key) {
+    const cfg = SECTION_CONFIG[key];
+    const notes = db.careBinder?.sections?.[key]?.notes || "";
+
+    sectionTitle.textContent = cfg.label;
+    sectionDesc.textContent = cfg.desc;
+
+    binderSectionContent.innerHTML = `
+      <section class="chart-card">
+        <div class="chart-card-head">
+          <h3>${escapeHtml(cfg.label)}</h3>
+          <div class="button-row">
+            <button class="btn btn-ghost" type="button" id="inlineEditBtn">Edit</button>
+          </div>
+        </div>
+
+        <div class="chart-card-body">
+          <div class="kv-list">
+            <div class="kv-row">
+              <div class="kv-key">Notes</div>
+              <div>${notes ? escapeHtml(notes) : `<span class="empty-state">No notes yet.</span>`}</div>
+            </div>
+          </div>
+        </div>
+      </section>
+    `;
+
+    document.getElementById("inlineEditBtn")?.addEventListener("click", () => {
+      openEdit(key);
+    });
+
+    editSectionBtn.onclick = () => openEdit(key);
+    renderStats();
+    renderStatusPanel();
+  }
+
+  function openEdit(key) {
+    editingSection = key;
+    editTitle.textContent = `Edit ${SECTION_CONFIG[key].label}`;
+    editNotes.value = db.careBinder?.sections?.[key]?.notes || "";
+    editModal.classList.add("open");
+  }
+
+  function closeEdit() {
+    editModal.classList.remove("open");
+  }
+
+  function saveEdit() {
+    if (!editingSection) return;
+
+    if (!db.careBinder) db.careBinder = {};
+    if (!db.careBinder.sections) db.careBinder.sections = {};
+    if (!db.careBinder.sections[editingSection]) db.careBinder.sections[editingSection] = {};
+
+    db.careBinder.sections[editingSection].notes = editNotes.value.trim();
+    saveDB(db);
+
+    renderSection(editingSection);
+    closeEdit();
+  }
+
+  function normalizeDiagnoses(value) {
+    if (Array.isArray(value)) return value.filter(Boolean);
+    if (typeof value === "string" && value.trim()) {
+      return value
+        .split(",")
+        .map((item) => item.trim())
+        .filter(Boolean);
+    }
+    return [];
+  }
+
+  function getAgeFromBirthdate(birthdate) {
+    if (!birthdate) return "";
+    const dob = new Date(birthdate);
+    if (Number.isNaN(dob.getTime())) return "";
+
+    const now = new Date();
+    let age = now.getFullYear() - dob.getFullYear();
+    const monthDiff = now.getMonth() - dob.getMonth();
+
+    if (monthDiff < 0 || (monthDiff === 0 && now.getDate() < dob.getDate())) {
+      age--;
+    }
+
+    return age;
+  }
+
+  function escapeHtml(value) {
+    return String(value ?? "")
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#39;");
+  }
+});
