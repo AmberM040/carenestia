@@ -1,8 +1,7 @@
 document.addEventListener("DOMContentLoaded", () => {
-  let db = ensureDB(loadDB());
-  saveDB(db);
+  let db = loadDB();
 
-  const supabase = window.supabaseClient;
+  const supabase = window.supabaseClient || null;
 
   const childSwitcher = document.getElementById("childSwitcher");
   const childSummary = document.getElementById("childSummary");
@@ -153,6 +152,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const child = getChildrenSafe().find((entry) => String(entry.id) === String(id));
     db.activeChildId = child ? child.id : null;
     db.currentChildId = db.activeChildId;
+    db = ensureDB(db);
     saveDB(db);
   }
 
@@ -352,6 +352,7 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   function buildTaskPayload() {
+    const child = activeChild();
     const startDateTime = new Date(`${taskDate.value}T${taskTime.value}`);
     const startAt = Number.isNaN(startDateTime.getTime())
       ? new Date().toISOString()
@@ -359,7 +360,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     return {
       user_id: currentUser.id,
-      child_id: activeChild().id,
+      child_id: child.id,
       title: taskTitle.value.trim(),
       type: taskCategory.value,
       start_at: startAt,
@@ -400,6 +401,11 @@ document.addEventListener("DOMContentLoaded", () => {
       return;
     }
 
+    if (!supabase || !currentUser?.id) {
+      showStatus("Supabase is not connected.", true);
+      return;
+    }
+
     try {
       showStatus("Saving...");
 
@@ -420,11 +426,6 @@ document.addEventListener("DOMContentLoaded", () => {
       console.error(err);
       showStatus("Could not save task.", true);
     }
-  }
-
-  function parseISODateLocal(dateStr) {
-    const [year, month, day] = dateStr.split("-").map(Number);
-    return new Date(year, month - 1, day);
   }
 
   function startOfDay(date) {
@@ -560,6 +561,7 @@ document.addEventListener("DOMContentLoaded", () => {
       scheduledFor: occurrenceDate.toISOString()
     });
 
+    db = ensureDB(db);
     saveDB(db);
     renderAll();
     showStatus("Dose logged.");
@@ -593,6 +595,7 @@ document.addEventListener("DOMContentLoaded", () => {
       scheduledFor: occurrenceDate.toISOString()
     });
 
+    db = ensureDB(db);
     saveDB(db);
     renderAll();
     showStatus("Dose marked skipped.");
@@ -603,12 +606,15 @@ document.addEventListener("DOMContentLoaded", () => {
     if (!existing) return;
 
     db.doseEvents = (db.doseEvents || []).filter((evt) => evt.id !== existing.id);
+    db = ensureDB(db);
     saveDB(db);
     renderAll();
     showStatus("Medication log removed.");
   }
 
   async function markTaskComplete(taskId, date) {
+    if (!supabase || !currentUser?.id) return;
+
     const task = supabaseTasks.find((item) => item.id === taskId);
     if (!task) return;
 
@@ -636,6 +642,8 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   async function undoTaskComplete(taskId, date) {
+    if (!supabase || !currentUser?.id) return;
+
     const task = supabaseTasks.find((item) => item.id === taskId);
     if (!task) return;
 
@@ -660,6 +668,8 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   async function deleteTask(taskId) {
+    if (!supabase || !currentUser?.id) return;
+
     const { error } = await supabase
       .from("schedule_items")
       .delete()
@@ -1112,7 +1122,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   async function loadScheduleTasks() {
     const child = activeChild();
-    if (!child || !currentUser?.id) {
+    if (!child || !currentUser?.id || !supabase) {
       supabaseTasks = [];
       return;
     }
@@ -1195,15 +1205,21 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 
   async function init() {
-    db = ensureDB(loadDB());
+    db = loadDB();
 
     currentUser = await fetchUser();
 
     if (currentUser?.id) {
       const fetchedChildren = await fetchChildrenForUser(currentUser.id);
+      console.log("Fetched children:", fetchedChildren);
+
       if (fetchedChildren.length) {
         db.children = fetchedChildren;
+      } else {
+        db.children = [];
       }
+    } else {
+      db.children = [];
     }
 
     const validActiveChild =
@@ -1213,7 +1229,12 @@ document.addEventListener("DOMContentLoaded", () => {
 
     db.activeChildId = validActiveChild ? validActiveChild.id : null;
     db.currentChildId = db.activeChildId;
+
+    db = ensureDB(db);
     saveDB(db);
+
+    console.log("DB children after init:", db.children);
+    console.log("Active child after init:", activeChild());
 
     setDefaultTaskDateTime();
     await loadScheduleTasks();
