@@ -1,9 +1,12 @@
 document.addEventListener("DOMContentLoaded", () => {
-  let db = ensureDB(loadDB());
-  saveDB(db);
+  let db = loadDB();
+
+  const supabase = window.supabaseClient || null;
 
   const childSummary = document.getElementById("childSummary");
   const childSwitcher = document.getElementById("childSwitcher");
+  const childAvatar = document.getElementById("childAvatar");
+  const logoutBtn = document.getElementById("logoutBtn");
 
   const searchInput = document.getElementById("searchInput");
   const specialtyFilter = document.getElementById("specialtyFilter");
@@ -23,14 +26,17 @@ document.addEventListener("DOMContentLoaded", () => {
   const emptyState = document.getElementById("emptyState");
 
   const btnAddLog = document.getElementById("btnAddLog");
+  const btnAddLogSidebar = document.getElementById("btnAddLogSidebar");
+  const btnAddLogQuick = document.getElementById("btnAddLogQuick");
   const btnCloseModal = document.getElementById("btnCloseModal");
   const modal = document.getElementById("modal");
 
   const btnClearFilters = document.getElementById("btnClearFilters");
 
   function calculateAge(birthdate) {
+    if (!birthdate) return "";
     const birth = new Date(birthdate);
-    if (Number.isNaN(birth.getTime())) return "—";
+    if (Number.isNaN(birth.getTime())) return "";
 
     const today = new Date();
     let age = today.getFullYear() - birth.getFullYear();
@@ -43,18 +49,76 @@ document.addEventListener("DOMContentLoaded", () => {
     return age;
   }
 
-  async function syncChildrenFromSupabase() {
+  function normalizeDiagnoses(value) {
+    if (Array.isArray(value)) return value.filter(Boolean);
+    if (typeof value === "string" && value.trim()) {
+      return value
+        .split(",")
+        .map((d) => d.trim())
+        .filter(Boolean);
+    }
+    return [];
+  }
+
+  function escapeHtml(str = "") {
+    return String(str)
+      .replaceAll("&", "&amp;")
+      .replaceAll("<", "&lt;")
+      .replaceAll(">", "&gt;")
+      .replaceAll('"', "&quot;")
+      .replaceAll("'", "&#039;");
+  }
+
+  function getChildrenSafe() {
+    return Array.isArray(db.children) ? db.children : [];
+  }
+
+  function activeChild() {
+    const children = getChildrenSafe();
+    if (!children.length) return null;
+
+    const preferredId = db.activeChildId || db.currentChildId || null;
+    if (preferredId) {
+      const match = children.find((child) => String(child.id) === String(preferredId));
+      if (match) return match;
+    }
+
+    return children[0] || null;
+  }
+
+  function setActiveChildId(id) {
+    const child = getChildrenSafe().find((entry) => String(entry.id) === String(id));
+    db.activeChildId = child ? child.id : null;
+    db.currentChildId = db.activeChildId;
+    db = ensureDB(db);
+    saveDB(db);
+  }
+
+  async function fetchCurrentUser() {
+    if (!supabase?.auth) return null;
+
     const {
       data: { user },
-      error: userError
-    } = await supabaseClient.auth.getUser();
+      error
+    } = await supabase.auth.getUser();
 
-    if (userError || !user) {
+    if (error) {
+      console.warn("Could not get user:", error.message);
+      return null;
+    }
+
+    return user || null;
+  }
+
+  async function syncChildrenFromSupabase() {
+    const user = await fetchCurrentUser();
+
+    if (!user) {
       window.location.href = "login.html";
       return false;
     }
 
-    const { data: children, error: childrenError } = await supabaseClient
+    const { data: children, error: childrenError } = await supabase
       .from("children")
       .select("*")
       .eq("parent_id", user.id)
@@ -67,57 +131,59 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     if (!children || children.length === 0) {
-      window.location.href = "onboarding.html";
-      return false;
+      db.children = [];
+      db.activeChildId = null;
+      db.currentChildId = null;
+      db = ensureDB(db);
+      saveDB(db);
+      return true;
     }
 
     const childIds = children.map((child) => child.id);
 
-    const { data: careProfiles } = await supabaseClient
+    const { data: careProfiles } = await supabase
       .from("child_care_profiles")
       .select("*")
       .in("child_id", childIds);
 
-    const { data: equipmentProfiles } = await supabaseClient
+    const { data: equipmentProfiles } = await supabase
       .from("child_equipment_profiles")
       .select("*")
       .in("child_id", childIds);
 
     db.children = children.map((child) => {
       const careProfile =
-        (careProfiles || []).find((row) => row.child_id === child.id) || {};
+        (careProfiles || []).find((row) => String(row.child_id) === String(child.id)) || {};
 
       const equipmentProfile =
-        (equipmentProfiles || []).find((row) => row.child_id === child.id) || {};
+        (equipmentProfiles || []).find((row) => String(row.child_id) === String(child.id)) || {};
 
       return {
         id: child.id,
         name: child.name || "Child",
-        age: child.birthdate ? calculateAge(child.birthdate) : "—",
-        diagnoses: child.diagnoses
-          ? child.diagnoses.split(",").map((d) => d.trim()).filter(Boolean)
-          : [],
+        age: child.age ?? calculateAge(child.birthdate),
+        birthdate: child.birthdate || "",
+        diagnoses: normalizeDiagnoses(child.diagnoses),
         allergies: child.allergies || "",
         notes: child.notes || "",
+        photo_url: child.photo_url || "",
         complexityLevel: child.complexity_level || "moderate",
         careProfile,
         equipmentProfile
       };
     });
 
-    if (!db.activeChildId || !db.children.find((c) => c.id === db.activeChildId)) {
-      db.activeChildId = db.children[0].id;
-      db.currentChildId = db.children[0].id;
-    }
+    const validActive =
+      db.children.find((c) => String(c.id) === String(db.activeChildId || db.currentChildId)) ||
+      db.children[0] ||
+      null;
 
+    db.activeChildId = validActive ? validActive.id : null;
+    db.currentChildId = db.activeChildId;
+
+    db = ensureDB(db);
     saveDB(db);
     return true;
-  }
-
-  function activeChild() {
-    const children = Array.isArray(db.children) ? db.children : [];
-    if (!children.length) return null;
-    return children.find((c) => c.id === db.activeChildId) || children[0];
   }
 
   function getAvailableSpecialties() {
@@ -167,8 +233,8 @@ document.addEventListener("DOMContentLoaded", () => {
       const label = document.createElement("label");
       label.className = "chip";
       label.innerHTML = `
-        <input type="checkbox" value="${s}">
-        <span>${s}</span>
+        <input type="checkbox" value="${escapeHtml(s)}">
+        <span>${escapeHtml(s)}</span>
       `;
       carelogSpecialtyChecks.appendChild(label);
     });
@@ -197,16 +263,34 @@ document.addEventListener("DOMContentLoaded", () => {
     modal.classList.add("hidden");
   }
 
-  btnAddLog.addEventListener("click", () => {
+  function resetModalForm() {
     setDefaultTime();
     note.value = "";
+    category.value = "note";
+    author.value = author.value || "Mom";
     saveStatus.textContent = "Ready";
+
+    carelogSpecialtyChecks.querySelectorAll('input[type="checkbox"]').forEach((box) => {
+      box.checked = false;
+    });
+  }
+
+  btnAddLog?.addEventListener("click", () => {
+    resetModalForm();
     openModal();
   });
 
-  btnCloseModal.addEventListener("click", closeModal);
+  btnAddLogSidebar?.addEventListener("click", () => {
+    btnAddLog?.click();
+  });
 
-  modal.addEventListener("click", (e) => {
+  btnAddLogQuick?.addEventListener("click", () => {
+    btnAddLog?.click();
+  });
+
+  btnCloseModal?.addEventListener("click", closeModal);
+
+  modal?.addEventListener("click", (e) => {
     if (e.target === modal) closeModal();
   });
 
@@ -217,13 +301,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
   async function buildEntryPayload() {
     const child = activeChild();
+    const user = await fetchCurrentUser();
 
-    const {
-      data: { user },
-      error: userError
-    } = await supabaseClient.auth.getUser();
-
-    if (userError || !user) {
+    if (!user) {
       throw new Error("You must be logged in.");
     }
 
@@ -250,12 +330,17 @@ document.addEventListener("DOMContentLoaded", () => {
       return;
     }
 
+    if (!supabase) {
+      saveStatus.textContent = "Supabase not connected";
+      return;
+    }
+
     saveStatus.textContent = "Saving...";
 
     try {
       const payload = await buildEntryPayload();
 
-      const { error } = await supabaseClient
+      const { error } = await supabase
         .from("care_logs")
         .insert([payload]);
 
@@ -274,7 +359,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
-  saveBtn.addEventListener("click", saveEntry);
+  saveBtn?.addEventListener("click", saveEntry);
 
   function matchesFilters(entry) {
     const q = searchInput.value.toLowerCase().trim();
@@ -283,16 +368,15 @@ document.addEventListener("DOMContentLoaded", () => {
 
     if (
       specialtyFilter.value !== "all" &&
-      !Array.isArray(entry.specialties || []) &&
-      specialtyFilter.value
+      Array.isArray(entry.specialties || []) &&
+      !entry.specialties.includes(specialtyFilter.value)
     ) {
       return false;
     }
 
     if (
       specialtyFilter.value !== "all" &&
-      Array.isArray(entry.specialties || []) &&
-      !entry.specialties.includes(specialtyFilter.value)
+      !Array.isArray(entry.specialties || [])
     ) {
       return false;
     }
@@ -323,16 +407,13 @@ document.addEventListener("DOMContentLoaded", () => {
   async function renderTimeline() {
     const child = activeChild();
 
-    if (!child) {
+    if (!child || !supabase) {
       timeline.innerHTML = "";
       emptyState?.classList.remove("hidden");
       return;
     }
 
-    const {
-      data: logs,
-      error
-    } = await supabaseClient
+    const { data: logs, error } = await supabase
       .from("care_logs")
       .select("*")
       .eq("child_id", child.id)
@@ -363,11 +444,11 @@ document.addEventListener("DOMContentLoaded", () => {
       const entryDate = new Date(entry.created_at || entry.createdAt);
 
       card.innerHTML = `
-        <div class="log-icon general">${iconForCategory(entry.category)}</div>
+        <div class="log-icon general">${escapeHtml(iconForCategory(entry.category))}</div>
         <div class="log-main">
-          <h3>${entry.note}</h3>
-          <p class="muted">${entry.author || "Caregiver"} • ${entryDate.toLocaleString()}</p>
-          <p class="muted">${labelForCategory(entry.category)} • Specialties: ${(entry.specialties || []).join(", ") || "General"}</p>
+          <h3>${escapeHtml(entry.note || "")}</h3>
+          <p class="muted">${escapeHtml(entry.author || "Caregiver")} • ${escapeHtml(entryDate.toLocaleString())}</p>
+          <p class="muted">${escapeHtml(labelForCategory(entry.category))} • Specialties: ${escapeHtml((entry.specialties || []).join(", ") || "General")}</p>
         </div>
       `;
 
@@ -375,19 +456,19 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  searchInput.addEventListener("input", () => {
+  searchInput?.addEventListener("input", () => {
     renderTimeline();
   });
 
-  specialtyFilter.addEventListener("change", () => {
+  specialtyFilter?.addEventListener("change", () => {
     renderTimeline();
   });
 
-  daysFilter.addEventListener("change", () => {
+  daysFilter?.addEventListener("change", () => {
     renderTimeline();
   });
 
-  btnClearFilters.addEventListener("click", () => {
+  btnClearFilters?.addEventListener("click", () => {
     searchInput.value = "";
     specialtyFilter.value = "all";
     daysFilter.value = "all";
@@ -397,21 +478,27 @@ document.addEventListener("DOMContentLoaded", () => {
   function fillChildSwitcher() {
     childSwitcher.innerHTML = "";
 
-    (db.children || []).forEach((child) => {
+    const children = getChildrenSafe();
+
+    if (!children.length) {
+      const option = document.createElement("option");
+      option.value = "";
+      option.textContent = "No children yet";
+      childSwitcher.appendChild(option);
+      return;
+    }
+
+    children.forEach((child) => {
       const o = document.createElement("option");
       o.value = child.id;
-      o.textContent = child.name;
+      o.textContent = child.name || "Child";
+      if (String(child.id) === String(db.activeChildId)) o.selected = true;
       childSwitcher.appendChild(o);
     });
-
-    childSwitcher.value = db.activeChildId || "";
   }
 
-  childSwitcher.addEventListener("change", async () => {
-    db.activeChildId = childSwitcher.value;
-    db.currentChildId = childSwitcher.value;
-    saveDB(db);
-
+  childSwitcher?.addEventListener("change", async () => {
+    setActiveChildId(childSwitcher.value);
     updateChildSummary();
     renderSpecialties();
     await renderTimeline();
@@ -419,15 +506,49 @@ document.addEventListener("DOMContentLoaded", () => {
 
   function updateChildSummary() {
     const child = activeChild();
+
     if (!child) {
       childSummary.textContent = "No child selected";
+      if (childAvatar) childAvatar.innerHTML = "";
       return;
     }
 
-    childSummary.textContent = `${child.name} • Age ${child.age}`;
+    const childAge = child.age ?? calculateAge(child.birthdate);
+    const diagnoses = normalizeDiagnoses(child.diagnoses);
+
+    let summary = childAge !== "" && childAge !== null && childAge !== undefined
+      ? `Age ${childAge}`
+      : "Age —";
+
+    if (diagnoses.length) {
+      summary += ` • ${diagnoses.slice(0, 2).join(" • ")}`;
+    }
+
+    childSummary.textContent = summary;
+
+    if (childAvatar) {
+      if (child.photo_url) {
+        childAvatar.innerHTML = `<img src="${escapeHtml(child.photo_url)}" alt="${escapeHtml(child.name || "Child")}">`;
+      } else {
+        childAvatar.innerHTML = "";
+      }
+    }
   }
 
+  logoutBtn?.addEventListener("click", async () => {
+    if (window.supabaseClient?.auth) {
+      try {
+        await window.supabaseClient.auth.signOut();
+      } catch (err) {
+        console.warn("Supabase sign out failed:", err);
+      }
+    }
+    window.location.href = "login.html";
+  });
+
   async function init() {
+    db = loadDB();
+
     const ok = await syncChildrenFromSupabase();
     if (!ok) return;
 
