@@ -2,6 +2,8 @@ document.addEventListener("DOMContentLoaded", () => {
   let db = ensureDB(loadDB());
   saveDB(db);
 
+  const supabase = window.supabaseClient;
+
   const childSwitcher = document.getElementById("childSwitcher");
   const childSummary = document.getElementById("childSummary");
   const childAvatar = document.getElementById("childAvatar");
@@ -49,6 +51,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
   let currentView = "today";
   let statusTimer = null;
+  let currentUser = null;
+  let supabaseTasks = [];
 
   const required = {
     childSwitcher,
@@ -90,47 +94,6 @@ document.addEventListener("DOMContentLoaded", () => {
   if (missing.length) {
     alert("Missing elements in schedule.html: " + missing.join(", "));
     return;
-  }
-
-  function getSupabaseClient() {
-    if (window.supabaseClient) return window.supabaseClient;
-    if (window.supabase?.from) return window.supabase;
-    return null;
-  }
-
-  async function fetchUser() {
-    const supabase = getSupabaseClient();
-    if (!supabase?.auth) return null;
-
-    const { data, error } = await supabase.auth.getUser();
-    if (error) {
-      console.warn("Could not get user:", error.message);
-      return null;
-    }
-
-    return data?.user || null;
-  }
-
-  async function fetchChildrenForUser(userId) {
-    const supabase = getSupabaseClient();
-    if (!supabase || !userId) return [];
-
-    const { data, error } = await supabase
-      .from("children")
-      .select("*")
-      .eq("parent_id", userId)
-      .order("created_at", { ascending: true });
-
-    if (error) {
-      console.warn("Could not load children:", error.message);
-      return [];
-    }
-
-    return (data || []).map((child) => ({
-      ...child,
-      diagnoses: normalizeDiagnoses(child.diagnoses),
-      age: child.age ?? getAgeFromBirthdate(child.birthdate)
-    }));
   }
 
   function escapeHtml(str = "") {
@@ -178,7 +141,6 @@ document.addEventListener("DOMContentLoaded", () => {
     if (!children.length) return null;
 
     const preferredId = db.activeChildId || db.currentChildId || null;
-
     if (preferredId) {
       const match = children.find((child) => String(child.id) === String(preferredId));
       if (match) return match;
@@ -192,18 +154,6 @@ document.addEventListener("DOMContentLoaded", () => {
     db.activeChildId = child ? child.id : null;
     db.currentChildId = db.activeChildId;
     saveDB(db);
-  }
-
-  function ensureSchedulesForChild(childId) {
-    if (!db.schedules) db.schedules = {};
-    if (!Array.isArray(db.schedules[childId])) db.schedules[childId] = [];
-  }
-
-  function getTasksForActiveChild() {
-    const child = activeChild();
-    if (!child) return [];
-    ensureSchedulesForChild(child.id);
-    return db.schedules[child.id];
   }
 
   function getMedicationScheduleForDate(date) {
@@ -319,7 +269,7 @@ document.addEventListener("DOMContentLoaded", () => {
         <strong>Child</strong>
         <div class="muted" style="margin-top:6px;">
           <div><strong>Name:</strong> ${escapeHtml(child.name || "—")}</div>
-          <div><strong>Age:</strong> ${escapeHtml((child.age ?? getAgeFromBirthdate(child.birthdate)) || "—"}</div>
+          <div><strong>Age:</strong> ${escapeHtml((child.age ?? getAgeFromBirthdate(child.birthdate)) || "—")}</div>
           <div><strong>Diagnoses:</strong> ${escapeHtml(diagnoses)}</div>
         </div>
       </div>
@@ -401,33 +351,29 @@ document.addEventListener("DOMContentLoaded", () => {
       .sort((a, b) => a - b);
   }
 
-  function buildTaskObject() {
+  function buildTaskPayload() {
     const startDateTime = new Date(`${taskDate.value}T${taskTime.value}`);
     const startAt = Number.isNaN(startDateTime.getTime())
       ? new Date().toISOString()
       : startDateTime.toISOString();
 
     return {
-      id: crypto?.randomUUID ? crypto.randomUUID() : `task_${Date.now()}`,
+      user_id: currentUser.id,
+      child_id: activeChild().id,
       title: taskTitle.value.trim(),
-      category: taskCategory.value,
-      startDate: taskDate.value,
-      time: taskTime.value,
-      startAt,
+      type: taskCategory.value,
+      start_at: startAt,
       frequency: taskFrequency.value,
-      weekdays: getCheckedWeekdays(),
-      durationMinutes: Number(taskDuration.value) || 0,
-      assignedTo: taskAssignedTo.value.trim(),
-      reminderMinutes: Number(taskReminder.value) || 0,
-      instructions: taskInstructions.value.trim(),
-      shareable: taskShareable.value === "yes",
-      active: true,
-      createdAt: new Date().toISOString(),
-      completions: []
+      days_of_week: getCheckedWeekdays(),
+      assigned_to: taskAssignedTo.value.trim() || null,
+      duration_minutes: Number(taskDuration.value) || 0,
+      reminder_minutes: Number(taskReminder.value) || 0,
+      instructions: taskInstructions.value.trim() || null,
+      shareable: taskShareable.value === "yes"
     };
   }
 
-  function saveTask() {
+  async function saveTask() {
     if (!taskTitle.value.trim()) {
       showStatus("Please enter a task name.", true);
       return;
@@ -454,14 +400,26 @@ document.addEventListener("DOMContentLoaded", () => {
       return;
     }
 
-    ensureSchedulesForChild(child.id);
-    db.schedules[child.id].push(buildTaskObject());
-    saveDB(db);
+    try {
+      showStatus("Saving...");
 
-    resetTaskForm();
-    closeTaskModal();
-    renderAll();
-    showStatus("Task saved.");
+      const { error } = await supabase.from("schedule_items").insert(buildTaskPayload());
+
+      if (error) {
+        console.error("Save task failed:", error);
+        showStatus("Could not save task.", true);
+        return;
+      }
+
+      resetTaskForm();
+      closeTaskModal();
+      await loadScheduleTasks();
+      renderAll();
+      showStatus("Task saved.");
+    } catch (err) {
+      console.error(err);
+      showStatus("Could not save task.", true);
+    }
   }
 
   function parseISODateLocal(dateStr) {
@@ -482,23 +440,38 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   function getOccurrenceDate(task, baseDate) {
+    if (task.source === "medication") {
+      return new Date(
+        baseDate.getFullYear(),
+        baseDate.getMonth(),
+        baseDate.getDate(),
+        Number(task.time?.split(":")[0] || 0),
+        Number(task.time?.split(":")[1] || 0),
+        0,
+        0
+      );
+    }
+
+    const startAt = task.start_at ? new Date(task.start_at) : new Date();
     return new Date(
       baseDate.getFullYear(),
       baseDate.getMonth(),
       baseDate.getDate(),
-      Number(task.time?.split(":")[0] || 0),
-      Number(task.time?.split(":")[1] || 0),
+      startAt.getHours(),
+      startAt.getMinutes(),
       0,
       0
     );
   }
 
   function isTaskScheduledOnDate(task, date) {
-    if (task.active === false) return false;
+    if (task.source === "medication") return true;
 
-    const startDate = task.startDate ? parseISODateLocal(task.startDate) : new Date(task.startAt);
+    const startAt = task.start_at ? new Date(task.start_at) : null;
+    if (!startAt || Number.isNaN(startAt.getTime())) return false;
+
     const targetDate = startOfDay(date);
-    const taskStartDay = startOfDay(startDate);
+    const taskStartDay = startOfDay(startAt);
 
     if (targetDate < taskStartDay) return false;
 
@@ -511,7 +484,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     if (task.frequency === "weekly") {
-      const weekdays = Array.isArray(task.weekdays) ? task.weekdays : [];
+      const weekdays = Array.isArray(task.days_of_week) ? task.days_of_week : [];
       return weekdays.includes(targetDate.getDay());
     }
 
@@ -531,7 +504,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   function isCompletedOnDate(task, date) {
     const key = getCompletionKey(date);
-    return Array.isArray(task.completions) && task.completions.includes(key);
+    return Array.isArray(task.completed_dates) && task.completed_dates.includes(key);
   }
 
   function getMedicationLogForDateAndTime(medId, date, scheduledTime) {
@@ -635,45 +608,71 @@ document.addEventListener("DOMContentLoaded", () => {
     showStatus("Medication log removed.");
   }
 
-  function markTaskComplete(taskId, date) {
-    const child = activeChild();
-    if (!child) return;
-
-    ensureSchedulesForChild(child.id);
-    const task = db.schedules[child.id].find((item) => item.id === taskId);
+  async function markTaskComplete(taskId, date) {
+    const task = supabaseTasks.find((item) => item.id === taskId);
     if (!task) return;
 
-    if (!Array.isArray(task.completions)) task.completions = [];
-
     const key = getCompletionKey(date);
-    if (!task.completions.includes(key)) {
-      task.completions.push(key);
-      saveDB(db);
-      renderAll();
+    const completedDates = Array.isArray(task.completed_dates) ? [...task.completed_dates] : [];
+
+    if (!completedDates.includes(key)) {
+      completedDates.push(key);
     }
-  }
 
-  function undoTaskComplete(taskId, date) {
-    const child = activeChild();
-    if (!child) return;
+    const { error } = await supabase
+      .from("schedule_items")
+      .update({ completed_dates: completedDates })
+      .eq("id", taskId)
+      .eq("user_id", currentUser.id);
 
-    ensureSchedulesForChild(child.id);
-    const task = db.schedules[child.id].find((item) => item.id === taskId);
-    if (!task || !Array.isArray(task.completions)) return;
+    if (error) {
+      console.error("Complete failed:", error);
+      showStatus("Could not mark complete.", true);
+      return;
+    }
 
-    const key = getCompletionKey(date);
-    task.completions = task.completions.filter((entry) => entry !== key);
-    saveDB(db);
+    await loadScheduleTasks();
     renderAll();
   }
 
-  function deleteTask(taskId) {
-    const child = activeChild();
-    if (!child) return;
+  async function undoTaskComplete(taskId, date) {
+    const task = supabaseTasks.find((item) => item.id === taskId);
+    if (!task) return;
 
-    ensureSchedulesForChild(child.id);
-    db.schedules[child.id] = db.schedules[child.id].filter((task) => task.id !== taskId);
-    saveDB(db);
+    const key = getCompletionKey(date);
+    const completedDates = Array.isArray(task.completed_dates) ? [...task.completed_dates] : [];
+    const nextDates = completedDates.filter((entry) => entry !== key);
+
+    const { error } = await supabase
+      .from("schedule_items")
+      .update({ completed_dates: nextDates })
+      .eq("id", taskId)
+      .eq("user_id", currentUser.id);
+
+    if (error) {
+      console.error("Undo failed:", error);
+      showStatus("Could not undo.", true);
+      return;
+    }
+
+    await loadScheduleTasks();
+    renderAll();
+  }
+
+  async function deleteTask(taskId) {
+    const { error } = await supabase
+      .from("schedule_items")
+      .delete()
+      .eq("id", taskId)
+      .eq("user_id", currentUser.id);
+
+    if (error) {
+      console.error("Delete failed:", error);
+      showStatus("Could not delete task.", true);
+      return;
+    }
+
+    await loadScheduleTasks();
     renderAll();
   }
 
@@ -697,6 +696,17 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
+  function formatTaskTime(task) {
+    if (task.source === "medication") return formatTime(task.time);
+    if (!task.start_at) return "No time";
+
+    const dt = new Date(task.start_at);
+    return dt.toLocaleTimeString([], {
+      hour: "numeric",
+      minute: "2-digit"
+    });
+  }
+
   function getCategoryMeta(category) {
     const map = {
       Medication: { cls: "med", icon: "💊" },
@@ -714,21 +724,22 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   function makeTaskCard(task, occurrenceDate, completed = false, isDueNow = false) {
-    const meta = getCategoryMeta(task.category);
+    const category = task.source === "medication" ? task.category : (task.type || "Other");
+    const meta = getCategoryMeta(category);
     const card = document.createElement("div");
     card.className = "log-card";
 
     const subtitleParts = [];
     subtitleParts.push(formatFullDate(occurrenceDate));
-    subtitleParts.push(formatTime(task.time));
+    subtitleParts.push(formatTaskTime(task));
 
     if (task.source === "medication") {
       if (task.instructions) subtitleParts.push(task.instructions);
       if (task.stepLabel) subtitleParts.push(task.stepLabel);
       subtitleParts.push("From Medications");
     } else {
-      if (task.assignedTo) subtitleParts.push(`Assigned to ${task.assignedTo}`);
-      if (task.durationMinutes) subtitleParts.push(`${task.durationMinutes} min`);
+      if (task.assigned_to) subtitleParts.push(`Assigned to ${task.assigned_to}`);
+      if (task.duration_minutes) subtitleParts.push(`${task.duration_minutes} min`);
     }
 
     const medLog =
@@ -744,24 +755,24 @@ document.addEventListener("DOMContentLoaded", () => {
             ? "Skipped"
             : isDueNow
               ? "Due Now"
-              : task.category
+              : category
         : completed
           ? "Completed"
           : isDueNow
             ? "Due Now"
-            : task.category;
+            : category;
 
     card.innerHTML = `
       <div class="log-icon ${meta.cls}">${meta.icon}</div>
       <div class="log-main">
         <h3>
           ${escapeHtml(task.title)}
-          <span class="time">${formatTime(task.time)}</span>
+          <span class="time">${escapeHtml(formatTaskTime(task))}</span>
         </h3>
         <p>${escapeHtml(task.instructions || task.note || "No extra instructions.")}</p>
         <p class="muted mt-8">${escapeHtml(subtitleParts.join(" • "))}</p>
         <p class="muted mt-8">
-          ${escapeHtml(task.category)}
+          ${escapeHtml(category)}
           ${
             task.source === "medication"
               ? ` • ${
@@ -771,7 +782,7 @@ document.addEventListener("DOMContentLoaded", () => {
                       ? "Wean / Taper"
                       : "Medication"
                 }`
-              : ` • ${task.frequency.charAt(0).toUpperCase() + task.frequency.slice(1)}${task.shareable ? " • Shared" : ""}`
+              : ` • ${String(task.frequency || "once").charAt(0).toUpperCase() + String(task.frequency || "once").slice(1)}${task.shareable ? " • Shared" : ""}`
           }
         </p>
       </div>
@@ -853,12 +864,13 @@ document.addEventListener("DOMContentLoaded", () => {
 
   function taskMatchesCategory(task) {
     const selected = scheduleCategoryFilter.value;
-    return selected === "all" || task.category === selected;
+    const category = task.source === "medication" ? task.category : (task.type || "Other");
+    return selected === "all" || category === selected;
   }
 
   function getTodayBuckets() {
     const now = new Date();
-    const tasks = getTasksForActiveChild().filter(taskMatchesCategory);
+    const tasks = supabaseTasks.filter(taskMatchesCategory);
     const medTasks = getMedicationScheduleForDate(now).filter(taskMatchesCategory);
 
     const dueNow = [];
@@ -964,7 +976,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   function renderGroupedRange(listEl, dates, emptyMessage) {
     listEl.innerHTML = "";
-    const tasks = getTasksForActiveChild().filter(taskMatchesCategory);
+    const tasks = supabaseTasks.filter(taskMatchesCategory);
     let hasAnything = false;
 
     dates.forEach((date) => {
@@ -1065,6 +1077,62 @@ document.addEventListener("DOMContentLoaded", () => {
     renderCurrentView();
   }
 
+  async function fetchUser() {
+    if (!supabase?.auth) return null;
+
+    const { data, error } = await supabase.auth.getUser();
+    if (error) {
+      console.warn("Could not get user:", error.message);
+      return null;
+    }
+
+    return data?.user || null;
+  }
+
+  async function fetchChildrenForUser(userId) {
+    if (!supabase || !userId) return [];
+
+    const { data, error } = await supabase
+      .from("children")
+      .select("*")
+      .eq("parent_id", userId)
+      .order("created_at", { ascending: true });
+
+    if (error) {
+      console.warn("Could not load children:", error.message);
+      return [];
+    }
+
+    return (data || []).map((child) => ({
+      ...child,
+      diagnoses: normalizeDiagnoses(child.diagnoses),
+      age: child.age ?? getAgeFromBirthdate(child.birthdate)
+    }));
+  }
+
+  async function loadScheduleTasks() {
+    const child = activeChild();
+    if (!child || !currentUser?.id) {
+      supabaseTasks = [];
+      return;
+    }
+
+    const { data, error } = await supabase
+      .from("schedule_items")
+      .select("*")
+      .eq("user_id", currentUser.id)
+      .eq("child_id", child.id)
+      .order("start_at", { ascending: true });
+
+    if (error) {
+      console.warn("Could not load schedule items:", error.message);
+      supabaseTasks = [];
+      return;
+    }
+
+    supabaseTasks = Array.isArray(data) ? data : [];
+  }
+
   btnAddTask.addEventListener("click", () => {
     resetTaskForm();
     openTaskModal();
@@ -1086,8 +1154,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
   btnSaveTask.addEventListener("click", saveTask);
 
-  childSwitcher.addEventListener("change", () => {
+  childSwitcher.addEventListener("change", async () => {
     setActiveChildId(childSwitcher.value);
+    await loadScheduleTasks();
     renderAll();
   });
 
@@ -1128,11 +1197,10 @@ document.addEventListener("DOMContentLoaded", () => {
   async function init() {
     db = ensureDB(loadDB());
 
-    const currentUser = await fetchUser();
+    currentUser = await fetchUser();
 
     if (currentUser?.id) {
       const fetchedChildren = await fetchChildrenForUser(currentUser.id);
-
       if (fetchedChildren.length) {
         db.children = fetchedChildren;
       }
@@ -1145,10 +1213,10 @@ document.addEventListener("DOMContentLoaded", () => {
 
     db.activeChildId = validActiveChild ? validActiveChild.id : null;
     db.currentChildId = db.activeChildId;
-
     saveDB(db);
 
     setDefaultTaskDateTime();
+    await loadScheduleTasks();
     renderAll();
     setActiveView("today");
   }
