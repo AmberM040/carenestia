@@ -2,400 +2,271 @@
 <html lang="en">
 
 <head>
-
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-
-<title>CareNestia Dashboard</title>
-
-<link rel="stylesheet" href="styles.css">
-
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>CareNestia Dashboard</title>
+  <link rel="stylesheet" href="styles.css">
 </head>
 
-
 <body>
-
-
-<div class="app-shell">
-
-
-<!-- SIDEBAR -->
-
-<aside class="app-sidebar">
-
-<div class="sidebar-brand">
-<img src="images/carenestia_logo_wordmark.png" class="sidebar-wordmark">
-</div>
-
-
-<nav class="sidebar-nav">
-
-<a class="sidebar-link active" href="index.html">Dashboard</a>
-<a class="sidebar-link" href="schedule.html">Schedule</a>
-<a class="sidebar-link" href="meds.html">Medications</a>
-<a class="sidebar-link" href="carelog.html">Care Log</a>
-<a class="sidebar-link" href="inventory.html">Inventory</a>
-<a class="sidebar-link" href="schoolnurse.html">School Nurse</a>
-<a class="sidebar-link" href="documents.html">Documents</a>
-
-</nav>
-
-
-
-<div class="sidebar-actions-card">
-
-<div class="sidebar-actions-title">
-Quick Actions
-</div>
-
-
-<button class="btn btn-primary btn-block" data-category="note">
-+ Add New
-</button>
-
-<button class="btn btn-ghost btn-block" data-category="symptom">
-Log Symptom
-</button>
-
-<button class="btn btn-ghost btn-block" data-category="med">
-Log Medication
-</button>
-
-<a class="btn btn-ghost btn-block" href="schedule.html">
-Add Appointment
-</a>
-
-<a class="btn btn-ghost btn-block" href="inventory.html">
-Add Supply
-</a>
-
-<button class="btn btn-ghost btn-block" data-category="note">
-Add Care Note
-</button>
-
-</div>
-
-</aside>
-
-
-
-<!-- MAIN AREA -->
-
-<div class="app-main">
-
-
-<!-- HEADER -->
-
-<header class="app-topbar">
-
-
-<div class="topbar-child-card">
-
-<div class="topbar-child-avatar" id="childAvatar"></div>
-
-
-<div class="topbar-child-copy">
-
-<select id="childSwitcher" class="topbar-child-select"></select>
-
-<div class="topbar-child-meta" id="childSummary">
-Age —
-</div>
-
-<div class="pill-row" id="diagnosisPills"></div>
-
-</div>
-
-</div>
-
-
-
-<div class="topbar-actions">
-
-<a class="btn btn-soft" href="careplan.html">
-Edit Child Profile
-</a>
-
-<button id="logoutBtn" class="btn btn-ghost">
-Log out
-</button>
-
-</div>
-
-</header>
-
-
-
-<!-- PAGE CONTENT -->
-
-<main class="app-content">
-
-
-
-<!-- MAIN COLUMN -->
-
-<section class="main-column">
-
-
-
-<section class="card reminder-card">
-
-<div class="section-head">
-
-<div>
-
-<h2>Next Medication Reminder</h2>
-
-<p class="muted">
-Track the next scheduled medication, appointment, or care task.
-</p>
-
-</div>
-
-<a class="btn btn-ghost" href="schedule.html">
-Open Schedule
-</a>
-
-</div>
-
-</section>
-
-
-
-
-<section class="card">
-
-<div class="section-head">
-
-<h2>Today</h2>
-
-<a class="btn btn-ghost" href="schedule.html">
-View Full Schedule
-</a>
-
-</div>
-
-<ul id="todayList" class="timeline-list"></ul>
-
-</section>
-
-
-
-
-<section id="lastSymptomCard" class="card hidden">
-
-<div class="section-head">
-
-<h2>Last Symptom</h2>
-
-<a class="btn btn-ghost" href="carelog.html">
-View Symptoms
-</a>
-
-</div>
-
-<div id="lastSymptomContent"></div>
-
-</section>
-
-
-
-
-<section class="card">
-
-<div class="section-head">
-
-<h2>Recent Care Log</h2>
-
-<a class="btn btn-ghost" href="carelog.html">
-Open Care Log
-</a>
-
-</div>
-
-<ul id="careLogList" class="stack-list"></ul>
-
-</section>
-
-
-</section>
-
-
-
-<!-- RIGHT COLUMN -->
-
-<aside class="side-column">
-
-
-
-<section id="lastVitalsCard" class="card hidden">
-
-<div class="section-head">
-
-<h2>Last Known Vitals</h2>
-
-<div class="button-row">
-
-<button class="btn btn-ghost" data-quick-vital="full">
-Quick Log
-</button>
-
-<a class="btn" href="vitals.html">
-View History
-</a>
-
-</div>
-
-</div>
-
-<div id="lastVitalsContent"></div>
-
-</section>
-
-
-
-
-<section id="lowSupplyCard" class="card hidden">
-
-<div class="section-head">
-
-<h2>Inventory Reminders</h2>
-
-<a class="btn btn-ghost" href="inventory.html">
-View Inventory
-</a>
-
-</div>
-
-<div id="lowSupplySummary" class="alert-box alert-danger"></div>
-
-<div id="lowSupplyDashboardList" class="stack-list"></div>
-
-</section>
-
-
-
-
-<section class="card">
-
-<div class="section-head">
-
-<h2>Quick Log</h2>
-
-<span class="muted">
-Fast daily updates
-</span>
-
-</div>
-
-
-<div class="quick-actions">
-
-
-<button class="quick-btn quick-note" data-category="note">
-<strong>+ Note</strong>
-<span>Add general care note</span>
-</button>
-
-
-<button class="quick-btn quick-med" data-category="med">
-<strong>+ Medication</strong>
-<span>Record medication note</span>
-</button>
-
-
-<button class="quick-btn quick-symptom" data-category="symptom">
-<strong>+ Symptom</strong>
-<span>Track symptoms or concerns</span>
-</button>
-
-
-<button class="quick-btn quick-question" data-category="question">
-<strong>+ Question</strong>
-<span>Save a question for visits</span>
-</button>
-
-
-
-<button class="quick-mini" data-quick-vital="o2">
-<strong>+ O2</strong>
-<span>Log oxygen saturation</span>
-</button>
-
-<button class="quick-mini" data-quick-vital="temp">
-<strong>+ Temp</strong>
-<span>Log temperature</span>
-</button>
-
-<button class="quick-mini" data-quick-vital="bp">
-<strong>+ BP</strong>
-<span>Log blood pressure</span>
-</button>
-
-<button class="quick-mini" data-quick-vital="hr">
-<strong>+ HR</strong>
-<span>Log heart rate</span>
-</button>
-
-<button class="quick-mini" data-quick-vital="rr">
-<strong>+ RR</strong>
-<span>Log respiratory rate</span>
-</button>
-
-
-</div>
-
-</section>
-
-
-
-
-<section class="card emergency-card">
-
-<div class="section-head">
-
-<h2>Emergency Sheet</h2>
-
-<div class="button-row">
-
-<button id="btnEmergency" class="btn">
-Open
-</button>
-
-<a class="btn btn-ghost" href="crisis.html">
-Crisis Mode
-</a>
-
-</div>
-
-</div>
-
-<p class="muted">
-Quick access to diagnoses, medications, contacts, allergies, and emergency instructions.
-</p>
-
-</section>
-
-
-</aside>
-
-
-
-</main>
-
-
-</div>
-
-
-</div>
-
-
-
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="supabase.js"></script>
-<script src="auth.js"></script>
-<script src="app.js"></script>
-
-
+  <div class="app-shell">
+
+    <!-- SIDEBAR -->
+    <aside class="app-sidebar">
+
+      <div class="sidebar-brand">
+        <img src="images/carenestia_logo_wordmark.png" class="sidebar-wordmark">
+      </div>
+
+      <nav class="sidebar-nav">
+        <a class="sidebar-link active" href="index.html">Dashboard</a>
+        <a class="sidebar-link" href="schedule.html">Schedule</a>
+        <a class="sidebar-link" href="meds.html">Medications</a>
+        <a class="sidebar-link" href="carelog.html">Care Log</a>
+        <a class="sidebar-link" href="inventory.html">Inventory</a>
+        <a class="sidebar-link" href="schoolnurse.html">School Nurse</a>
+        <a class="sidebar-link" href="more.html">More</a>
+      </nav>
+
+      <div class="sidebar-actions-card">
+        <div class="sidebar-actions-title">
+          Quick Actions
+        </div>
+
+        <button class="btn btn-primary btn-block" data-category="note">
+          + Add New
+        </button>
+
+        <button class="btn btn-ghost btn-block" data-category="symptom">
+          Log Symptom
+        </button>
+
+        <button class="btn btn-ghost btn-block" data-category="med">
+          Log Medication
+        </button>
+
+        <a class="btn btn-ghost btn-block" href="schedule.html">
+          Add Appointment
+        </a>
+
+        <a class="btn btn-ghost btn-block" href="inventory.html">
+          Add Supply
+        </a>
+
+        <button class="btn btn-ghost btn-block" data-category="note">
+          Add Care Note
+        </button>
+      </div>
+
+    </aside>
+
+    <!-- MAIN AREA -->
+    <div class="app-main">
+
+      <!-- HEADER -->
+      <header class="app-topbar">
+
+        <div class="topbar-child-card">
+          <div class="topbar-child-avatar" id="childAvatar"></div>
+
+          <div class="topbar-child-copy">
+            <select id="childSwitcher" class="topbar-child-select"></select>
+
+            <div class="topbar-child-meta" id="childSummary">
+              Age —
+            </div>
+
+            <div class="pill-row" id="diagnosisPills"></div>
+          </div>
+        </div>
+
+        <div class="topbar-actions">
+          <a class="btn btn-soft" href="careplan.html">
+            Edit Child Profile
+          </a>
+
+          <button id="logoutBtn" class="btn btn-ghost">
+            Log out
+          </button>
+        </div>
+
+      </header>
+
+      <!-- PAGE CONTENT -->
+      <main class="app-content">
+
+        <!-- MAIN COLUMN -->
+        <section class="main-column">
+
+          <section class="card reminder-card">
+            <div class="section-head">
+              <div>
+                <h2>Next Medication Reminder</h2>
+                <p class="muted">
+                  Track the next scheduled medication, appointment, or care task.
+                </p>
+              </div>
+              <a class="btn btn-ghost" href="schedule.html">
+                Open Schedule
+              </a>
+            </div>
+          </section>
+
+          <section class="card">
+            <div class="section-head">
+              <h2>Today</h2>
+              <a class="btn btn-ghost" href="schedule.html">
+                View Full Schedule
+              </a>
+            </div>
+
+            <ul id="todayList" class="timeline-list"></ul>
+          </section>
+
+          <section id="lastSymptomCard" class="card hidden">
+            <div class="section-head">
+              <h2>Last Symptom</h2>
+              <a class="btn btn-ghost" href="carelog.html">
+                View Symptoms
+              </a>
+            </div>
+
+            <div id="lastSymptomContent"></div>
+          </section>
+
+          <section class="card">
+            <div class="section-head">
+              <h2>Recent Care Log</h2>
+              <a class="btn btn-ghost" href="carelog.html">
+                Open Care Log
+              </a>
+            </div>
+
+            <ul id="careLogList" class="stack-list"></ul>
+          </section>
+
+        </section>
+
+        <!-- RIGHT COLUMN -->
+        <aside class="side-column">
+
+          <section id="lastVitalsCard" class="card hidden">
+            <div class="section-head">
+              <h2>Last Known Vitals</h2>
+
+              <div class="button-row">
+                <button class="btn btn-ghost" data-quick-vital="full">
+                  Quick Log
+                </button>
+
+                <a class="btn" href="vitals.html">
+                  View History
+                </a>
+              </div>
+            </div>
+
+            <div id="lastVitalsContent"></div>
+          </section>
+
+          <section id="lowSupplyCard" class="card hidden">
+            <div class="section-head">
+              <h2>Inventory Reminders</h2>
+              <a class="btn btn-ghost" href="inventory.html">
+                View Inventory
+              </a>
+            </div>
+
+            <div id="lowSupplySummary" class="alert-box alert-danger"></div>
+            <div id="lowSupplyDashboardList" class="stack-list"></div>
+          </section>
+
+          <section class="card">
+            <div class="section-head">
+              <h2>Quick Log</h2>
+              <span class="muted">
+                Fast daily updates
+              </span>
+            </div>
+
+            <div class="quick-actions">
+              <button class="quick-btn quick-note" data-category="note">
+                <strong>+ Note</strong>
+                <span>Add general care note</span>
+              </button>
+
+              <button class="quick-btn quick-med" data-category="med">
+                <strong>+ Medication</strong>
+                <span>Record medication note</span>
+              </button>
+
+              <button class="quick-btn quick-symptom" data-category="symptom">
+                <strong>+ Symptom</strong>
+                <span>Track symptoms or concerns</span>
+              </button>
+
+              <button class="quick-btn quick-question" data-category="question">
+                <strong>+ Question</strong>
+                <span>Save a question for visits</span>
+              </button>
+
+              <button class="quick-mini" data-quick-vital="o2">
+                <strong>+ O2</strong>
+                <span>Log oxygen saturation</span>
+              </button>
+
+              <button class="quick-mini" data-quick-vital="temp">
+                <strong>+ Temp</strong>
+                <span>Log temperature</span>
+              </button>
+
+              <button class="quick-mini" data-quick-vital="bp">
+                <strong>+ BP</strong>
+                <span>Log blood pressure</span>
+              </button>
+
+              <button class="quick-mini" data-quick-vital="hr">
+                <strong>+ HR</strong>
+                <span>Log heart rate</span>
+              </button>
+
+              <button class="quick-mini" data-quick-vital="rr">
+                <strong>+ RR</strong>
+                <span>Log respiratory rate</span>
+              </button>
+            </div>
+          </section>
+
+          <section class="card emergency-card">
+            <div class="section-head">
+              <h2>Emergency Sheet</h2>
+
+              <div class="button-row">
+                <button id="btnEmergency" class="btn">
+                  Open
+                </button>
+
+                <a class="btn btn-ghost" href="crisis.html">
+                  Crisis Mode
+                </a>
+              </div>
+            </div>
+
+            <p class="muted">
+              Quick access to diagnoses, medications, contacts, allergies, and emergency instructions.
+            </p>
+          </section>
+
+        </aside>
+
+      </main>
+
+    </div>
+
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="supabase.js"></script>
+  <script src="auth.js"></script>
+  <script src="app.js"></script>
 </body>
 </html>
