@@ -1,0 +1,188 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>School Nurse • CareNestia</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div class="app-shell">
+
+  <aside class="app-sidebar">
+    <div class="sidebar-brand">
+      <img src="images/carenestia_logo_wordmark.png" class="sidebar-wordmark" alt="CareNestia">
+    </div>
+
+    <nav class="sidebar-nav">
+      <a class="sidebar-link" href="index.html">Dashboard</a>
+      <a class="sidebar-link" href="schedule.html">Schedule</a>
+      <a class="sidebar-link" href="meds.html">Medications</a>
+      <a class="sidebar-link" href="carelog.html">Care Log</a>
+      <a class="sidebar-link" href="inventory.html">Inventory</a>
+      <a class="sidebar-link active" href="schoolnurse.html">School Nurse</a>
+      <a class="sidebar-link" href="more.html">More</a>
+    </nav>
+  </aside>
+
+  <div class="app-main">
+
+    <header class="app-topbar">
+      <div class="topbar-child-card">
+        <div id="childAvatar" class="topbar-child-avatar"></div>
+        <div>
+          <select id="childSwitcher" class="topbar-child-select"></select>
+          <div id="childSummary" class="topbar-child-meta">Age —</div>
+        </div>
+      </div>
+
+      <div class="topbar-actions">
+        <button id="btnOpenEmergency" class="btn btn-soft" type="button">Emergency Info</button>
+        <button id="logoutBtn" class="btn btn-ghost" type="button">Log out</button>
+      </div>
+    </header>
+
+    <main class="app-content">
+      <section class="main-column">
+
+        <section class="card">
+          <div class="section-head">
+            <div>
+              <h2>School Nurse Dashboard</h2>
+              <p class="muted">View the school-day plan, log events, and access emergency information quickly.</p>
+            </div>
+          </div>
+
+          <div class="quick-actions">
+            <button class="quick-btn quick-note" data-log-type="note" type="button">
+              <strong>+ School Note</strong>
+              <span>General update for parents</span>
+            </button>
+
+            <button class="quick-btn quick-symptom" data-log-type="symptom" type="button">
+              <strong>+ Symptom</strong>
+              <span>Log symptoms or concerns</span>
+            </button>
+
+            <button class="quick-btn quick-med" data-log-type="med" type="button">
+              <strong>+ Medication</strong>
+              <span>Log school medication event</span>
+            </button>
+
+            <button class="quick-btn quick-question" data-log-type="feed" type="button">
+              <strong>+ Feed / Therapy</strong>
+              <span>Track school-day care tasks</span>
+            </button>
+          </div>
+        </section>
+
+        <section class="card">
+          <div class="section-head">
+            <h2>Today at School</h2>
+          </div>
+          <section id="schoolScheduleList" class="stack-list"></section>
+        </section>
+
+        <section class="card">
+          <div class="section-head">
+            <h2>Recent School Activity</h2>
+          </div>
+          <section id="schoolActivityList" class="log-list"></section>
+        </section>
+
+      </section>
+
+      <aside class="side-column">
+
+        <section class="card">
+          <div class="section-head">
+            <h2>Emergency Snapshot</h2>
+          </div>
+          <div id="emergencySnapshot" class="stack-list"></div>
+        </section>
+
+        <section class="card">
+          <div class="section-head">
+            <h2>School-Day Notes</h2>
+          </div>
+          <div id="schoolNotesPanel" class="stack-list"></div>
+        </section>
+
+      </aside>
+    </main>
+
+  </div>
+</div>
+
+<div id="schoolLogModal" class="modal hidden">
+  <div class="modal-card">
+    <div class="section-head">
+      <h2 id="schoolLogModalTitle">Add Entry</h2>
+      <button id="btnCloseSchoolLogModal" class="btn btn-ghost" type="button">Close</button>
+    </div>
+
+    <div class="form-grid">
+      <div class="field">
+        <label for="schoolLogCategory">Category</label>
+        <select id="schoolLogCategory" class="input">
+          <option value="note">School Note</option>
+          <option value="symptom">Symptom</option>
+          <option value="med">Medication</option>
+          <option value="feed">Feed / Therapy</option>
+          <option value="bathroom">Bathroom / Output</option>
+          <option value="missed">Missed Task</option>
+          <option value="seizure">Seizure</option>
+        </select>
+      </div>
+
+      <div class="field">
+        <label for="schoolLogAuthor">Logged By</label>
+        <input id="schoolLogAuthor" class="input" value="School Nurse">
+      </div>
+    </div>
+
+    <div class="form-grid mt-16">
+      <div class="field">
+        <label for="schoolLogDate">Date</label>
+        <input id="schoolLogDate" type="date" class="input">
+      </div>
+
+      <div class="field">
+        <label for="schoolLogTime">Time</label>
+        <input id="schoolLogTime" type="time" class="input">
+      </div>
+    </div>
+
+    <div class="field mt-16">
+      <label for="schoolLogTitle">Title</label>
+      <input id="schoolLogTitle" class="input" placeholder="Short title">
+    </div>
+
+    <div class="field mt-16">
+      <label for="schoolLogNote">Details</label>
+      <textarea id="schoolLogNote" class="input" rows="5" placeholder="Describe what happened..."></textarea>
+    </div>
+
+    <div class="modal-actions">
+      <button id="btnSaveSchoolLog" class="btn" type="button">Save Entry</button>
+    </div>
+  </div>
+</div>
+
+<div id="schoolEmergencyModal" class="modal hidden">
+  <div class="modal-card">
+    <div class="section-head">
+      <h2>Emergency Information</h2>
+      <button id="btnCloseEmergencyModal" class="btn btn-ghost" type="button">Close</button>
+    </div>
+    <div id="schoolEmergencyBody" class="stack-list"></div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="supabase.js"></script>
+<script src="storage.js"></script>
+<script src="auth.js"></script>
+<script src="schoolnurse.js"></script>
+</body>
+</html>
