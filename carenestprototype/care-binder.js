@@ -172,7 +172,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     });
 
     manageSectionsBtn?.addEventListener("click", () => {
-      alert("Manage Sections is the next upgrade. Right now this chart layout is active and editable per section.");
+      alert("Section manager can be the next step. First we’re making sections properly editable.");
     });
 
     editSectionBtn?.addEventListener("click", () => {
@@ -246,10 +246,28 @@ document.addEventListener("DOMContentLoaded", async () => {
     if (!db.careBinder) db.careBinder = {};
     if (!db.careBinder.sections) db.careBinder.sections = {};
 
+    if (!db.careBinder.sections.overview || typeof db.careBinder.sections.overview !== "object") {
+      db.careBinder.sections.overview = {};
+    }
+
+    const overview = db.careBinder.sections.overview;
+    if (typeof overview.legalName !== "string") overview.legalName = "";
+    if (typeof overview.dob !== "string") overview.dob = "";
+    if (typeof overview.age !== "string") overview.age = "";
+    if (typeof overview.sex !== "string") overview.sex = "";
+    if (typeof overview.communication !== "string") overview.communication = "";
+    if (typeof overview.mobility !== "string") overview.mobility = "";
+    if (typeof overview.feedingMethod !== "string") overview.feedingMethod = "";
+    if (typeof overview.preferredHospital !== "string") overview.preferredHospital = "";
+    if (typeof overview.baselineStatus !== "string") overview.baselineStatus = "";
+    if (typeof overview.specialEquipment !== "string") overview.specialEquipment = "";
+    if (typeof overview.emergencyNotes !== "string") overview.emergencyNotes = "";
+
     Object.keys(SECTION_CONFIG).forEach((key) => {
       if (!db.careBinder.sections[key] || typeof db.careBinder.sections[key] !== "object") {
         db.careBinder.sections[key] = { notes: "" };
-      } else if (typeof db.careBinder.sections[key].notes !== "string") {
+      }
+      if (key !== "overview" && typeof db.careBinder.sections[key].notes !== "string") {
         db.careBinder.sections[key].notes = "";
       }
     });
@@ -269,8 +287,6 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   function renderChildSwitcher() {
     const children = getChildren();
-    if (!childSwitcher) return;
-
     childSwitcher.innerHTML = "";
 
     if (!children.length) {
@@ -290,51 +306,45 @@ document.addEventListener("DOMContentLoaded", async () => {
     const child = getActiveChild();
 
     if (!child) {
-      if (childSummary) childSummary.textContent = "No child selected";
-      if (childAvatar) childAvatar.innerHTML = "";
+      childSummary.textContent = "No child selected";
+      childAvatar.innerHTML = "";
       return;
     }
 
     const ageText = child.age ? `Age ${child.age}` : "Age —";
-    const dx = Array.isArray(child.diagnoses) && child.diagnoses.length
-      ? child.diagnoses.slice(0, 2).join(" • ")
-      : "No diagnoses listed";
+    const dx =
+      Array.isArray(child.diagnoses) && child.diagnoses.length
+        ? child.diagnoses.slice(0, 2).join(" • ")
+        : "No diagnoses listed";
 
-    if (childSummary) childSummary.textContent = `${ageText} • ${dx}`;
+    childSummary.textContent = `${ageText} • ${dx}`;
 
-    if (childAvatar) {
-      childAvatar.innerHTML = child.photo_url
-        ? `<img src="${escapeHtml(child.photo_url)}" alt="${escapeHtml(child.name || "Child")}">`
-        : "";
-    }
+    childAvatar.innerHTML = child.photo_url
+      ? `<img src="${escapeAttr(child.photo_url)}" alt="${escapeAttr(child.name || "Child")}">`
+      : "";
   }
 
   function renderSidebarProfile() {
     const child = getActiveChild();
 
     if (!child) {
-      if (binderPhoto) binderPhoto.removeAttribute("src");
-      if (binderName) binderName.textContent = "No child selected";
-      if (binderSub) binderSub.textContent = "Add a child profile to continue";
+      binderPhoto.removeAttribute("src");
+      binderName.textContent = "No child selected";
+      binderSub.textContent = "Add a child profile to continue";
       return;
     }
 
-    if (binderPhoto) {
-      binderPhoto.src = child.photo_url || "https://via.placeholder.com/600x400?text=Child+Photo";
-      binderPhoto.alt = child.name ? `${child.name} photo` : "Child photo";
-      binderPhoto.onerror = () => {
-        binderPhoto.src = "https://via.placeholder.com/600x400?text=Child+Photo";
-      };
-    }
-
-    if (binderName) binderName.textContent = child.name || "Child";
+    binderPhoto.src = child.photo_url || "https://via.placeholder.com/600x400?text=Child+Photo";
+    binderPhoto.alt = child.name ? `${child.name} photo` : "Child photo";
+    binderName.textContent = child.name || "Child";
 
     const ageText = child.age ? `Age ${child.age}` : "Age —";
-    const dx = Array.isArray(child.diagnoses) && child.diagnoses.length
-      ? child.diagnoses.join(" • ")
-      : "No diagnoses listed";
+    const dx =
+      Array.isArray(child.diagnoses) && child.diagnoses.length
+        ? child.diagnoses.join(" • ")
+        : "No diagnoses listed";
 
-    if (binderSub) binderSub.textContent = `${ageText} • ${dx}`;
+    binderSub.textContent = `${ageText} • ${dx}`;
   }
 
   function renderGroupNav() {
@@ -356,8 +366,6 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   function renderSubnav() {
     const sectionKeys = getSectionsForGroup(currentGroup);
-
-    if (!binderSubnav) return;
 
     binderSubnav.innerHTML = sectionKeys
       .map((key) => {
@@ -390,8 +398,6 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
   function renderStatusPanel() {
-    if (!binderStatusList) return;
-
     const allSections = Object.keys(SECTION_CONFIG);
 
     binderStatusList.innerHTML = allSections
@@ -410,16 +416,29 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
   function getSectionStatus(key) {
+    if (key === "overview") {
+      const section = db.careBinder?.sections?.overview || {};
+      const fields = [
+        section.legalName,
+        section.dob,
+        section.sex,
+        section.communication,
+        section.mobility,
+        section.feedingMethod,
+        section.preferredHospital,
+        section.baselineStatus,
+        section.specialEquipment,
+        section.emergencyNotes
+      ].filter((v) => String(v || "").trim());
+
+      if (!fields.length) return { label: "Empty", className: "status-empty" };
+      if (fields.length < 5) return { label: "Partial", className: "status-partial" };
+      return { label: "Complete", className: "status-complete" };
+    }
+
     const notes = db.careBinder?.sections?.[key]?.notes || "";
-
-    if (!notes.trim()) {
-      return { label: "Empty", className: "status-empty" };
-    }
-
-    if (notes.trim().length < 40) {
-      return { label: "Partial", className: "status-partial" };
-    }
-
+    if (!notes.trim()) return { label: "Empty", className: "status-empty" };
+    if (notes.trim().length < 40) return { label: "Partial", className: "status-partial" };
     return { label: "Complete", className: "status-complete" };
   }
 
@@ -434,17 +453,67 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   function renderSection(key) {
     const cfg = SECTION_CONFIG[key];
-    const notes = db.careBinder?.sections?.[key]?.notes || "";
+    sectionTitle.textContent = cfg.label;
+    sectionDesc.textContent = cfg.desc;
 
-    if (sectionTitle) sectionTitle.textContent = cfg.label;
-    if (sectionDesc) sectionDesc.textContent = cfg.desc;
+    if (key === "overview") {
+      binderSectionContent.innerHTML = renderOverviewSection();
+    } else {
+      const notes = db.careBinder?.sections?.[key]?.notes || "";
 
-    if (!binderSectionContent) return;
+      binderSectionContent.innerHTML = `
+        <section class="chart-card">
+          <div class="chart-card-head">
+            <h3>${escapeHtml(cfg.label)}</h3>
+            <div class="button-row">
+              <button class="btn btn-ghost" type="button" id="inlineEditBtn">Edit</button>
+            </div>
+          </div>
 
-    binderSectionContent.innerHTML = `
+          <div class="chart-card-body">
+            <div class="kv-list">
+              <div class="kv-row">
+                <div class="kv-key">Notes</div>
+                <div>${notes ? escapeHtml(notes) : `<span class="empty-state">No notes yet.</span>`}</div>
+              </div>
+            </div>
+          </div>
+        </section>
+      `;
+
+      document.getElementById("inlineEditBtn")?.addEventListener("click", () => {
+        openEdit(key);
+      });
+    }
+
+    editSectionBtn.onclick = () => openEdit(key);
+    renderStats();
+    renderStatusPanel();
+  }
+
+  function renderOverviewSection() {
+    const child = getActiveChild();
+    const overview = db.careBinder?.sections?.overview || {};
+
+    const rows = [
+      ["Preferred Name", child?.name || "—"],
+      ["Legal Name", overview.legalName || "—"],
+      ["DOB", overview.dob || child?.birthdate || "—"],
+      ["Age", overview.age || (child?.age ? String(child.age) : "—")],
+      ["Sex", overview.sex || "—"],
+      ["Communication", overview.communication || "—"],
+      ["Mobility", overview.mobility || "—"],
+      ["Feeding Method", overview.feedingMethod || "—"],
+      ["Preferred Hospital", overview.preferredHospital || "—"],
+      ["Baseline Status", overview.baselineStatus || "—"],
+      ["Special Equipment", overview.specialEquipment || "—"],
+      ["Emergency Notes", overview.emergencyNotes || "—"]
+    ];
+
+    return `
       <section class="chart-card">
         <div class="chart-card-head">
-          <h3>${escapeHtml(cfg.label)}</h3>
+          <h3>Overview</h3>
           <div class="button-row">
             <button class="btn btn-ghost" type="button" id="inlineEditBtn">Edit</button>
           </div>
@@ -452,60 +521,169 @@ document.addEventListener("DOMContentLoaded", async () => {
 
         <div class="chart-card-body">
           <div class="kv-list">
-            <div class="kv-row">
-              <div class="kv-key">Notes</div>
-              <div>${notes ? escapeHtml(notes) : `<span class="empty-state">No notes yet.</span>`}</div>
-            </div>
+            ${rows
+              .map(
+                ([label, value]) => `
+                  <div class="kv-row">
+                    <div class="kv-key">${escapeHtml(label)}</div>
+                    <div>${escapeHtml(value || "—")}</div>
+                  </div>
+                `
+              )
+              .join("")}
           </div>
         </div>
       </section>
     `;
-
-    document.getElementById("inlineEditBtn")?.addEventListener("click", () => {
-      openEdit(key);
-    });
-
-    if (editSectionBtn) {
-      editSectionBtn.onclick = () => openEdit(key);
-    }
-
-    renderStats();
-    renderStatusPanel();
   }
 
   function openEdit(key) {
     editingSection = key;
-    if (editTitle) editTitle.textContent = `Edit ${SECTION_CONFIG[key].label}`;
-    if (editNotes) editNotes.value = db.careBinder?.sections?.[key]?.notes || "";
-    editModal?.classList.add("open");
-    editNotes?.focus();
+
+    if (key === "overview") {
+      openOverviewEditor();
+      return;
+    }
+
+    editTitle.textContent = `Edit ${SECTION_CONFIG[key].label}`;
+    editNotes.value = db.careBinder?.sections?.[key]?.notes || "";
+    editModal.classList.add("open");
+    editNotes.focus();
+  }
+
+  function openOverviewEditor() {
+    const child = getActiveChild();
+    const overview = db.careBinder?.sections?.overview || {};
+
+    editTitle.textContent = "Edit Overview";
+
+    editNotes.outerHTML = `
+      <div id="overviewEditForm" class="form-grid" style="margin-top:12px;">
+        <div class="field">
+          <label for="ovLegalName">Legal Name</label>
+          <input id="ovLegalName" class="input" value="${escapeAttr(overview.legalName || "")}">
+        </div>
+
+        <div class="field">
+          <label for="ovDob">DOB</label>
+          <input id="ovDob" class="input" value="${escapeAttr(overview.dob || child?.birthdate || "")}">
+        </div>
+
+        <div class="field">
+          <label for="ovAge">Age</label>
+          <input id="ovAge" class="input" value="${escapeAttr(overview.age || (child?.age ? String(child.age) : ""))}">
+        </div>
+
+        <div class="field">
+          <label for="ovSex">Sex</label>
+          <input id="ovSex" class="input" value="${escapeAttr(overview.sex || "")}">
+        </div>
+
+        <div class="field">
+          <label for="ovCommunication">Communication</label>
+          <textarea id="ovCommunication" class="input" rows="3">${escapeHtml(overview.communication || "")}</textarea>
+        </div>
+
+        <div class="field">
+          <label for="ovMobility">Mobility</label>
+          <textarea id="ovMobility" class="input" rows="3">${escapeHtml(overview.mobility || "")}</textarea>
+        </div>
+
+        <div class="field">
+          <label for="ovFeedingMethod">Feeding Method</label>
+          <textarea id="ovFeedingMethod" class="input" rows="3">${escapeHtml(overview.feedingMethod || "")}</textarea>
+        </div>
+
+        <div class="field">
+          <label for="ovPreferredHospital">Preferred Hospital</label>
+          <textarea id="ovPreferredHospital" class="input" rows="3">${escapeHtml(overview.preferredHospital || "")}</textarea>
+        </div>
+
+        <div class="field">
+          <label for="ovBaselineStatus">Baseline Status</label>
+          <textarea id="ovBaselineStatus" class="input" rows="4">${escapeHtml(overview.baselineStatus || "")}</textarea>
+        </div>
+
+        <div class="field">
+          <label for="ovSpecialEquipment">Special Equipment</label>
+          <textarea id="ovSpecialEquipment" class="input" rows="4">${escapeHtml(overview.specialEquipment || "")}</textarea>
+        </div>
+
+        <div class="field" style="grid-column:1 / -1;">
+          <label for="ovEmergencyNotes">Emergency Notes</label>
+          <textarea id="ovEmergencyNotes" class="input" rows="5">${escapeHtml(overview.emergencyNotes || "")}</textarea>
+        </div>
+      </div>
+    `;
+
+    editModal.classList.add("open");
+    document.getElementById("ovLegalName")?.focus();
   }
 
   function closeEdit() {
-    editModal?.classList.remove("open");
+    editModal.classList.remove("open");
+    restoreDefaultEditBody();
+  }
+
+  function restoreDefaultEditBody() {
+    const overviewEditForm = document.getElementById("overviewEditForm");
+    if (overviewEditForm) {
+      overviewEditForm.outerHTML = `<textarea id="editNotes" class="input" rows="6"></textarea>`;
+    }
   }
 
   function saveEdit() {
     if (!editingSection) return;
 
+    if (editingSection === "overview") {
+      saveOverviewEdit();
+      return;
+    }
+
     if (!db.careBinder) db.careBinder = {};
     if (!db.careBinder.sections) db.careBinder.sections = {};
     if (!db.careBinder.sections[editingSection]) db.careBinder.sections[editingSection] = {};
 
-    db.careBinder.sections[editingSection].notes = editNotes?.value.trim() || "";
+    const notesEl = document.getElementById("editNotes");
+    db.careBinder.sections[editingSection].notes = notesEl?.value.trim() || "";
     saveDB(db);
 
     renderSection(editingSection);
     closeEdit();
   }
 
+  function saveOverviewEdit() {
+    if (!db.careBinder) db.careBinder = {};
+    if (!db.careBinder.sections) db.careBinder.sections = {};
+    if (!db.careBinder.sections.overview) db.careBinder.sections.overview = {};
+
+    const overview = db.careBinder.sections.overview;
+
+    overview.legalName = getValue("ovLegalName");
+    overview.dob = getValue("ovDob");
+    overview.age = getValue("ovAge");
+    overview.sex = getValue("ovSex");
+    overview.communication = getValue("ovCommunication");
+    overview.mobility = getValue("ovMobility");
+    overview.feedingMethod = getValue("ovFeedingMethod");
+    overview.preferredHospital = getValue("ovPreferredHospital");
+    overview.baselineStatus = getValue("ovBaselineStatus");
+    overview.specialEquipment = getValue("ovSpecialEquipment");
+    overview.emergencyNotes = getValue("ovEmergencyNotes");
+
+    saveDB(db);
+    renderSection("overview");
+    closeEdit();
+  }
+
+  function getValue(id) {
+    return document.getElementById(id)?.value.trim() || "";
+  }
+
   function normalizeDiagnoses(value) {
     if (Array.isArray(value)) return value.filter(Boolean);
     if (typeof value === "string" && value.trim()) {
-      return value
-        .split(",")
-        .map((item) => item.trim())
-        .filter(Boolean);
+      return value.split(",").map((item) => item.trim()).filter(Boolean);
     }
     return [];
   }
@@ -533,5 +711,9 @@ document.addEventListener("DOMContentLoaded", async () => {
       .replace(/>/g, "&gt;")
       .replace(/"/g, "&quot;")
       .replace(/'/g, "&#39;");
+  }
+
+  function escapeAttr(value) {
+    return escapeHtml(value);
   }
 });
