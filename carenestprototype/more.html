@@ -1,149 +1,197 @@
 <!doctype html>
 <html lang="en">
+
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>More • CareNest</title>
-  <link rel="stylesheet" href="styles.css" />
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>CareNestia More</title>
+  <link rel="stylesheet" href="styles.css">
 </head>
 
 <body>
+  <div class="app-shell">
 
-  <header class="topbar">
-    <div class="container">
-      <div class="topbar-left">
-        <h1>CareNest</h1>
-        <p>More</p>
+    <!-- SIDEBAR -->
+    <aside class="app-sidebar">
+
+      <div class="sidebar-brand">
+        <img src="images/carenestia_logo_wordmark.png" class="sidebar-wordmark" alt="CareNestia">
       </div>
 
-      <div class="topbar-right">
-        <select id="childSwitcher" class="child-switcher"></select>
-        <button id="logoutBtn" class="btn btn-ghost" type="button">Log out</button>
+      <nav class="sidebar-nav">
+        <a class="sidebar-link" href="index.html">Dashboard</a>
+        <a class="sidebar-link" href="schedule.html">Schedule</a>
+        <a class="sidebar-link" href="meds.html">Medications</a>
+        <a class="sidebar-link" href="carelog.html">Care Log</a>
+        <a class="sidebar-link" href="inventory.html">Inventory</a>
+        <a class="sidebar-link" href="schoolnurse.html">School Nurse</a>
+        <a class="sidebar-link active" href="more.html">More</a>
+      </nav>
+
+      <div class="sidebar-actions-card">
+        <div class="sidebar-actions-title">
+          Quick Access
+        </div>
+
+        <button class="btn btn-primary btn-block" data-link="care-binder.html">
+          Open Care Binder
+        </button>
+
+        <button class="btn btn-ghost btn-block" id="btnOpenEmergency">
+          Open Emergency Sheet
+        </button>
+
+        <button class="btn btn-ghost btn-block" data-link="crisis.html">
+          Open Crisis Mode
+        </button>
       </div>
+
+    </aside>
+
+    <!-- MAIN AREA -->
+    <div class="app-main">
+
+      <!-- HEADER -->
+      <header class="app-topbar">
+
+        <div class="topbar-child-card">
+          <div class="topbar-child-avatar" id="childAvatar"></div>
+
+          <div class="topbar-child-copy">
+            <select id="childSwitcher" class="topbar-child-select"></select>
+
+            <div class="topbar-child-meta" id="childSummary">
+              Age —
+            </div>
+
+            <div class="pill-row" id="diagnosisPills"></div>
+          </div>
+        </div>
+
+        <div class="topbar-actions">
+          <button id="logoutBtn" class="btn btn-ghost">
+            Log out
+          </button>
+        </div>
+
+      </header>
+
+      <!-- PAGE CONTENT -->
+      <main class="app-content">
+
+        <section class="main-column">
+
+          <section class="card">
+            <div class="section-head">
+              <div>
+                <h1 style="margin-bottom:6px;">More</h1>
+                <p class="muted">Additional tools and child record access.</p>
+              </div>
+            </div>
+          </section>
+
+          <section class="card">
+            <div class="section-head">
+              <h2>Care Tools</h2>
+              <span class="muted">Core support tools for emergencies and records</span>
+            </div>
+
+            <div class="quick-actions">
+              <button class="quick-btn quick-note" data-link="care-binder.html">
+                <strong>📘 Care Binder</strong>
+                <span>Child profile, plans, school info, history, and records</span>
+              </button>
+
+              <button class="quick-btn quick-symptom" id="btnEmergencyCard">
+                <strong>🚨 Emergency Sheet</strong>
+                <span>Fast-access emergency information for EMS and caregivers</span>
+              </button>
+
+              <button class="quick-btn quick-med" data-link="crisis.html">
+                <strong>⏱️ Crisis Mode</strong>
+                <span>Emergency timer, response flow, and event tracking</span>
+              </button>
+            </div>
+          </section>
+
+          <section class="card">
+            <div class="section-head">
+              <h2>Management</h2>
+              <span class="muted">Supplies, reports, and app tools</span>
+            </div>
+
+            <div class="quick-actions">
+              <button class="quick-btn quick-question" data-link="inventory.html">
+                <strong>📦 Inventory</strong>
+                <span>Track supplies, formula, meds, and equipment needs</span>
+              </button>
+
+              <button class="quick-btn quick-note" data-link="reports.html">
+                <strong>📄 Reports</strong>
+                <span>Generate summaries and visit-ready information</span>
+              </button>
+
+              <button class="quick-btn quick-question" data-link="settings.html">
+                <strong>⚙️ Settings</strong>
+                <span>Manage account, preferences, and app setup</span>
+              </button>
+            </div>
+          </section>
+
+          <section class="card">
+            <div class="section-head">
+              <h2>Access</h2>
+              <span class="muted">School and caregiver tools</span>
+            </div>
+
+            <div class="quick-actions">
+              <button class="quick-btn quick-symptom" data-link="schoolnurse.html">
+                <strong>🏫 School Nurse</strong>
+                <span>School-day logs, schedule, and emergency references</span>
+              </button>
+            </div>
+          </section>
+
+        </section>
+
+        <aside class="side-column">
+
+          <section class="card emergency-card">
+            <div class="section-head">
+              <h2>Emergency Access</h2>
+              <div class="button-row">
+                <button class="btn" id="btnOpenEmergencySide">Open</button>
+                <a class="btn btn-ghost" href="crisis.html">Crisis Mode</a>
+              </div>
+            </div>
+
+            <p class="muted">
+              Quick access to diagnoses, medications, allergies, contacts, and emergency instructions.
+            </p>
+          </section>
+
+          <section class="card">
+            <div class="section-head">
+              <h2>Care Binder</h2>
+              <a class="btn btn-ghost" href="care-binder.html">Open</a>
+            </div>
+
+            <p class="muted">
+              The central binder for child history, care plans, emergency planning, school information, and records.
+            </p>
+          </section>
+
+        </aside>
+
+      </main>
+
     </div>
-  </header>
-
-  <main class="page">
-
-    <div class="welcome-row">
-      <h1>More</h1>
-      <div id="childSummary" class="badge"></div>
-    </div>
-
-    <section class="card">
-      <div class="section-head">
-        <h2>Medical Binder</h2>
-      </div>
-
-      <div class="simple-list">
-        <a class="simple-item" href="binder.html">
-          <div>
-            <div class="strong">Binder</div>
-            <div class="muted tiny">Medical records and important info</div>
-          </div>
-        </a>
-
-        <a class="simple-item" href="emergency.html">
-          <div>
-            <div class="strong">Emergency Sheet</div>
-            <div class="muted tiny">Critical information for EMS</div>
-          </div>
-        </a>
-      </div>
-    </section>
-
-    <section class="card">
-      <div class="section-head">
-        <h2>Care Tools</h2>
-      </div>
-
-      <div class="simple-list">
-        <a class="simple-item" href="careplan.html">
-          <div>
-            <div class="strong">Care Plan</div>
-            <div class="muted tiny">Emergency instructions, protocols, and baseline info</div>
-          </div>
-        </a>
-
-        <a class="simple-item" href="inventory.html">
-          <div>
-            <div class="strong">Inventory</div>
-            <div class="muted tiny">Track medical supplies</div>
-          </div>
-        </a>
-
-        <a class="simple-item" href="vitals.html">
-          <div>
-            <div class="strong">Vitals</div>
-            <div class="muted tiny">View and log vitals history</div>
-          </div>
-        </a>
-
-        <a class="simple-item" href="schoolnurse.html">
-          <div>
-            <div class="strong">School Nurse Log</div>
-            <div class="muted tiny">Daily logs from school</div>
-          </div>
-        </a>
-      </div>
-    </section>
-
-    <section class="card">
-      <div class="section-head">
-        <h2>Reports</h2>
-      </div>
-
-      <div class="simple-list">
-        <a class="simple-item" href="visitprep.html">
-          <div>
-            <div class="strong">Visit Prep</div>
-            <div class="muted tiny">Prepare summaries for appointments</div>
-          </div>
-        </a>
-
-        <a class="simple-item" href="export.html">
-          <div>
-            <div class="strong">Export Reports</div>
-            <div class="muted tiny">Download care summaries</div>
-          </div>
-        </a>
-      </div>
-    </section>
-
-    <section class="card">
-      <div class="section-head">
-        <h2>Settings</h2>
-      </div>
-
-      <div class="simple-list">
-        <a class="simple-item" href="settings.html">
-          <div>
-            <div class="strong">App Settings</div>
-            <div class="muted tiny">Profile, preferences, children</div>
-          </div>
-        </a>
-      </div>
-    </section>
-
-  </main>
-
-  <nav class="bottom-nav">
-    <div class="bottom-nav-inner">
-      <a class="nav-link" href="index.html">Home</a>
-      <a class="nav-link" href="carelog.html">Care Log</a>
-      <a class="nav-link" href="meds.html">Meds</a>
-      <a class="nav-link" href="schedule.html">Schedule</a>
-      <a class="nav-link active" href="more.html">More</a>
-    </div>
-  </nav>
-
-  <button class="emergency-btn hidden" type="button">Emergency</button>
+  </div>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="supabase.js"></script>
-  <script src="storage.js"></script>
   <script src="auth.js"></script>
+  <script src="storage.js"></script>
   <script src="more.js"></script>
-
 </body>
 </html>
