@@ -22,7 +22,7 @@
         <a class="sidebar-link" href="carelog.html">Care Log</a>
         <a class="sidebar-link" href="inventory.html">Inventory</a>
         <a class="sidebar-link" href="schoolnurse.html">School Nurse</a>
-        <a class="sidebar-link" href="documents.html">Documents</a>
+        <a class="sidebar-link" href="more.html">More</a>
       </nav>
 
       <div class="sidebar-actions-card">
@@ -33,6 +33,7 @@
           <a class="btn btn-ghost btn-block" href="meds.html">Open Medications</a>
           <a class="btn btn-ghost btn-block" href="carelog.html">Open Care Log</a>
           <a class="btn btn-ghost btn-block" href="inventory.html">Open Inventory</a>
+          <a class="btn btn-ghost btn-block" href="care-binder.html">Open Care Binder</a>
         </div>
       </div>
     </aside>
@@ -196,6 +197,7 @@
               <h2>Emergency Info</h2>
               <div class="button-row">
                 <button id="btnEmergency" class="btn" type="button">Open</button>
+                <a class="btn btn-ghost" href="crisis.html">Crisis Mode</a>
               </div>
             </div>
 
@@ -357,6 +359,10 @@
 
     document.getElementById("btnAddTaskQuick")?.addEventListener("click", () => {
       document.getElementById("btnAddTask")?.click();
+    });
+
+    document.getElementById("btnEmergency")?.addEventListener("click", () => {
+      window.location.href = "emergency-sheet.html";
     });
   </script>
 </body>
