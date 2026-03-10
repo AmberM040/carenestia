@@ -1,0 +1,435 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Care Binder • CareNestia</title>
+  <link rel="stylesheet" href="styles.css" />
+  <style>
+    .binder-shell {
+      display: grid;
+      grid-template-columns: 300px minmax(0, 1fr);
+      gap: 20px;
+      align-items: start;
+    }
+
+    .binder-sidebar {
+      position: sticky;
+      top: 16px;
+      display: grid;
+      gap: 14px;
+    }
+
+    .binder-profile {
+      overflow: hidden;
+      padding: 0;
+    }
+
+    .binder-photo {
+      width: 100%;
+      height: 170px;
+      object-fit: cover;
+      display: block;
+      background: #e9eefc;
+    }
+
+    .binder-profile-body {
+      padding: 16px;
+    }
+
+    .binder-name {
+      font-size: 1.35rem;
+      font-weight: 800;
+      margin: 0 0 4px;
+    }
+
+    .binder-sub {
+      color: var(--muted);
+      margin: 0;
+    }
+
+    .binder-manage-btn {
+      width: 100%;
+    }
+
+    .binder-nav {
+      padding: 10px 0;
+    }
+
+    .binder-nav a {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 12px 16px;
+      color: var(--text);
+      text-decoration: none;
+      border-left: 3px solid transparent;
+      font-weight: 600;
+    }
+
+    .binder-nav a:hover,
+    .binder-nav a.active {
+      background: rgba(111, 93, 255, 0.08);
+      border-left-color: var(--primary);
+      color: var(--primary);
+    }
+
+    .binder-main {
+      display: grid;
+      gap: 16px;
+    }
+
+    .binder-header {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: start;
+      flex-wrap: wrap;
+    }
+
+    .binder-header h1 {
+      margin-bottom: 6px;
+    }
+
+    .binder-section-desc {
+      color: var(--muted);
+      margin: 0;
+    }
+
+    .binder-actions {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .subcard {
+      padding: 0;
+      overflow: hidden;
+    }
+
+    .subcard-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      padding: 14px 16px;
+      border-bottom: 1px solid var(--line);
+      background: rgba(111, 93, 255, 0.03);
+    }
+
+    .subcard-head h3 {
+      margin: 0;
+      font-size: 1.02rem;
+    }
+
+    .subcard-body {
+      padding: 16px;
+    }
+
+    .subcard-actions {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .kv-list {
+      display: grid;
+      gap: 10px;
+    }
+
+    .kv-row {
+      display: grid;
+      grid-template-columns: 180px minmax(0, 1fr);
+      gap: 12px;
+      align-items: start;
+      padding: 8px 0;
+      border-bottom: 1px dashed rgba(0,0,0,0.08);
+    }
+
+    .kv-row:last-child {
+      border-bottom: 0;
+      padding-bottom: 0;
+    }
+
+    .kv-key {
+      font-weight: 700;
+      color: var(--muted);
+    }
+
+    .pill-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .pill {
+      padding: 6px 10px;
+      border-radius: 999px;
+      background: rgba(111, 93, 255, 0.1);
+      color: var(--primary);
+      font-weight: 700;
+      font-size: 0.92rem;
+    }
+
+    .entry-list {
+      display: grid;
+      gap: 10px;
+    }
+
+    .entry-item {
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 12px;
+      background: #fff;
+    }
+
+    .entry-item strong {
+      display: block;
+      margin-bottom: 4px;
+    }
+
+    .empty-state {
+      color: var(--muted);
+      font-style: italic;
+    }
+
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(20, 20, 40, 0.45);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 18px;
+      z-index: 999;
+    }
+
+    .modal-backdrop.open {
+      display: flex;
+    }
+
+    .modal-card {
+      width: min(860px, 100%);
+      max-height: 88vh;
+      overflow: auto;
+      border-radius: 24px;
+      background: #fff;
+      box-shadow: 0 24px 60px rgba(30, 30, 60, 0.18);
+      border: 1px solid var(--line);
+    }
+
+    .modal-head {
+      padding: 18px 20px;
+      border-bottom: 1px solid var(--line);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      background: linear-gradient(135deg, rgba(111,93,255,0.9), rgba(127,198,255,0.9));
+      color: white;
+    }
+
+    .modal-head h2 {
+      margin: 0;
+      color: white;
+    }
+
+    .modal-body {
+      padding: 18px 20px;
+      display: grid;
+      gap: 20px;
+    }
+
+    .toggle-grid {
+      display: grid;
+      gap: 12px;
+    }
+
+    .toggle-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 14px;
+      padding: 14px;
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      background: #fff;
+    }
+
+    .toggle-left {
+      display: grid;
+      gap: 4px;
+    }
+
+    .toggle-left small {
+      color: var(--muted);
+    }
+
+    .switch {
+      position: relative;
+      width: 52px;
+      height: 30px;
+      flex: 0 0 auto;
+    }
+
+    .switch input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+
+    .slider {
+      position: absolute;
+      inset: 0;
+      background: #cfd5e6;
+      border-radius: 999px;
+      cursor: pointer;
+      transition: 0.2s;
+    }
+
+    .slider:before {
+      content: "";
+      position: absolute;
+      width: 24px;
+      height: 24px;
+      left: 3px;
+      top: 3px;
+      background: white;
+      border-radius: 50%;
+      transition: 0.2s;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+    }
+
+    .switch input:checked + .slider {
+      background: var(--primary);
+    }
+
+    .switch input:checked + .slider:before {
+      transform: translateX(22px);
+    }
+
+    .modal-actions {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+      border-top: 1px solid var(--line);
+      padding-top: 16px;
+    }
+
+    .option-box {
+      margin-top: 8px;
+      display: grid;
+      gap: 8px;
+      padding: 12px;
+      border-radius: 14px;
+      background: rgba(111, 93, 255, 0.05);
+    }
+
+    .checkbox-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    @media (max-width: 980px) {
+      .binder-shell {
+        grid-template-columns: 1fr;
+      }
+
+      .binder-sidebar {
+        position: static;
+      }
+
+      .kv-row {
+        grid-template-columns: 1fr;
+        gap: 4px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <div class="topbar-inner">
+      <div class="brand">
+        <div class="brand-logo">💙</div>
+        <div class="brand-text">CareNestia</div>
+      </div>
+
+      <div class="topbar-actions">
+        <select id="childSwitcher" class="child-switcher"></select>
+        <a class="btn btn-ghost" href="more.html">← Back</a>
+      </div>
+    </div>
+  </header>
+
+  <main class="page">
+    <div class="binder-shell">
+      <aside class="binder-sidebar">
+        <section class="card binder-profile">
+          <img id="binderPhoto" class="binder-photo" alt="Child photo" />
+          <div class="binder-profile-body">
+            <h2 id="binderName" class="binder-name">Child Name</h2>
+            <p id="binderSub" class="binder-sub">Age • Diagnoses</p>
+          </div>
+        </section>
+
+        <button id="manageSectionsBtn" class="btn binder-manage-btn" type="button">
+          ⚙️ Manage Sections
+        </button>
+
+        <nav id="binderNav" class="card binder-nav"></nav>
+      </aside>
+
+      <section class="binder-main">
+        <div class="card binder-header">
+          <div>
+            <h1 id="sectionTitle">Care Binder</h1>
+            <p id="sectionDesc" class="binder-section-desc">Select a section from the binder.</p>
+          </div>
+          <div class="binder-actions">
+            <button id="editSectionBtn" class="btn btn-ghost" type="button">Edit Section</button>
+            <a class="btn btn-primary" href="emergency-sheet.html">Open Emergency Sheet</a>
+          </div>
+        </div>
+
+        <div id="binderSectionContent"></div>
+      </section>
+    </div>
+  </main>
+
+  <div id="sectionsModal" class="modal-backdrop" aria-hidden="true">
+    <div class="modal-card">
+      <div class="modal-head">
+        <h2>Manage Binder Sections</h2>
+        <button id="closeModalBtn" class="btn btn-ghost" type="button">✕</button>
+      </div>
+
+      <div class="modal-body">
+        <div>
+          <h3>Visible & Optional Sections</h3>
+          <div id="sectionsToggleList" class="toggle-grid"></div>
+        </div>
+
+        <div id="conditionalOptionsWrap">
+          <h3>Conditional Options</h3>
+          <div id="conditionalOptionsList" class="toggle-grid"></div>
+        </div>
+
+        <div class="modal-actions">
+          <button id="restoreLayoutBtn" class="btn btn-ghost" type="button">
+            Restore Recommended Layout
+          </button>
+          <div class="subcard-actions">
+            <button id="cancelModalBtn" class="btn btn-ghost" type="button">Cancel</button>
+            <button id="saveSectionsBtn" class="btn btn-primary" type="button">Save Changes</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="storage.js"></script>
+  <script src="care-binder.js"></script>
+</body>
+</html>
