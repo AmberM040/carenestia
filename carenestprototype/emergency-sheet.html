@@ -6,6 +6,11 @@
   <title>Emergency Sheet • CareNestia</title>
   <link rel="stylesheet" href="styles.css" />
   <style>
+    .emergency-page .app-content {
+      display: block;
+      padding: 18px;
+    }
+
     .emergency-wrap {
       display: grid;
       gap: 16px;
@@ -20,7 +25,7 @@
     }
 
     .emergency-top h1 {
-      margin-bottom: 6px;
+      margin: 0 0 6px;
     }
 
     .emergency-sub {
@@ -62,7 +67,7 @@
 
     .ems-head {
       padding: 14px 16px;
-      border-bottom: 1px solid var(--line);
+      border-bottom: 1px solid var(--border);
       background: rgba(111, 93, 255, 0.04);
     }
 
@@ -104,26 +109,31 @@
       gap: 6px;
     }
 
-    .critical-list {
+    .critical-list,
+    .protocol-box,
+    .ice-list,
+    .med-list,
+    .equip-list {
       display: grid;
-      gap: 12px;
+      gap: 10px;
     }
 
-    .critical-item {
-      border: 1px solid var(--line);
+    .critical-item,
+    .ice-item,
+    .med-item,
+    .equip-item {
+      border: 1px solid var(--border);
       border-radius: 16px;
       padding: 12px;
       background: #fff;
     }
 
-    .critical-item strong {
+    .critical-item strong,
+    .ice-item strong,
+    .med-item strong,
+    .equip-item strong {
       display: block;
       margin-bottom: 6px;
-    }
-
-    .protocol-box {
-      display: grid;
-      gap: 10px;
     }
 
     .protocol-line {
@@ -131,18 +141,6 @@
       border-radius: 14px;
       background: rgba(111, 93, 255, 0.05);
       border: 1px solid rgba(111, 93, 255, 0.14);
-    }
-
-    .ice-list, .med-list, .equip-list {
-      display: grid;
-      gap: 10px;
-    }
-
-    .ice-item, .med-item, .equip-item {
-      border: 1px solid var(--line);
-      border-radius: 14px;
-      padding: 12px;
-      background: #fff;
     }
 
     .footer-note {
@@ -166,94 +164,116 @@
     }
   </style>
 </head>
-<body>
-  <header class="topbar">
-    <div class="topbar-inner">
-      <div class="brand">
-        <div class="brand-logo">💙</div>
-        <div class="brand-text">CareNestia</div>
+<body class="emergency-page">
+  <div class="app-shell">
+    <aside class="app-sidebar">
+      <div class="sidebar-brand">
+        <img src="images/carenestia_logo_wordmark.png" class="sidebar-wordmark" alt="CareNestia">
       </div>
 
-      <div class="topbar-actions">
-        <select id="childSwitcher" class="child-switcher"></select>
-        <a class="btn btn-ghost" href="care-binder.html">← Back to Binder</a>
-      </div>
+      <nav class="sidebar-nav">
+        <a class="sidebar-link" href="index.html">Dashboard</a>
+        <a class="sidebar-link" href="schedule.html">Schedule</a>
+        <a class="sidebar-link" href="meds.html">Medications</a>
+        <a class="sidebar-link" href="carelog.html">Care Log</a>
+        <a class="sidebar-link" href="inventory.html">Inventory</a>
+        <a class="sidebar-link" href="schoolnurse.html">School Nurse</a>
+        <a class="sidebar-link active" href="more.html">More</a>
+      </nav>
+    </aside>
+
+    <div class="app-main">
+      <header class="app-topbar">
+        <div class="topbar-child-card">
+          <div id="childAvatar" class="topbar-child-avatar"></div>
+          <div>
+            <select id="childSwitcher" class="topbar-child-select"></select>
+            <div id="childSummary" class="topbar-child-meta">Age —</div>
+          </div>
+        </div>
+
+        <div class="topbar-actions">
+          <a class="btn btn-ghost" href="care-binder.html">Back to Binder</a>
+          <button id="shareBtn" class="btn btn-ghost" type="button">Share</button>
+          <button id="printBtn" class="btn" type="button">Print</button>
+        </div>
+      </header>
+
+      <main class="app-content">
+        <div class="emergency-wrap">
+          <div class="card emergency-top">
+            <div>
+              <h1>Emergency Information</h1>
+              <p id="emergencySub" class="emergency-sub">
+                For first responder use during a medical emergency.
+              </p>
+            </div>
+          </div>
+
+          <div class="alert-strip">
+            Use this screen for fast EMS access. Information is pulled from the child profile, care binder, and medication data.
+          </div>
+
+          <div class="emergency-grid">
+            <div class="stack">
+              <section class="card ems-card">
+                <div class="ems-head">
+                  <h2>Child Details</h2>
+                </div>
+                <div id="childDetailsCard" class="ems-body"></div>
+              </section>
+
+              <section class="card ems-card">
+                <div class="ems-head">
+                  <h2>Seizure / Medical Protocol</h2>
+                </div>
+                <div id="protocolCard" class="ems-body"></div>
+              </section>
+
+              <section class="card ems-card">
+                <div class="ems-head">
+                  <h2>Current Medications</h2>
+                </div>
+                <div id="medicationsCard" class="ems-body"></div>
+              </section>
+            </div>
+
+            <div class="stack">
+              <section class="card ems-card">
+                <div class="ems-head">
+                  <h3>ICE Contacts</h3>
+                </div>
+                <div id="iceCard" class="ems-body"></div>
+              </section>
+
+              <section class="card ems-card">
+                <div class="ems-head">
+                  <h3>Critical Information</h3>
+                </div>
+                <div id="criticalCard" class="ems-body"></div>
+              </section>
+
+              <section class="card ems-card">
+                <div class="ems-head">
+                  <h3>Equipment & Special Needs</h3>
+                </div>
+                <div id="equipmentCard" class="ems-body"></div>
+              </section>
+            </div>
+          </div>
+
+          <div class="card">
+            <p id="lastUpdatedText" class="footer-note"></p>
+          </div>
+        </div>
+      </main>
     </div>
-  </header>
+  </div>
 
-  <main class="page emergency-wrap">
-    <div class="card emergency-top">
-      <div>
-        <h1>Emergency Information</h1>
-        <p id="emergencySub" class="emergency-sub">
-          For first responder use during a medical emergency.
-        </p>
-      </div>
-
-      <div class="emergency-actions">
-        <button id="shareBtn" class="btn btn-ghost" type="button">Share</button>
-        <button id="printBtn" class="btn btn-primary" type="button">Print</button>
-      </div>
-    </div>
-
-    <div class="alert-strip">
-      Use this screen for fast EMS access. Information is auto-pulled from the Care Binder.
-    </div>
-
-    <div class="emergency-grid">
-      <div class="stack">
-        <section class="card ems-card">
-          <div class="ems-head">
-            <h2>Child Details</h2>
-          </div>
-          <div id="childDetailsCard" class="ems-body"></div>
-        </section>
-
-        <section class="card ems-card">
-          <div class="ems-head">
-            <h2>Seizure / Medical Protocol</h2>
-          </div>
-          <div id="protocolCard" class="ems-body"></div>
-        </section>
-
-        <section class="card ems-card">
-          <div class="ems-head">
-            <h2>Current Medications</h2>
-          </div>
-          <div id="medicationsCard" class="ems-body"></div>
-        </section>
-      </div>
-
-      <div class="stack">
-        <section class="card ems-card">
-          <div class="ems-head">
-            <h3>ICE Contacts</h3>
-          </div>
-          <div id="iceCard" class="ems-body"></div>
-        </section>
-
-        <section class="card ems-card">
-          <div class="ems-head">
-            <h3>Critical Information</h3>
-          </div>
-          <div id="criticalCard" class="ems-body"></div>
-        </section>
-
-        <section class="card ems-card">
-          <div class="ems-head">
-            <h3>Equipment & Special Needs</h3>
-          </div>
-          <div id="equipmentCard" class="ems-body"></div>
-        </section>
-      </div>
-    </div>
-
-    <div class="card">
-      <p id="lastUpdatedText" class="footer-note"></p>
-    </div>
-  </main>
-
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="supabase.js"></script>
   <script src="storage.js"></script>
+  <script src="auth.js"></script>
   <script src="emergency-sheet.js"></script>
 </body>
 </html>
