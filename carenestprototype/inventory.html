@@ -2,306 +2,270 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Inventory • CareNest</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>CareNestia • Inventory</title>
   <link rel="stylesheet" href="styles.css" />
-  <style>
-    .hidden { display: none; }
-
-    .toolbar,
-    .row-actions,
-    .section-head,
-    .quick-actions,
-    .filter-row {
-      display: flex;
-      gap: 10px;
-      flex-wrap: wrap;
-      align-items: center;
-    }
-
-    .section-head {
-      justify-content: space-between;
-      margin-bottom: 12px;
-    }
-
-    .inventory-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-      gap: 12px;
-    }
-
-    .inventory-card {
-      border: 1px solid var(--border, #dcdcdc);
-      border-radius: 16px;
-      padding: 14px;
-      background: var(--card, #fff);
-      box-shadow: 0 2px 10px rgba(0,0,0,0.04);
-    }
-
-    .inventory-card.low {
-      border-color: #d97706;
-      background: #fff8eb;
-    }
-
-    .inventory-card.out {
-      border-color: #dc2626;
-      background: #fff1f2;
-    }
-
-    .inventory-title {
-      font-size: 1.05rem;
-      font-weight: 700;
-      margin-bottom: 4px;
-    }
-
-    .pill-row {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 8px;
-      margin: 8px 0 10px;
-    }
-
-    .pill {
-      font-size: 12px;
-      padding: 6px 10px;
-      border-radius: 999px;
-      background: #f3f4f6;
-    }
-
-    .pill.low {
-      background: #ffedd5;
-      color: #9a3412;
-    }
-
-    .pill.out {
-      background: #fee2e2;
-      color: #991b1b;
-    }
-
-    .stats-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-      gap: 12px;
-      margin-bottom: 16px;
-    }
-
-    .stat-card {
-      border: 1px solid var(--border, #dcdcdc);
-      border-radius: 16px;
-      padding: 14px;
-      background: var(--card, #fff);
-    }
-
-    .stat-label {
-      font-size: 13px;
-      opacity: 0.7;
-      margin-bottom: 4px;
-    }
-
-    .stat-value {
-      font-size: 1.4rem;
-      font-weight: 700;
-    }
-
-    .alert-box {
-      border: 1px solid #f59e0b;
-      background: #fff8eb;
-      border-radius: 16px;
-      padding: 14px;
-      margin-bottom: 16px;
-    }
-
-    .alert-box h3 {
-      margin: 0 0 8px;
-      font-size: 1rem;
-    }
-
-    .alert-box ul {
-      margin: 0;
-      padding-left: 18px;
-    }
-
-    .form-card {
-      border: 1px solid var(--border, #dcdcdc);
-      border-radius: 16px;
-      padding: 14px;
-      background: var(--card, #fff);
-      margin-bottom: 16px;
-    }
-
-    .grid-2 {
-      display: grid;
-      grid-template-columns: repeat(2, minmax(0,1fr));
-      gap: 12px;
-    }
-
-    .grid-3 {
-      display: grid;
-      grid-template-columns: repeat(3, minmax(0,1fr));
-      gap: 12px;
-    }
-
-    @media (max-width: 700px) {
-      .grid-2,
-      .grid-3 {
-        grid-template-columns: 1fr;
-      }
-    }
-
-    .empty-state {
-      border: 1px dashed var(--border, #dcdcdc);
-      border-radius: 16px;
-      padding: 24px;
-      text-align: center;
-      opacity: 0.8;
-      background: var(--card, #fff);
-    }
-
-    .muted {
-      opacity: 0.72;
-    }
-
-    .danger-text {
-      color: #b91c1c;
-      font-weight: 600;
-    }
-
-    .warn-text {
-      color: #b45309;
-      font-weight: 600;
-    }
-  </style>
 </head>
 <body>
-  <header class="topbar">
-    <div class="title">
-      <h1>Inventory</h1>
-      <p id="childSummary" class="muted"></p>
-    </div>
 
-    <div class="row-actions">
-      <select id="childSwitcher" class="input" style="width:auto;min-width:140px;"></select>
-      <a class="btn btn-ghost" href="more.html">← Back</a>
-    </div>
+  <div class="app-shell">
 
-    <div class="user-actions">
-    <button id="logoutBtn" class="logout-btn">Log out</button>
+    <aside class="app-sidebar">
+      <div class="sidebar-brand">
+        <img src="images/carenestia_logo_wordmark.png" class="sidebar-wordmark" alt="CareNestia" />
+      </div>
+
+      <nav class="sidebar-nav">
+        <a class="sidebar-link" href="index.html">Dashboard</a>
+        <a class="sidebar-link" href="schedule.html">Schedule</a>
+        <a class="sidebar-link" href="meds.html">Medications</a>
+        <a class="sidebar-link" href="carelog.html">Care Log</a>
+        <a class="sidebar-link active" href="inventory.html">Inventory</a>
+        <a class="sidebar-link" href="schoolnurse.html">School Nurse</a>
+        <a class="sidebar-link" href="more.html">More</a>
+      </nav>
+
+      <div class="sidebar-actions-card">
+        <div class="sidebar-actions-title">Quick Actions</div>
+
+        <div class="sidebar-actions-list">
+          <button id="btnToggleFormSidebar" class="btn btn-primary btn-block" type="button">+ Add Item</button>
+          <button id="btnSeedTrachSidebar" class="btn btn-ghost btn-block" type="button">Add Trach Starter Set</button>
+          <a class="btn btn-ghost btn-block" href="schedule.html">Open Schedule</a>
+          <a class="btn btn-ghost btn-block" href="carelog.html">Open Care Log</a>
+        </div>
+      </div>
+    </aside>
+
+    <div class="app-main">
+
+      <header class="app-topbar">
+        <div class="topbar-child-card">
+          <div class="topbar-child-avatar" id="childAvatar"></div>
+
+          <div class="topbar-child-copy">
+            <label for="childSwitcher" class="sr-only">Select child</label>
+            <select id="childSwitcher" class="topbar-child-select"></select>
+            <div class="topbar-child-meta" id="childSummary">Age —</div>
+          </div>
+        </div>
+
+        <div class="topbar-actions">
+          <button id="btnToggleForm" class="btn" type="button">+ Add Item</button>
+          <button id="logoutBtn" class="btn btn-ghost" type="button">Log out</button>
+        </div>
+      </header>
+
+      <main class="app-content">
+
+        <div class="main-column">
+
+          <section class="card">
+            <div class="section-head">
+              <div>
+                <h2>Inventory</h2>
+                <p class="muted">Track medical, trach, nutrition, medication, and daily care items.</p>
+              </div>
+
+              <div class="button-row">
+                <button id="btnSeedTrach" class="btn btn-ghost" type="button">Add Trach Starter Set</button>
+              </div>
+            </div>
+
+            <section id="statsGrid" class="stats-grid"></section>
+          </section>
+
+          <section id="lowSupplyBox" class="card hidden">
+            <div class="section-head">
+              <h2>Smart Supply Alerts</h2>
+            </div>
+            <ul id="lowSupplyList"></ul>
+          </section>
+
+          <section id="formCard" class="card hidden">
+            <div class="section-head">
+              <h2 id="formTitle">Add Inventory Item</h2>
+              <button id="btnCancelEdit" class="btn btn-ghost" type="button">Cancel</button>
+            </div>
+
+            <form id="inventoryForm">
+              <div class="form-grid">
+                <label class="field">
+                  <span>Item Name</span>
+                  <input id="itemName" class="input" required placeholder="Ex: Suction Catheters" />
+                </label>
+
+                <label class="field">
+                  <span>Category</span>
+                  <select id="itemCategory" class="input" required>
+                    <option value="Tracheostomy">Tracheostomy</option>
+                    <option value="Medical">Medical</option>
+                    <option value="Nutrition">Nutrition</option>
+                    <option value="Medication">Medication</option>
+                    <option value="Emergency">Emergency</option>
+                    <option value="Daily Care">Daily Care</option>
+                    <option value="Other">Other</option>
+                  </select>
+                </label>
+              </div>
+
+              <div class="form-grid mt-12">
+                <label class="field">
+                  <span>Quantity</span>
+                  <input id="itemQuantity" class="input" type="number" min="0" step="1" required />
+                </label>
+
+                <label class="field">
+                  <span>Low Stock Alert</span>
+                  <input id="itemLow" class="input" type="number" min="0" step="1" required />
+                </label>
+              </div>
+
+              <div class="form-grid mt-12">
+                <label class="field">
+                  <span>Unit</span>
+                  <input id="itemUnit" class="input" placeholder="count, boxes, bottles..." required />
+                </label>
+
+                <label class="field">
+                  <span>Notes</span>
+                  <input id="itemNotes" class="input" placeholder="Optional details or preferred reorder info" />
+                </label>
+              </div>
+
+              <div class="button-row mt-12">
+                <button id="btnSaveItem" class="btn" type="submit">Save Item</button>
+                <button id="btnResetForm" class="btn btn-ghost" type="button">Reset</button>
+              </div>
+            </form>
+          </section>
+
+          <section class="card">
+            <div class="filter-bar">
+              <input id="searchInput" class="input" placeholder="Search inventory..." style="min-width:220px;flex:1;" />
+
+              <select id="categoryFilter" class="input" style="width:auto;min-width:170px;">
+                <option value="all">All Categories</option>
+                <option value="Tracheostomy">Tracheostomy</option>
+                <option value="Medical">Medical</option>
+                <option value="Nutrition">Nutrition</option>
+                <option value="Medication">Medication</option>
+                <option value="Emergency">Emergency</option>
+                <option value="Daily Care">Daily Care</option>
+                <option value="Other">Other</option>
+              </select>
+
+              <select id="statusFilter" class="input" style="width:auto;min-width:160px;">
+                <option value="all">All Statuses</option>
+                <option value="ok">In Stock</option>
+                <option value="low">Low Stock</option>
+                <option value="out">Out of Stock</option>
+              </select>
+            </div>
+          </section>
+
+          <section id="inventoryList" class="inventory-grid"></section>
+        </div>
+
+        <aside class="side-column">
+
+          <section class="card">
+            <div class="section-head">
+              <h2>Inventory Tips</h2>
+            </div>
+
+            <div class="stack-list">
+              <div class="list-item">
+                <div>
+                  <strong>Track low stock early</strong>
+                  <div class="muted">Set realistic reorder thresholds before supplies run out.</div>
+                </div>
+              </div>
+
+              <div class="list-item">
+                <div>
+                  <strong>Group by care type</strong>
+                  <div class="muted">Keep trach, feeding, medication, and emergency supplies easy to scan.</div>
+                </div>
+              </div>
+
+              <div class="list-item">
+                <div>
+                  <strong>Use notes</strong>
+                  <div class="muted">Add reorder brands, sizing details, or vendor reminders.</div>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <section class="card">
+            <div class="section-head">
+              <h2>Quick Actions</h2>
+            </div>
+
+            <div class="quick-actions">
+              <button class="quick-btn quick-note" type="button" id="btnToggleFormQuick">
+                <strong>+ Add Item</strong>
+                <span>Create a new inventory item</span>
+              </button>
+
+              <button class="quick-btn quick-med" type="button" id="btnSeedTrachQuick">
+                <strong>Add Trach Set</strong>
+                <span>Insert common trach starter supplies</span>
+              </button>
+
+              <a class="quick-btn quick-symptom" href="carelog.html" style="text-decoration:none;">
+                <strong>Care Log</strong>
+                <span>Review recent care updates</span>
+              </a>
+
+              <a class="quick-btn quick-question" href="index.html" style="text-decoration:none;">
+                <strong>Dashboard</strong>
+                <span>Return to main home view</span>
+              </a>
+            </div>
+          </section>
+
+        </aside>
+
+      </main>
+    </div>
   </div>
-  </header>
 
-  <main class="container">
-    <section class="section-head">
-      <div>
-        <h2 style="margin:0;">Supplies</h2>
-        <p class="muted" style="margin:6px 0 0;">Track medical, trach, nutrition, medication, and daily care items.</p>
-      </div>
-
-      <div class="toolbar">
-        <button id="btnSeedTrach" class="btn btn-ghost" type="button">Add Trach Starter Set</button>
-        <button id="btnToggleForm" class="btn" type="button">+ Add Item</button>
-      </div>
-    </section>
-
-    <section id="statsGrid" class="stats-grid"></section>
-
-    <section id="lowSupplyBox" class="alert-box hidden">
-      <h3>⚠ Smart Supply Alerts</h3>
-      <ul id="lowSupplyList"></ul>
-    </section>
-
-    <section id="formCard" class="form-card hidden">
-      <div class="section-head" style="margin-bottom:10px;">
-        <h3 id="formTitle" style="margin:0;">Add Inventory Item</h3>
-        <button id="btnCancelEdit" class="btn btn-ghost" type="button">Cancel</button>
-      </div>
-
-      <form id="inventoryForm">
-        <div class="grid-2">
-          <label>
-            <div>Item Name</div>
-            <input id="itemName" class="input" required placeholder="Ex: Suction Catheters" />
-          </label>
-
-          <label>
-            <div>Category</div>
-            <select id="itemCategory" class="input" required>
-              <option value="Tracheostomy">Tracheostomy</option>
-              <option value="Medical">Medical</option>
-              <option value="Nutrition">Nutrition</option>
-              <option value="Medication">Medication</option>
-              <option value="Emergency">Emergency</option>
-              <option value="Daily Care">Daily Care</option>
-              <option value="Other">Other</option>
-            </select>
-          </label>
-        </div>
-
-        <div class="grid-3" style="margin-top:12px;">
-          <label>
-            <div>Quantity</div>
-            <input id="itemQuantity" class="input" type="number" min="0" step="1" required />
-          </label>
-
-          <label>
-            <div>Low Stock Alert</div>
-            <input id="itemLow" class="input" type="number" min="0" step="1" required />
-          </label>
-
-          <label>
-            <div>Unit</div>
-            <input id="itemUnit" class="input" placeholder="count, boxes, bottles..." required />
-          </label>
-        </div>
-
-        <label style="display:block;margin-top:12px;">
-          <div>Notes</div>
-          <input id="itemNotes" class="input" placeholder="Optional details or preferred reorder info" />
-        </label>
-
-        <div class="row-actions" style="margin-top:14px;">
-          <button id="btnSaveItem" class="btn" type="submit">Save Item</button>
-          <button id="btnResetForm" class="btn btn-ghost" type="button">Reset</button>
-        </div>
-      </form>
-    </section>
-
-    <section class="form-card">
-      <div class="filter-row">
-        <input id="searchInput" class="input" placeholder="Search inventory..." style="min-width:220px;flex:1;" />
-        <select id="categoryFilter" class="input" style="width:auto;min-width:170px;">
-          <option value="all">All Categories</option>
-          <option value="Tracheostomy">Tracheostomy</option>
-          <option value="Medical">Medical</option>
-          <option value="Nutrition">Nutrition</option>
-          <option value="Medication">Medication</option>
-          <option value="Emergency">Emergency</option>
-          <option value="Daily Care">Daily Care</option>
-          <option value="Other">Other</option>
-        </select>
-        <select id="statusFilter" class="input" style="width:auto;min-width:160px;">
-          <option value="all">All Statuses</option>
-          <option value="ok">In Stock</option>
-          <option value="low">Low Stock</option>
-          <option value="out">Out of Stock</option>
-        </select>
-      </div>
-    </section>
-
-    <section id="inventoryList" class="inventory-grid"></section>
-  </main>
-
- <nav class="bottom-nav">
-    <a class="nav-link active" href="index.html">Home</a>
-    <a class="nav-link" href="carelog.html">Care Log</a>
-    <a class="nav-link" href="meds.html">Meds</a>
-    <a class="nav-link" href="schedule.html">Schedule</a>
-    <a class="nav-link" href="more.html">More</a>
+  <nav class="bottom-nav">
+    <div class="bottom-nav-inner">
+      <a class="nav-link" href="index.html">Home</a>
+      <a class="nav-link" href="carelog.html">Care Log</a>
+      <a class="nav-link" href="meds.html">Meds</a>
+      <a class="nav-link" href="schedule.html">Schedule</a>
+      <a class="nav-link active" href="more.html">More</a>
+    </div>
   </nav>
 
-  <button class="emergency-btn hidden" type="button">Emergency</button>
-
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="supabase.js"></script>
   <script src="storage.js"></script>
   <script src="inventory.js"></script>
   <script src="auth.js"></script>
+  <script>
+    requireAuth();
+
+    document.getElementById("btnToggleFormSidebar")?.addEventListener("click", () => {
+      document.getElementById("btnToggleForm")?.click();
+    });
+
+    document.getElementById("btnToggleFormQuick")?.addEventListener("click", () => {
+      document.getElementById("btnToggleForm")?.click();
+    });
+
+    document.getElementById("btnSeedTrachSidebar")?.addEventListener("click", () => {
+      document.getElementById("btnSeedTrach")?.click();
+    });
+
+    document.getElementById("btnSeedTrachQuick")?.addEventListener("click", () => {
+      document.getElementById("btnSeedTrach")?.click();
+    });
+  </script>
+
 </body>
 </html>
