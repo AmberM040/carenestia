@@ -783,3 +783,115 @@ textarea{
   font-weight: 700;
   font-size: 0.85rem;
 }
+
+.filter-bar{
+  display:flex;
+  flex-wrap:wrap;
+  gap:10px;
+  align-items:center;
+}
+
+.log-list{
+  display:grid;
+  gap:12px;
+}
+
+.row{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  flex-wrap:wrap;
+}
+
+.tiny{
+  font-size:.78rem;
+}
+
+.mt-16{
+  margin-top:16px !important;
+}
+
+.log-side{
+  display:flex;
+  align-items:flex-start;
+  justify-content:flex-end;
+}
+
+.log-tag{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  padding:6px 10px;
+  border-radius:999px;
+  font-size:.78rem;
+  font-weight:800;
+  background:#eef3ff;
+  color:var(--primary-dark);
+  white-space:nowrap;
+}
+
+.log-tag.med{
+  background:#e8f7ec;
+  color:#2f8f46;
+}
+
+.log-tag.gi{
+  background:#fff3e6;
+  color:#b26b1f;
+}
+
+.log-tag.neuro{
+  background:#eef0ff;
+  color:#5c63d6;
+}
+
+.log-tag.pulm{
+  background:#e9f8fc;
+  color:#1886a1;
+}
+
+.log-tag.card{
+  background:#fdeceb;
+  color:#c24a3c;
+}
+
+.log-card{
+  grid-template-columns:48px minmax(0,1fr) auto;
+}
+
+.log-main{
+  min-width:0;
+}
+
+.log-main h3{
+  word-break:break-word;
+}
+
+.log-main p{
+  word-break:break-word;
+}
+
+.empty-state{
+  padding:18px;
+  border:1px dashed var(--border);
+  border-radius:16px;
+  background:#f8fbff;
+  color:var(--muted);
+}
+
+@media (max-width:640px){
+  .filter-bar{
+    flex-direction:column;
+    align-items:stretch;
+  }
+
+  .log-card{
+    grid-template-columns:42px minmax(0,1fr);
+  }
+
+  .log-side{
+    grid-column:2;
+    justify-content:flex-start;
+    margin-top:6px;
+  }
+}
