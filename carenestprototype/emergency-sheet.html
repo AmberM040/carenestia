@@ -1,0 +1,259 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Emergency Sheet • CareNestia</title>
+  <link rel="stylesheet" href="styles.css" />
+  <style>
+    .emergency-wrap {
+      display: grid;
+      gap: 16px;
+    }
+
+    .emergency-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: start;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .emergency-top h1 {
+      margin-bottom: 6px;
+    }
+
+    .emergency-sub {
+      color: var(--muted);
+      margin: 0;
+      max-width: 900px;
+    }
+
+    .emergency-actions {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .alert-strip {
+      padding: 12px 14px;
+      border-radius: 16px;
+      background: rgba(255, 193, 7, 0.14);
+      border: 1px solid rgba(255, 193, 7, 0.35);
+      font-weight: 700;
+    }
+
+    .emergency-grid {
+      display: grid;
+      grid-template-columns: 1.35fr 0.9fr;
+      gap: 16px;
+      align-items: start;
+    }
+
+    .stack {
+      display: grid;
+      gap: 16px;
+    }
+
+    .ems-card {
+      padding: 0;
+      overflow: hidden;
+    }
+
+    .ems-head {
+      padding: 14px 16px;
+      border-bottom: 1px solid var(--line);
+      background: rgba(111, 93, 255, 0.04);
+    }
+
+    .ems-head h2,
+    .ems-head h3 {
+      margin: 0;
+    }
+
+    .ems-body {
+      padding: 16px;
+    }
+
+    .child-hero {
+      display: grid;
+      grid-template-columns: 140px minmax(0, 1fr);
+      gap: 16px;
+      align-items: start;
+    }
+
+    .child-hero img {
+      width: 140px;
+      height: 140px;
+      border-radius: 18px;
+      object-fit: cover;
+      background: #eef2ff;
+    }
+
+    .hero-name {
+      font-size: 1.7rem;
+      font-weight: 800;
+      margin: 0 0 8px;
+    }
+
+    .diagnosis-list,
+    .bullet-list {
+      margin: 0;
+      padding-left: 18px;
+      display: grid;
+      gap: 6px;
+    }
+
+    .critical-list {
+      display: grid;
+      gap: 12px;
+    }
+
+    .critical-item {
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      padding: 12px;
+      background: #fff;
+    }
+
+    .critical-item strong {
+      display: block;
+      margin-bottom: 6px;
+    }
+
+    .protocol-box {
+      display: grid;
+      gap: 10px;
+    }
+
+    .protocol-line {
+      padding: 10px 12px;
+      border-radius: 14px;
+      background: rgba(111, 93, 255, 0.05);
+      border: 1px solid rgba(111, 93, 255, 0.14);
+    }
+
+    .ice-list, .med-list, .equip-list {
+      display: grid;
+      gap: 10px;
+    }
+
+    .ice-item, .med-item, .equip-item {
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 12px;
+      background: #fff;
+    }
+
+    .footer-note {
+      color: var(--muted);
+      font-size: 0.95rem;
+    }
+
+    @media (max-width: 900px) {
+      .emergency-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .child-hero {
+        grid-template-columns: 1fr;
+      }
+
+      .child-hero img {
+        width: 100%;
+        height: 220px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <div class="topbar-inner">
+      <div class="brand">
+        <div class="brand-logo">💙</div>
+        <div class="brand-text">CareNestia</div>
+      </div>
+
+      <div class="topbar-actions">
+        <select id="childSwitcher" class="child-switcher"></select>
+        <a class="btn btn-ghost" href="care-binder.html">← Back to Binder</a>
+      </div>
+    </div>
+  </header>
+
+  <main class="page emergency-wrap">
+    <div class="card emergency-top">
+      <div>
+        <h1>Emergency Information</h1>
+        <p id="emergencySub" class="emergency-sub">
+          For first responder use during a medical emergency.
+        </p>
+      </div>
+
+      <div class="emergency-actions">
+        <button id="shareBtn" class="btn btn-ghost" type="button">Share</button>
+        <button id="printBtn" class="btn btn-primary" type="button">Print</button>
+      </div>
+    </div>
+
+    <div class="alert-strip">
+      Use this screen for fast EMS access. Information is auto-pulled from the Care Binder.
+    </div>
+
+    <div class="emergency-grid">
+      <div class="stack">
+        <section class="card ems-card">
+          <div class="ems-head">
+            <h2>Child Details</h2>
+          </div>
+          <div id="childDetailsCard" class="ems-body"></div>
+        </section>
+
+        <section class="card ems-card">
+          <div class="ems-head">
+            <h2>Seizure / Medical Protocol</h2>
+          </div>
+          <div id="protocolCard" class="ems-body"></div>
+        </section>
+
+        <section class="card ems-card">
+          <div class="ems-head">
+            <h2>Current Medications</h2>
+          </div>
+          <div id="medicationsCard" class="ems-body"></div>
+        </section>
+      </div>
+
+      <div class="stack">
+        <section class="card ems-card">
+          <div class="ems-head">
+            <h3>ICE Contacts</h3>
+          </div>
+          <div id="iceCard" class="ems-body"></div>
+        </section>
+
+        <section class="card ems-card">
+          <div class="ems-head">
+            <h3>Critical Information</h3>
+          </div>
+          <div id="criticalCard" class="ems-body"></div>
+        </section>
+
+        <section class="card ems-card">
+          <div class="ems-head">
+            <h3>Equipment & Special Needs</h3>
+          </div>
+          <div id="equipmentCard" class="ems-body"></div>
+        </section>
+      </div>
+    </div>
+
+    <div class="card">
+      <p id="lastUpdatedText" class="footer-note"></p>
+    </div>
+  </main>
+
+  <script src="storage.js"></script>
+  <script src="emergency-sheet.js"></script>
+</body>
+</html>
