@@ -5,8 +5,181 @@
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>School Nurse • CareNestia</title>
   <link rel="stylesheet" href="styles.css">
+  <style>
+    .school-page .app-content{
+      display:block;
+      padding:18px;
+    }
+
+    .school-wrap{
+      display:grid;
+      grid-template-columns:minmax(0,1.5fr) minmax(320px,.9fr);
+      gap:18px;
+    }
+
+    .school-main,
+    .school-side{
+      display:grid;
+      gap:18px;
+      align-content:start;
+    }
+
+    .school-hero{
+      display:grid;
+      grid-template-columns:110px minmax(0,1fr);
+      gap:16px;
+      align-items:start;
+    }
+
+    .school-hero-photo{
+      width:110px;
+      height:110px;
+      border-radius:18px;
+      object-fit:cover;
+      background:#eef2ff;
+      border:1px solid var(--border);
+    }
+
+    .school-hero-name{
+      margin:0 0 6px;
+      font-size:1.4rem;
+      font-weight:800;
+    }
+
+    .school-pills{
+      display:flex;
+      flex-wrap:wrap;
+      gap:8px;
+      margin-top:10px;
+    }
+
+    .school-pill{
+      display:inline-flex;
+      align-items:center;
+      padding:6px 10px;
+      border-radius:999px;
+      background:#eef3ff;
+      color:var(--primary-dark);
+      font-weight:700;
+      font-size:.82rem;
+    }
+
+    .school-grid-2{
+      display:grid;
+      grid-template-columns:repeat(2,minmax(0,1fr));
+      gap:12px;
+    }
+
+    .school-stat{
+      border:1px solid var(--border);
+      border-radius:16px;
+      background:#fbfdff;
+      padding:12px;
+    }
+
+    .school-stat-label{
+      font-size:.8rem;
+      color:var(--muted);
+      margin-bottom:6px;
+    }
+
+    .school-stat-value{
+      font-size:1.05rem;
+      font-weight:800;
+      color:var(--text);
+    }
+
+    .schedule-item,
+    .snapshot-item{
+      display:flex;
+      justify-content:space-between;
+      gap:12px;
+      padding:14px 16px;
+      border:1px solid var(--border);
+      border-radius:16px;
+      background:#fbfdff;
+    }
+
+    .timeline-list{
+      display:grid;
+      gap:12px;
+    }
+
+    .timeline-entry{
+      display:grid;
+      grid-template-columns:56px minmax(0,1fr);
+      gap:12px;
+      padding:14px 16px;
+      border:1px solid var(--border);
+      border-radius:18px;
+      background:#fbfdff;
+    }
+
+    .timeline-time{
+      font-weight:800;
+      color:var(--primary-dark);
+      font-size:.9rem;
+      white-space:nowrap;
+    }
+
+    .timeline-body h3{
+      margin:0 0 6px;
+      font-size:1rem;
+      color:var(--text);
+    }
+
+    .timeline-body p{
+      margin:0;
+      color:var(--text-soft);
+      line-height:1.35;
+    }
+
+    .handoff-box{
+      border:1px dashed var(--border);
+      border-radius:16px;
+      background:#fbfdff;
+      padding:14px;
+      white-space:pre-wrap;
+      color:var(--text);
+      line-height:1.45;
+      min-height:180px;
+    }
+
+    .empty-box{
+      border:1px dashed var(--border);
+      border-radius:16px;
+      background:#fbfdff;
+      padding:16px;
+      color:var(--muted);
+    }
+
+    @media (max-width:980px){
+      .school-wrap{
+        grid-template-columns:1fr;
+      }
+    }
+
+    @media (max-width:640px){
+      .school-hero{
+        grid-template-columns:1fr;
+      }
+
+      .school-hero-photo{
+        width:100%;
+        height:220px;
+      }
+
+      .school-grid-2{
+        grid-template-columns:1fr;
+      }
+
+      .timeline-entry{
+        grid-template-columns:1fr;
+      }
+    }
+  </style>
 </head>
-<body>
+<body class="school-page">
 <div class="app-shell">
 
   <aside class="app-sidebar">
@@ -26,7 +199,6 @@
   </aside>
 
   <div class="app-main">
-
     <header class="app-topbar">
       <div class="topbar-child-card">
         <div id="childAvatar" class="topbar-child-avatar"></div>
@@ -43,99 +215,120 @@
     </header>
 
     <main class="app-content">
-      <section class="main-column">
+      <div class="school-wrap">
 
-        <section class="card">
-          <div class="section-head">
-            <div>
-              <h2>School Nurse Dashboard</h2>
-              <p class="muted">Track school-day care, view emergency information, and generate a parent handoff summary.</p>
+        <section class="school-main">
+          <section class="card">
+            <div class="school-hero">
+              <img id="schoolHeroPhoto" class="school-hero-photo" alt="Child photo">
+              <div>
+                <h1 id="schoolHeroName" class="school-hero-name">Child Name</h1>
+                <p id="schoolHeroSub" class="muted">School-day care dashboard</p>
+
+                <div id="schoolDiagnosisPills" class="school-pills"></div>
+
+                <div class="school-grid-2" style="margin-top:14px;">
+                  <div class="school-stat">
+                    <div class="school-stat-label">Allergies</div>
+                    <div id="schoolAllergyStat" class="school-stat-value">None listed</div>
+                  </div>
+                  <div class="school-stat">
+                    <div class="school-stat-label">Rescue Medication</div>
+                    <div id="schoolRescueStat" class="school-stat-value">—</div>
+                  </div>
+                </div>
+              </div>
             </div>
-          </div>
+          </section>
 
-          <div class="quick-actions">
-            <button class="quick-btn quick-note" data-log-type="note" type="button">
-              <strong>+ School Note</strong>
-              <span>General update for parents</span>
-            </button>
-
-            <button class="quick-btn quick-symptom" data-log-type="symptom" type="button">
-              <strong>+ Symptom</strong>
-              <span>Log symptoms or concerns</span>
-            </button>
-
-            <button class="quick-btn quick-med" data-log-type="med" type="button">
-              <strong>+ Medication</strong>
-              <span>Log school medication event</span>
-            </button>
-
-            <button class="quick-btn quick-question" data-log-type="feed" type="button">
-              <strong>+ Feed / Therapy</strong>
-              <span>Track school-day care tasks</span>
-            </button>
-
-            <button class="quick-btn quick-note" data-log-type="bathroom" type="button">
-              <strong>+ Bathroom / Output</strong>
-              <span>Track output or diapering</span>
-            </button>
-
-            <button class="quick-btn quick-symptom" data-log-type="seizure" type="button">
-              <strong>+ Seizure</strong>
-              <span>Document seizure activity</span>
-            </button>
-
-            <button class="quick-btn quick-question" data-log-type="therapy" type="button">
-              <strong>+ Therapy</strong>
-              <span>Log school therapies or supports</span>
-            </button>
-
-            <button class="quick-btn quick-med" data-log-type="missed" type="button">
-              <strong>+ Missed Task</strong>
-              <span>Document skipped or delayed care</span>
-            </button>
-          </div>
-        </section>
-
-        <section class="card">
-          <div class="section-head">
-            <h2>Today at School</h2>
-          </div>
-          <section id="schoolScheduleList" class="stack-list"></section>
-        </section>
-
-        <section class="card">
-          <div class="section-head">
-            <h2>Live School Timeline</h2>
-          </div>
-          <section id="schoolActivityList" class="log-list"></section>
-        </section>
-
-      </section>
-
-      <aside class="side-column">
-
-        <section class="card">
-          <div class="section-head">
-            <h2>Emergency Snapshot</h2>
-          </div>
-          <div id="emergencySnapshot" class="stack-list"></div>
-        </section>
-
-        <section class="card">
-          <div class="section-head">
-            <h2>End-of-Day Handoff</h2>
-            <div class="button-row">
-              <button id="btnGenerateHandoff" class="btn" type="button">Generate</button>
-              <button id="btnSaveHandoff" class="btn btn-ghost" type="button">Save to Care Log</button>
+          <section class="card">
+            <div class="section-head">
+              <div>
+                <h2>Quick Log</h2>
+                <p class="muted">Record school-day events for this child.</p>
+              </div>
             </div>
-          </div>
 
-          <div id="handoffSummary" class="empty-state">No handoff summary generated yet.</div>
+            <div class="quick-actions">
+              <button class="quick-btn quick-note" data-log-type="note" type="button">
+                <strong>+ School Note</strong>
+                <span>General update for parents</span>
+              </button>
+
+              <button class="quick-btn quick-symptom" data-log-type="symptom" type="button">
+                <strong>+ Symptom</strong>
+                <span>Log symptoms or concerns</span>
+              </button>
+
+              <button class="quick-btn quick-med" data-log-type="med" type="button">
+                <strong>+ Medication</strong>
+                <span>Log a school medication event</span>
+              </button>
+
+              <button class="quick-btn quick-question" data-log-type="feed" type="button">
+                <strong>+ Feed</strong>
+                <span>Track school feeding</span>
+              </button>
+
+              <button class="quick-btn quick-note" data-log-type="therapy" type="button">
+                <strong>+ Therapy</strong>
+                <span>Track therapy or support</span>
+              </button>
+
+              <button class="quick-btn quick-symptom" data-log-type="seizure" type="button">
+                <strong>+ Seizure</strong>
+                <span>Document seizure activity</span>
+              </button>
+
+              <button class="quick-btn quick-question" data-log-type="bathroom" type="button">
+                <strong>+ Bathroom / Output</strong>
+                <span>Track output or diapering</span>
+              </button>
+
+              <button class="quick-btn quick-med" data-log-type="missed" type="button">
+                <strong>+ Missed Task</strong>
+                <span>Document delayed or skipped care</span>
+              </button>
+            </div>
+          </section>
+
+          <section class="card">
+            <div class="section-head">
+              <h2>Today at School</h2>
+            </div>
+            <div id="schoolScheduleList" class="stack-list"></div>
+          </section>
+
+          <section class="card">
+            <div class="section-head">
+              <h2>Live School Timeline</h2>
+            </div>
+            <div id="schoolActivityList" class="timeline-list"></div>
+          </section>
         </section>
 
-      </aside>
+        <aside class="school-side">
+          <section class="card">
+            <div class="section-head">
+              <h2>Emergency Snapshot</h2>
+            </div>
+            <div id="emergencySnapshot" class="stack-list"></div>
+          </section>
+
+          <section class="card">
+            <div class="section-head">
+              <h2>End-of-Day Handoff</h2>
+              <div class="button-row">
+                <button id="btnGenerateHandoff" class="btn" type="button">Generate</button>
+                <button id="btnSaveHandoff" class="btn btn-ghost" type="button">Save to Care Log</button>
+              </div>
+            </div>
+            <div id="handoffSummary" class="handoff-box">No handoff summary generated yet.</div>
+          </section>
+        </aside>
+
+      </div>
     </main>
-
   </div>
 </div>
 
