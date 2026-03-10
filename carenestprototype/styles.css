@@ -918,3 +918,64 @@ textarea{
 .quick-question span {
   color: var(--muted) !important;
 }
+
+/* Force readable text on all dashboard / quick / log cards */
+.card,
+.card h1,
+.card h2,
+.card h3,
+.card h4,
+.card p,
+.card strong,
+.card span,
+.log-card,
+.log-card h1,
+.log-card h2,
+.log-card h3,
+.log-card h4,
+.log-card p,
+.log-card strong,
+.log-card span,
+.quick-btn,
+.quick-btn h1,
+.quick-btn h2,
+.quick-btn h3,
+.quick-btn h4,
+.quick-btn p,
+.quick-btn strong,
+.quick-btn span,
+a.quick-btn,
+a.quick-btn strong,
+a.quick-btn span {
+  color: var(--text) !important;
+}
+
+.card .muted,
+.log-card .muted,
+.quick-btn .muted,
+.quick-btn span,
+a.quick-btn span {
+  color: var(--muted) !important;
+}
+
+/* Override old colored quick-card themes */
+.quick-note,
+.quick-med,
+.quick-symptom,
+.quick-question,
+a.quick-note,
+a.quick-med,
+a.quick-symptom,
+a.quick-question {
+  background: #fff !important;
+  color: var(--text) !important;
+  border: 1px solid var(--border) !important;
+}
+
+/* Make sure care log titles are dark */
+.log-main h3,
+.log-main h3 *,
+.log-card h3,
+.log-card h3 * {
+  color: var(--text) !important;
+}
