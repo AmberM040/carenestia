@@ -15,7 +15,7 @@
     <aside class="app-sidebar">
 
       <div class="sidebar-brand">
-        <img src="images/carenestia_logo_wordmark.png" class="sidebar-wordmark">
+        <img src="images/carenestia_logo_wordmark.png" class="sidebar-wordmark" alt="CareNestia">
       </div>
 
       <nav class="sidebar-nav">
@@ -85,7 +85,7 @@
             Edit Child Profile
           </a>
 
-          <button id="logoutBtn" class="btn btn-ghost">
+          <button id="logoutBtn" class="btn btn-ghost" type="button">
             Log out
           </button>
         </div>
@@ -265,8 +265,13 @@
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="supabase.js"></script>
-  <script src="auth.js"></script>
-  <script src="app.js"></script>
+<script src="supabase.js"></script>
+<script src="storage.js"></script>
+<script src="app.js"></script>
+<script src="auth.js"></script>
+<script>
+  requireAuth();
+</script>
+  
 </body>
 </html>
