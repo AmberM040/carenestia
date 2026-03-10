@@ -49,6 +49,11 @@ document.addEventListener("DOMContentLoaded", async () => {
   async function init() {
     await loadChildrenFromSupabase();
     ensureSchoolData();
+
+    console.log("school nurse children:", db.children);
+    console.log("school nurse activeChildId:", db.activeChildId);
+    console.log("school nurse active child:", getActiveChild());
+
     renderChildSwitcher();
     renderHeader();
     renderHero();
@@ -119,14 +124,21 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
   async function loadChildrenFromSupabase() {
-    if (!supabase?.auth) return;
+    if (!supabase?.auth) {
+      if (!Array.isArray(db.children)) db.children = [];
+      return;
+    }
 
     const {
       data: { user },
       error: userError
     } = await supabase.auth.getUser();
 
-    if (userError || !user) return;
+    if (userError || !user) {
+      if (!Array.isArray(db.children)) db.children = [];
+      return;
+    }
+
     currentUser = user;
 
     const { data, error } = await supabase
@@ -140,22 +152,25 @@ document.addEventListener("DOMContentLoaded", async () => {
       return;
     }
 
-    if (!Array.isArray(data) || !data.length) return;
+    if (Array.isArray(data) && data.length) {
+      db.children = data.map((child) => ({
+        ...child,
+        diagnoses: normalizeDiagnoses(child.diagnoses),
+        age: child.age ?? getAgeFromBirthdate(child.birthdate)
+      }));
 
-    db.children = data.map((child) => ({
-      ...child,
-      diagnoses: normalizeDiagnoses(child.diagnoses),
-      age: child.age ?? getAgeFromBirthdate(child.birthdate)
-    }));
+      const validActive =
+        db.children.find((c) => String(c.id) === String(db.activeChildId || db.currentChildId)) ||
+        db.children[0] ||
+        null;
 
-    const validActive =
-      db.children.find((c) => String(c.id) === String(db.activeChildId || db.currentChildId)) ||
-      db.children[0] ||
-      null;
+      db.activeChildId = validActive ? validActive.id : null;
+      db.currentChildId = db.activeChildId;
+      saveDB(db);
+      return;
+    }
 
-    db.activeChildId = validActive ? validActive.id : null;
-    db.currentChildId = db.activeChildId;
-    saveDB(db);
+    if (!Array.isArray(db.children)) db.children = [];
   }
 
   function ensureSchoolData() {
@@ -173,12 +188,18 @@ document.addEventListener("DOMContentLoaded", async () => {
   function getActiveChild() {
     const children = getChildren();
     if (!children.length) return null;
-    return children.find((c) => String(c.id) === String(db.activeChildId || db.currentChildId)) || children[0] || null;
+
+    return (
+      children.find((c) => String(c.id) === String(db.activeChildId || db.currentChildId)) ||
+      children[0] ||
+      null
+    );
   }
 
   function getSchoolLogsForActiveChild() {
     const child = getActiveChild();
     if (!child) return [];
+
     return (db.schoolLogs || [])
       .filter((entry) => String(entry.childId) === String(child.id))
       .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
@@ -211,43 +232,78 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
 
     const ageText = child.age ? `Age ${child.age}` : "Age —";
-    const dx = child.diagnoses?.length ? child.diagnoses.slice(0, 2).join(" • ") : "No diagnoses listed";
+    const dx =
+      Array.isArray(child.diagnoses) && child.diagnoses.length
+        ? child.diagnoses.slice(0, 2).join(" • ")
+        : "No diagnoses listed";
 
-    childSummary.textContent = `${ageText} • ${dx}`;
+    if (childSummary) {
+      childSummary.textContent = `${ageText} • ${dx}`;
+    }
 
-    childAvatar.innerHTML = child.photo_url
-      ? `<img src="${escapeAttr(child.photo_url)}" alt="${escapeAttr(child.name || "Child")}">`
-      : "";
+    if (childAvatar) {
+      childAvatar.innerHTML = child.photo_url
+        ? `<img src="${escapeAttr(child.photo_url)}" alt="${escapeAttr(child.name || "Child")}">`
+        : "";
+    }
   }
 
   function renderHero() {
     const child = getActiveChild();
-    if (!child) return;
+
+    if (!child) {
+      if (schoolHeroPhoto) {
+        schoolHeroPhoto.src = "https://via.placeholder.com/600x400?text=Child+Photo";
+        schoolHeroPhoto.alt = "Child photo";
+      }
+      if (schoolHeroName) schoolHeroName.textContent = "No child selected";
+      if (schoolHeroSub) schoolHeroSub.textContent = "School-day care dashboard";
+      if (schoolDiagnosisPills) schoolDiagnosisPills.innerHTML = "";
+      if (schoolAllergyStat) schoolAllergyStat.textContent = "None listed";
+      if (schoolRescueStat) schoolRescueStat.textContent = "—";
+      return;
+    }
 
     const carePlan = db.carePlans?.[child.id] || {};
 
-    schoolHeroPhoto.src = child.photo_url || "https://via.placeholder.com/600x400?text=Child+Photo";
-    schoolHeroPhoto.alt = child.name ? `${child.name} photo` : "Child photo";
-    schoolHeroName.textContent = child.name || "Child";
+    if (schoolHeroPhoto) {
+      schoolHeroPhoto.src =
+        child.photo_url || child.photo || "https://via.placeholder.com/600x400?text=Child+Photo";
+      schoolHeroPhoto.alt = child.name ? `${child.name} photo` : "Child photo";
+    }
+
+    if (schoolHeroName) {
+      schoolHeroName.textContent = child.name || "Child";
+    }
 
     const ageText = child.age ? `Age ${child.age}` : "Age —";
-    const diagnosesText = child.diagnoses?.length ? child.diagnoses.join(" • ") : "No diagnoses listed";
-    schoolHeroSub.textContent = `${ageText} • ${diagnosesText}`;
+    const diagnosesText =
+      Array.isArray(child.diagnoses) && child.diagnoses.length
+        ? child.diagnoses.join(" • ")
+        : "No diagnoses listed";
 
-    schoolDiagnosisPills.innerHTML = "";
-    (child.diagnoses || []).slice(0, 6).forEach((dx) => {
-      const pill = document.createElement("span");
-      pill.className = "school-pill";
-      pill.textContent = dx;
-      schoolDiagnosisPills.appendChild(pill);
-    });
+    if (schoolHeroSub) {
+      schoolHeroSub.textContent = `${ageText} • ${diagnosesText}`;
+    }
 
-    schoolAllergyStat.textContent = child.allergies || "None listed";
-    schoolRescueStat.textContent =
-      joinParts([
-        carePlan.rescue_med_name,
-        carePlan.rescue_med_dose
-      ], " • ") || "—";
+    if (schoolDiagnosisPills) {
+      schoolDiagnosisPills.innerHTML = "";
+      (child.diagnoses || []).slice(0, 6).forEach((dx) => {
+        const pill = document.createElement("span");
+        pill.className = "school-pill";
+        pill.textContent = dx;
+        schoolDiagnosisPills.appendChild(pill);
+      });
+    }
+
+    if (schoolAllergyStat) {
+      schoolAllergyStat.textContent = child.allergies || "None listed";
+    }
+
+    if (schoolRescueStat) {
+      schoolRescueStat.textContent =
+        joinParts([carePlan.rescue_med_name, carePlan.rescue_med_dose], " • ") || "—";
+    }
   }
 
   function renderSchedule() {
@@ -306,6 +362,8 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
   function renderActivity() {
+    if (!schoolActivityList) return;
+
     const entries = getSchoolLogsForActiveChild().slice(0, 25);
 
     if (!entries.length) {
@@ -339,7 +397,10 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
 
     const carePlan = db.carePlans?.[child.id] || {};
-    const diagnoses = child.diagnoses?.length ? child.diagnoses.join(", ") : "None listed";
+    const diagnoses =
+      Array.isArray(child.diagnoses) && child.diagnoses.length
+        ? child.diagnoses.join(", ")
+        : "None listed";
 
     emergencySnapshot.innerHTML = `
       <div class="snapshot-item">
@@ -382,7 +443,10 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
 
     const carePlan = db.carePlans?.[child.id] || {};
-    const diagnoses = child.diagnoses?.length ? child.diagnoses.join(", ") : "None listed";
+    const diagnoses =
+      Array.isArray(child.diagnoses) && child.diagnoses.length
+        ? child.diagnoses.join(", ")
+        : "None listed";
 
     schoolEmergencyBody.innerHTML = `
       <div class="snapshot-item"><div><strong>Name</strong><div class="muted">${escapeHtml(child.name || "—")}</div></div></div>
@@ -395,33 +459,33 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
   function openSchoolLogModal(type = "note") {
-    schoolLogCategory.value = type;
-    schoolLogModalTitle.textContent = `Add ${labelForCategory(type)}`;
-    schoolLogAuthor.value = "School Nurse";
-    schoolLogTitle.value = "";
-    schoolLogNote.value = "";
+    if (schoolLogCategory) schoolLogCategory.value = type;
+    if (schoolLogModalTitle) schoolLogModalTitle.textContent = `Add ${labelForCategory(type)}`;
+    if (schoolLogAuthor) schoolLogAuthor.value = "School Nurse";
+    if (schoolLogTitle) schoolLogTitle.value = "";
+    if (schoolLogNote) schoolLogNote.value = "";
 
     const now = new Date();
-    schoolLogDate.value = now.toISOString().slice(0, 10);
-    schoolLogTime.value = now.toTimeString().slice(0, 5);
+    if (schoolLogDate) schoolLogDate.value = now.toISOString().slice(0, 10);
+    if (schoolLogTime) schoolLogTime.value = now.toTimeString().slice(0, 5);
 
-    schoolLogModal.classList.remove("hidden");
+    schoolLogModal?.classList.remove("hidden");
   }
 
   function closeSchoolLogModal() {
-    schoolLogModal.classList.add("hidden");
+    schoolLogModal?.classList.add("hidden");
   }
 
   function saveSchoolLog() {
     const child = getActiveChild();
     if (!child) return;
 
-    const category = schoolLogCategory.value || "note";
-    const title = schoolLogTitle.value.trim() || labelForCategory(category);
-    const note = schoolLogNote.value.trim();
-    const author = schoolLogAuthor.value.trim() || "School Nurse";
-    const date = schoolLogDate.value || todayYYYYMMDD();
-    const time = schoolLogTime.value || "12:00";
+    const category = schoolLogCategory?.value || "note";
+    const title = schoolLogTitle?.value.trim() || labelForCategory(category);
+    const note = schoolLogNote?.value.trim() || "";
+    const author = schoolLogAuthor?.value.trim() || "School Nurse";
+    const date = schoolLogDate?.value || todayYYYYMMDD();
+    const time = schoolLogTime?.value || "12:00";
 
     if (!note) {
       alert("Please enter details for this school log.");
@@ -490,7 +554,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
 
     lastGeneratedHandoff = text;
-    handoffSummary.textContent = text;
+    if (handoffSummary) handoffSummary.textContent = text;
   }
 
   function buildSummarySection(title, entries) {
