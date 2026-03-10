@@ -895,3 +895,26 @@ textarea{
     margin-top:6px;
   }
 }
+
+.quick-note,
+.quick-med,
+.quick-symptom,
+.quick-question {
+  background: #fff !important;
+  color: var(--text) !important;
+  border: 1px solid var(--border);
+}
+
+.quick-note strong,
+.quick-med strong,
+.quick-symptom strong,
+.quick-question strong {
+  color: var(--text) !important;
+}
+
+.quick-note span,
+.quick-med span,
+.quick-symptom span,
+.quick-question span {
+  color: var(--muted) !important;
+}
