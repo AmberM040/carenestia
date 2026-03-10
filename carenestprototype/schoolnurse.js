@@ -10,9 +10,12 @@ document.addEventListener("DOMContentLoaded", async () => {
   const schoolScheduleList = document.getElementById("schoolScheduleList");
   const schoolActivityList = document.getElementById("schoolActivityList");
   const emergencySnapshot = document.getElementById("emergencySnapshot");
-  const schoolNotesPanel = document.getElementById("schoolNotesPanel");
+  const handoffSummary = document.getElementById("handoffSummary");
 
+  const btnGenerateHandoff = document.getElementById("btnGenerateHandoff");
+  const btnSaveHandoff = document.getElementById("btnSaveHandoff");
   const btnOpenEmergency = document.getElementById("btnOpenEmergency");
+
   const schoolEmergencyModal = document.getElementById("schoolEmergencyModal");
   const btnCloseEmergencyModal = document.getElementById("btnCloseEmergencyModal");
   const schoolEmergencyBody = document.getElementById("schoolEmergencyBody");
@@ -30,6 +33,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   const schoolLogNote = document.getElementById("schoolLogNote");
 
   let currentUser = null;
+  let lastGeneratedHandoff = "";
 
   await init();
 
@@ -41,7 +45,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     renderSchedule();
     renderActivity();
     renderEmergencySnapshot();
-    renderSchoolNotes();
+    renderEmergencyModal();
     wireEvents();
   }
 
@@ -55,7 +59,8 @@ document.addEventListener("DOMContentLoaded", async () => {
       renderSchedule();
       renderActivity();
       renderEmergencySnapshot();
-      renderSchoolNotes();
+      renderEmergencyModal();
+      clearHandoff();
     });
 
     document.querySelectorAll("[data-log-type]").forEach((btn) => {
@@ -85,6 +90,12 @@ document.addEventListener("DOMContentLoaded", async () => {
         schoolEmergencyModal.classList.add("hidden");
       }
     });
+
+    btnGenerateHandoff?.addEventListener("click", () => {
+      generateHandoffSummary();
+    });
+
+    btnSaveHandoff?.addEventListener("click", saveHandoffToCareLog);
 
     logoutBtn?.addEventListener("click", async () => {
       if (supabase?.auth) {
@@ -146,6 +157,8 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   function ensureSchoolLogStructure() {
     if (!Array.isArray(db.schoolLogs)) db.schoolLogs = [];
+    if (!Array.isArray(db.careLogs)) db.careLogs = [];
+    if (!db.carePlans || typeof db.carePlans !== "object") db.carePlans = {};
     saveDB(db);
   }
 
@@ -157,6 +170,14 @@ document.addEventListener("DOMContentLoaded", async () => {
     const children = getChildren();
     if (!children.length) return null;
     return children.find((c) => String(c.id) === String(db.activeChildId)) || children[0] || null;
+  }
+
+  function getSchoolLogsForActiveChild() {
+    const child = getActiveChild();
+    if (!child) return [];
+    return (db.schoolLogs || [])
+      .filter((entry) => String(entry.childId) === String(child.id))
+      .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
   }
 
   function renderChildSwitcher() {
@@ -225,15 +246,13 @@ document.addEventListener("DOMContentLoaded", async () => {
         title: item.title || "Medication",
         time: item.time || "",
         category: "Medication",
-        details: item.instructions || "",
-        source: "medication"
+        details: item.instructions || ""
       })),
       ...customItems.map((item) => ({
         title: item.title || "Task",
         time: formatTimeFromStart(item.startAt, item.time),
         category: item.category || "School Task",
-        details: item.instructions || "",
-        source: "schedule"
+        details: item.instructions || ""
       }))
     ].sort((a, b) => String(a.time).localeCompare(String(b.time)));
 
@@ -258,18 +277,9 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
   function renderActivity() {
-    const child = getActiveChild();
     if (!schoolActivityList) return;
 
-    if (!child) {
-      schoolActivityList.innerHTML = `<div class="empty-state">No child selected.</div>`;
-      return;
-    }
-
-    const entries = (db.schoolLogs || [])
-      .filter((entry) => String(entry.childId) === String(child.id))
-      .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
-      .slice(0, 20);
+    const entries = getSchoolLogsForActiveChild().slice(0, 20);
 
     if (!entries.length) {
       schoolActivityList.innerHTML = `<div class="empty-state">No school activity logged yet.</div>`;
@@ -341,71 +351,12 @@ document.addEventListener("DOMContentLoaded", async () => {
       : "None listed";
 
     schoolEmergencyBody.innerHTML = `
-      <div class="list-item">
-        <div>
-          <strong>Name</strong>
-          <div class="muted">${escapeHtml(child.name || "—")}</div>
-        </div>
-      </div>
-      <div class="list-item">
-        <div>
-          <strong>Diagnoses</strong>
-          <div class="muted">${escapeHtml(diagnoses)}</div>
-        </div>
-      </div>
-      <div class="list-item">
-        <div>
-          <strong>Allergies</strong>
-          <div class="muted">${escapeHtml(child.allergies || "None listed")}</div>
-        </div>
-      </div>
-      <div class="list-item">
-        <div>
-          <strong>Emergency Protocol</strong>
-          <div class="muted">${escapeHtml(carePlan.seizure_protocol || "No emergency protocol added yet.")}</div>
-        </div>
-      </div>
-      <div class="list-item">
-        <div>
-          <strong>When to Call EMS</strong>
-          <div class="muted">${escapeHtml(carePlan.ems_when || "No EMS instructions added yet.")}</div>
-        </div>
-      </div>
+      <div class="list-item"><div><strong>Name</strong><div class="muted">${escapeHtml(child.name || "—")}</div></div></div>
+      <div class="list-item"><div><strong>Diagnoses</strong><div class="muted">${escapeHtml(diagnoses)}</div></div></div>
+      <div class="list-item"><div><strong>Allergies</strong><div class="muted">${escapeHtml(child.allergies || "None listed")}</div></div></div>
+      <div class="list-item"><div><strong>Emergency Protocol</strong><div class="muted">${escapeHtml(carePlan.seizure_protocol || "No emergency protocol added yet.")}</div></div></div>
+      <div class="list-item"><div><strong>When to Call EMS</strong><div class="muted">${escapeHtml(carePlan.ems_when || "No EMS instructions added yet.")}</div></div></div>
     `;
-  }
-
-  function renderSchoolNotes() {
-    const child = getActiveChild();
-    if (!schoolNotesPanel) return;
-
-    if (!child) {
-      schoolNotesPanel.innerHTML = `<div class="empty-state">No child selected.</div>`;
-      return;
-    }
-
-    const noteRows = (db.schoolLogs || [])
-      .filter((entry) => String(entry.childId) === String(child.id))
-      .filter((entry) => entry.category === "note" || entry.category === "symptom")
-      .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
-      .slice(0, 5);
-
-    if (!noteRows.length) {
-      schoolNotesPanel.innerHTML = `<div class="empty-state">No school notes yet.</div>`;
-      return;
-    }
-
-    schoolNotesPanel.innerHTML = noteRows
-      .map(
-        (entry) => `
-          <div class="list-item">
-            <div>
-              <strong>${escapeHtml(entry.title || labelForCategory(entry.category))}</strong>
-              <div class="muted">${escapeHtml(entry.note || "")}</div>
-            </div>
-          </div>
-        `
-      )
-      .join("");
   }
 
   function openSchoolLogModal(type = "note") {
@@ -459,7 +410,113 @@ document.addEventListener("DOMContentLoaded", async () => {
     saveDB(db);
     closeSchoolLogModal();
     renderActivity();
-    renderSchoolNotes();
+    clearHandoff();
+  }
+
+  function generateHandoffSummary() {
+    const child = getActiveChild();
+    if (!child || !handoffSummary) return;
+
+    const todayKey = todayYYYYMMDD();
+
+    const entries = getSchoolLogsForActiveChild().filter((entry) => {
+      const d = new Date(entry.createdAt);
+      return !Number.isNaN(d.getTime()) && getDateKeyFromDate(d) === todayKey;
+    });
+
+    const grouped = {
+      med: [],
+      feed: [],
+      therapy: [],
+      symptom: [],
+      seizure: [],
+      bathroom: [],
+      missed: [],
+      note: []
+    };
+
+    entries.forEach((entry) => {
+      if (!grouped[entry.category]) grouped.note.push(entry);
+      else grouped[entry.category].push(entry);
+    });
+
+    let text = "";
+    text += `School Day Summary\n`;
+    text += `${child.name || "Child"} — ${new Date().toLocaleDateString()}\n\n`;
+
+    text += buildSummarySection("Medications", grouped.med);
+    text += buildSummarySection("Feeds", grouped.feed);
+    text += buildSummarySection("Therapies", grouped.therapy);
+    text += buildSummarySection("Symptoms", grouped.symptom);
+    text += buildSummarySection("Seizure Activity", grouped.seizure);
+    text += buildSummarySection("Bathroom / Output", grouped.bathroom);
+    text += buildSummarySection("Missed Tasks", grouped.missed);
+    text += buildSummarySection("Additional Notes", grouped.note);
+
+    if (!entries.length) {
+      text += `No school entries were logged today.\n`;
+    }
+
+    lastGeneratedHandoff = text;
+    handoffSummary.textContent = text;
+  }
+
+  function buildSummarySection(title, entries) {
+    let text = `${title}:\n`;
+
+    if (!entries.length) {
+      text += `• None logged\n\n`;
+      return text;
+    }
+
+    entries
+      .slice()
+      .sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt))
+      .forEach((entry) => {
+        const time = formatTimeOnly(entry.createdAt);
+        const line = `${entry.title || labelForCategory(entry.category)}${entry.note ? ` — ${entry.note}` : ""}`;
+        text += `• ${time}: ${line}\n`;
+      });
+
+    text += `\n`;
+    return text;
+  }
+
+  function saveHandoffToCareLog() {
+    const child = getActiveChild();
+    if (!child) return;
+
+    if (!lastGeneratedHandoff.trim()) {
+      generateHandoffSummary();
+    }
+
+    if (!lastGeneratedHandoff.trim()) {
+      alert("No handoff summary available.");
+      return;
+    }
+
+    if (!Array.isArray(db.careLogs)) db.careLogs = [];
+
+    db.careLogs.unshift({
+      id: uid("carelog"),
+      childId: child.id,
+      category: "note",
+      source: "school_handoff",
+      author: "School Nurse",
+      title: "School Day Handoff",
+      note: lastGeneratedHandoff,
+      createdAt: new Date().toISOString()
+    });
+
+    saveDB(db);
+    alert("Handoff summary saved to Care Log.");
+  }
+
+  function clearHandoff() {
+    lastGeneratedHandoff = "";
+    if (handoffSummary) {
+      handoffSummary.textContent = "No handoff summary generated yet.";
+    }
   }
 
   function uid(prefix = "id") {
@@ -491,7 +548,10 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
   function todayYYYYMMDD() {
-    const d = new Date();
+    return getDateKeyFromDate(new Date());
+  }
+
+  function getDateKeyFromDate(d) {
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
   }
 
@@ -502,6 +562,16 @@ document.addEventListener("DOMContentLoaded", async () => {
     return d.toLocaleString([], {
       month: "short",
       day: "numeric",
+      hour: "numeric",
+      minute: "2-digit"
+    });
+  }
+
+  function formatTimeOnly(value) {
+    if (!value) return "—";
+    const d = new Date(value);
+    if (Number.isNaN(d.getTime())) return "—";
+    return d.toLocaleTimeString([], {
       hour: "numeric",
       minute: "2-digit"
     });
@@ -532,7 +602,8 @@ document.addEventListener("DOMContentLoaded", async () => {
   function labelForCategory(cat) {
     if (cat === "symptom") return "Symptom";
     if (cat === "med") return "Medication";
-    if (cat === "feed") return "Feed / Therapy";
+    if (cat === "feed") return "Feed";
+    if (cat === "therapy") return "Therapy";
     if (cat === "bathroom") return "Bathroom / Output";
     if (cat === "missed") return "Missed Task";
     if (cat === "seizure") return "Seizure";
@@ -543,6 +614,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     if (cat === "symptom") return "🩺";
     if (cat === "med") return "💊";
     if (cat === "feed") return "🍼";
+    if (cat === "therapy") return "🤸";
     if (cat === "bathroom") return "🚻";
     if (cat === "missed") return "⚠️";
     if (cat === "seizure") return "🚨";
