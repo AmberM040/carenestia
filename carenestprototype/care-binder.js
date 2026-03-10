@@ -132,11 +132,11 @@ document.addEventListener("DOMContentLoaded", async () => {
   async function init() {
     await loadChildren();
     ensureBinderStructure();
+    ensureValidCurrentSection();
     renderChildSwitcher();
     renderHeader();
     renderSidebarProfile();
     renderGroupNav();
-    ensureValidCurrentSection();
     renderSubnav();
     renderStats();
     renderStatusPanel();
@@ -149,9 +149,13 @@ document.addEventListener("DOMContentLoaded", async () => {
       db.activeChildId = childSwitcher.value;
       db.currentChildId = childSwitcher.value;
       saveDB(db);
+
+      ensureValidCurrentSection();
       renderChildSwitcher();
       renderHeader();
       renderSidebarProfile();
+      renderGroupNav();
+      renderSubnav();
       renderStats();
       renderStatusPanel();
       renderSection(currentSectionKey);
@@ -177,9 +181,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     cancelEditBtn?.addEventListener("click", closeEdit);
 
-    saveEditBtn?.addEventListener("click", () => {
-      saveEdit();
-    });
+    saveEditBtn?.addEventListener("click", saveEdit);
 
     editModal?.addEventListener("click", (e) => {
       if (e.target === editModal) closeEdit();
@@ -204,10 +206,11 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
 
     const {
-      data: { user }
+      data: { user },
+      error: userError
     } = await supabase.auth.getUser();
 
-    if (!user) {
+    if (userError || !user) {
       if (!Array.isArray(db.children)) db.children = [];
       return;
     }
@@ -242,25 +245,17 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   function ensureBinderStructure() {
     if (!db.careBinder) db.careBinder = {};
-    if (!db.careBinder.sections) {
-      db.careBinder.sections = {
-        overview: { notes: "" },
-        medicalHistory: { notes: "" },
-        seizureProfile: { notes: "" },
-        medications: { notes: "" },
-        feedingNutrition: { notes: "" },
-        carePlans: { notes: "" },
-        emergencyPlans: { notes: "" },
-        careTeam: { notes: "" },
-        nursingMedicaid: { notes: "" },
-        schoolInfo: { notes: "" },
-        schoolPaperwork: { notes: "" },
-        labs: { notes: "" },
-        goBag: { notes: "" },
-        documents: { notes: "" }
-      };
-      saveDB(db);
-    }
+    if (!db.careBinder.sections) db.careBinder.sections = {};
+
+    Object.keys(SECTION_CONFIG).forEach((key) => {
+      if (!db.careBinder.sections[key] || typeof db.careBinder.sections[key] !== "object") {
+        db.careBinder.sections[key] = { notes: "" };
+      } else if (typeof db.careBinder.sections[key].notes !== "string") {
+        db.careBinder.sections[key].notes = "";
+      }
+    });
+
+    saveDB(db);
   }
 
   function getChildren() {
@@ -315,13 +310,18 @@ document.addEventListener("DOMContentLoaded", async () => {
     const child = getActiveChild();
 
     if (!child) {
-      binderPhoto.src = "";
+      binderPhoto.removeAttribute("src");
       binderName.textContent = "No child selected";
       binderSub.textContent = "Add a child profile to continue";
       return;
     }
 
-    binderPhoto.src = child.photo_url || "https://via.placeholder.com/600x400?text=Child+Photo";
+    if (child.photo_url) {
+      binderPhoto.src = child.photo_url;
+    } else {
+      binderPhoto.src = "https://via.placeholder.com/600x400?text=Child+Photo";
+    }
+
     binderPhoto.alt = child.name ? `${child.name} photo` : "Child photo";
     binderName.textContent = child.name || "Child";
 
@@ -373,8 +373,8 @@ document.addEventListener("DOMContentLoaded", async () => {
   function renderStats() {
     const child = getActiveChild();
     const diagnosesCount = Array.isArray(child?.diagnoses) ? child.diagnoses.length : 0;
-    const allergyCount = getSectionEntryCount("medicalHistory");
-    const medCount = getSectionEntryCount("medications");
+    const allergyCount = countMeaningfulNotes("medicalHistory");
+    const medCount = countMeaningfulNotes("medications");
     const completeCount = getCompleteSectionCount();
 
     if (binderStatDiagnoses) binderStatDiagnoses.textContent = diagnosesCount;
@@ -402,22 +402,14 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
   function getSectionStatus(key) {
-    const section = db.careBinder?.sections?.[key];
+    const notes = db.careBinder?.sections?.[key]?.notes || "";
 
-    if (!section) {
+    if (!notes.trim()) {
       return { label: "Empty", className: "status-empty" };
     }
 
-    const values = Object.values(section).filter(Boolean);
-
-    if (!values.length) {
-      return { label: "Empty", className: "status-empty" };
-    }
-
-    if (values.length === 1 && typeof values[0] === "string") {
-      return values[0].trim()
-        ? { label: "Partial", className: "status-partial" }
-        : { label: "Empty", className: "status-empty" };
+    if (notes.trim().length < 40) {
+      return { label: "Partial", className: "status-partial" };
     }
 
     return { label: "Complete", className: "status-complete" };
@@ -427,12 +419,9 @@ document.addEventListener("DOMContentLoaded", async () => {
     return Object.keys(SECTION_CONFIG).filter((key) => getSectionStatus(key).label !== "Empty").length;
   }
 
-  function getSectionEntryCount(key) {
-    const section = db.careBinder?.sections?.[key];
-    if (!section) return 0;
-
-    const values = Object.values(section).filter(Boolean);
-    return values.length;
+  function countMeaningfulNotes(key) {
+    const notes = db.careBinder?.sections?.[key]?.notes || "";
+    return notes.trim() ? 1 : 0;
   }
 
   function renderSection(key) {
@@ -476,6 +465,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     editTitle.textContent = `Edit ${SECTION_CONFIG[key].label}`;
     editNotes.value = db.careBinder?.sections?.[key]?.notes || "";
     editModal.classList.add("open");
+    editNotes.focus();
   }
 
   function closeEdit() {
