@@ -1,11 +1,20 @@
 document.addEventListener("DOMContentLoaded", async () => {
   let db = ensureDB(loadDB());
+  saveDB(db);
+
   const supabase = window.supabaseClient || null;
 
   const childSwitcher = document.getElementById("childSwitcher");
   const childAvatar = document.getElementById("childAvatar");
   const childSummary = document.getElementById("childSummary");
   const logoutBtn = document.getElementById("logoutBtn");
+
+  const schoolHeroPhoto = document.getElementById("schoolHeroPhoto");
+  const schoolHeroName = document.getElementById("schoolHeroName");
+  const schoolHeroSub = document.getElementById("schoolHeroSub");
+  const schoolDiagnosisPills = document.getElementById("schoolDiagnosisPills");
+  const schoolAllergyStat = document.getElementById("schoolAllergyStat");
+  const schoolRescueStat = document.getElementById("schoolRescueStat");
 
   const schoolScheduleList = document.getElementById("schoolScheduleList");
   const schoolActivityList = document.getElementById("schoolActivityList");
@@ -38,10 +47,11 @@ document.addEventListener("DOMContentLoaded", async () => {
   await init();
 
   async function init() {
-    await loadChildren();
-    ensureSchoolLogStructure();
+    await loadChildrenFromSupabase();
+    ensureSchoolData();
     renderChildSwitcher();
     renderHeader();
+    renderHero();
     renderSchedule();
     renderActivity();
     renderEmergencySnapshot();
@@ -51,11 +61,13 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   function wireEvents() {
     childSwitcher?.addEventListener("change", () => {
-      db.activeChildId = childSwitcher.value;
-      db.currentChildId = childSwitcher.value;
+      db.activeChildId = childSwitcher.value || null;
+      db.currentChildId = db.activeChildId;
       saveDB(db);
+
       renderChildSwitcher();
       renderHeader();
+      renderHero();
       renderSchedule();
       renderActivity();
       renderEmergencySnapshot();
@@ -91,10 +103,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       }
     });
 
-    btnGenerateHandoff?.addEventListener("click", () => {
-      generateHandoffSummary();
-    });
-
+    btnGenerateHandoff?.addEventListener("click", generateHandoffSummary);
     btnSaveHandoff?.addEventListener("click", saveHandoffToCareLog);
 
     logoutBtn?.addEventListener("click", async () => {
@@ -109,22 +118,15 @@ document.addEventListener("DOMContentLoaded", async () => {
     });
   }
 
-  async function loadChildren() {
-    if (!supabase?.auth) {
-      if (!Array.isArray(db.children)) db.children = [];
-      return;
-    }
+  async function loadChildrenFromSupabase() {
+    if (!supabase?.auth) return;
 
     const {
       data: { user },
       error: userError
     } = await supabase.auth.getUser();
 
-    if (userError || !user) {
-      if (!Array.isArray(db.children)) db.children = [];
-      return;
-    }
-
+    if (userError || !user) return;
     currentUser = user;
 
     const { data, error } = await supabase
@@ -135,11 +137,12 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     if (error) {
       console.warn("Could not load children:", error.message);
-      if (!Array.isArray(db.children)) db.children = [];
       return;
     }
 
-    db.children = (data || []).map((child) => ({
+    if (!Array.isArray(data) || !data.length) return;
+
+    db.children = data.map((child) => ({
       ...child,
       diagnoses: normalizeDiagnoses(child.diagnoses),
       age: child.age ?? getAgeFromBirthdate(child.birthdate)
@@ -155,10 +158,11 @@ document.addEventListener("DOMContentLoaded", async () => {
     saveDB(db);
   }
 
-  function ensureSchoolLogStructure() {
+  function ensureSchoolData() {
     if (!Array.isArray(db.schoolLogs)) db.schoolLogs = [];
     if (!Array.isArray(db.careLogs)) db.careLogs = [];
     if (!db.carePlans || typeof db.carePlans !== "object") db.carePlans = {};
+    if (!db.schedules || typeof db.schedules !== "object") db.schedules = {};
     saveDB(db);
   }
 
@@ -169,7 +173,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   function getActiveChild() {
     const children = getChildren();
     if (!children.length) return null;
-    return children.find((c) => String(c.id) === String(db.activeChildId)) || children[0] || null;
+    return children.find((c) => String(c.id) === String(db.activeChildId || db.currentChildId)) || children[0] || null;
   }
 
   function getSchoolLogsForActiveChild() {
@@ -184,8 +188,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     const children = getChildren();
     if (!childSwitcher) return;
 
-    childSwitcher.innerHTML = "";
-
     if (!children.length) {
       childSwitcher.innerHTML = `<option value="">No children yet</option>`;
       return;
@@ -193,7 +195,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     childSwitcher.innerHTML = children
       .map((c) => {
-        const selected = String(c.id) === String(db.activeChildId) ? "selected" : "";
+        const selected = String(c.id) === String(getActiveChild()?.id) ? "selected" : "";
         return `<option value="${escapeHtml(c.id)}" ${selected}>${escapeHtml(c.name || "Child")}</option>`;
       })
       .join("");
@@ -209,17 +211,43 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
 
     const ageText = child.age ? `Age ${child.age}` : "Age —";
-    const dx = Array.isArray(child.diagnoses) && child.diagnoses.length
-      ? child.diagnoses.slice(0, 2).join(" • ")
-      : "No diagnoses listed";
+    const dx = child.diagnoses?.length ? child.diagnoses.slice(0, 2).join(" • ") : "No diagnoses listed";
 
-    if (childSummary) childSummary.textContent = `${ageText} • ${dx}`;
+    childSummary.textContent = `${ageText} • ${dx}`;
 
-    if (childAvatar) {
-      childAvatar.innerHTML = child.photo_url
-        ? `<img src="${escapeHtml(child.photo_url)}" alt="${escapeHtml(child.name || "Child")}">`
-        : "";
-    }
+    childAvatar.innerHTML = child.photo_url
+      ? `<img src="${escapeAttr(child.photo_url)}" alt="${escapeAttr(child.name || "Child")}">`
+      : "";
+  }
+
+  function renderHero() {
+    const child = getActiveChild();
+    if (!child) return;
+
+    const carePlan = db.carePlans?.[child.id] || {};
+
+    schoolHeroPhoto.src = child.photo_url || "https://via.placeholder.com/600x400?text=Child+Photo";
+    schoolHeroPhoto.alt = child.name ? `${child.name} photo` : "Child photo";
+    schoolHeroName.textContent = child.name || "Child";
+
+    const ageText = child.age ? `Age ${child.age}` : "Age —";
+    const diagnosesText = child.diagnoses?.length ? child.diagnoses.join(" • ") : "No diagnoses listed";
+    schoolHeroSub.textContent = `${ageText} • ${diagnosesText}`;
+
+    schoolDiagnosisPills.innerHTML = "";
+    (child.diagnoses || []).slice(0, 6).forEach((dx) => {
+      const pill = document.createElement("span");
+      pill.className = "school-pill";
+      pill.textContent = dx;
+      schoolDiagnosisPills.appendChild(pill);
+    });
+
+    schoolAllergyStat.textContent = child.allergies || "None listed";
+    schoolRescueStat.textContent =
+      joinParts([
+        carePlan.rescue_med_name,
+        carePlan.rescue_med_dose
+      ], " • ") || "—";
   }
 
   function renderSchedule() {
@@ -227,14 +255,15 @@ document.addEventListener("DOMContentLoaded", async () => {
     if (!schoolScheduleList) return;
 
     if (!child) {
-      schoolScheduleList.innerHTML = `<div class="empty-state">No child selected.</div>`;
+      schoolScheduleList.innerHTML = `<div class="empty-box">No child selected.</div>`;
       return;
     }
 
-    const today = todayYYYYMMDD();
+    const todayKey = todayYYYYMMDD();
+
     const medItems =
       typeof generateMedicationScheduleItems === "function"
-        ? generateMedicationScheduleItems(db, child.id, today)
+        ? generateMedicationScheduleItems(db, child.id, todayKey)
         : [];
 
     const customItems = Array.isArray(db.schedules?.[child.id])
@@ -257,14 +286,14 @@ document.addEventListener("DOMContentLoaded", async () => {
     ].sort((a, b) => String(a.time).localeCompare(String(b.time)));
 
     if (!rows.length) {
-      schoolScheduleList.innerHTML = `<div class="empty-state">No school-day items scheduled.</div>`;
+      schoolScheduleList.innerHTML = `<div class="empty-box">No school-day items scheduled.</div>`;
       return;
     }
 
     schoolScheduleList.innerHTML = rows
       .map(
         (row) => `
-          <div class="list-item">
+          <div class="schedule-item">
             <div>
               <strong>${escapeHtml(row.title)}</strong>
               <div class="muted">${escapeHtml(row.category)}${row.details ? ` • ${escapeHtml(row.details)}` : ""}</div>
@@ -277,21 +306,19 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
   function renderActivity() {
-    if (!schoolActivityList) return;
-
-    const entries = getSchoolLogsForActiveChild().slice(0, 20);
+    const entries = getSchoolLogsForActiveChild().slice(0, 25);
 
     if (!entries.length) {
-      schoolActivityList.innerHTML = `<div class="empty-state">No school activity logged yet.</div>`;
+      schoolActivityList.innerHTML = `<div class="empty-box">No school activity logged yet.</div>`;
       return;
     }
 
     schoolActivityList.innerHTML = entries
       .map(
         (entry) => `
-          <div class="log-card">
-            <div class="log-icon">${escapeHtml(iconForCategory(entry.category))}</div>
-            <div class="log-main">
+          <div class="timeline-entry">
+            <div class="timeline-time">${escapeHtml(formatTimeOnly(entry.createdAt))}</div>
+            <div class="timeline-body">
               <h3>${escapeHtml(entry.title || labelForCategory(entry.category))}</h3>
               <p>${escapeHtml(entry.note || "")}</p>
               <p class="muted mt-12">${escapeHtml(entry.author || "School Nurse")} • ${escapeHtml(formatDateTime(entry.createdAt))} • Logged by Nurse</p>
@@ -307,27 +334,36 @@ document.addEventListener("DOMContentLoaded", async () => {
     if (!emergencySnapshot) return;
 
     if (!child) {
-      emergencySnapshot.innerHTML = `<div class="empty-state">No child selected.</div>`;
+      emergencySnapshot.innerHTML = `<div class="empty-box">No child selected.</div>`;
       return;
     }
 
     const carePlan = db.carePlans?.[child.id] || {};
-    const allergies = child.allergies || "None listed";
+    const diagnoses = child.diagnoses?.length ? child.diagnoses.join(", ") : "None listed";
 
     emergencySnapshot.innerHTML = `
-      <div class="list-item">
+      <div class="snapshot-item">
+        <div>
+          <strong>Diagnoses</strong>
+          <div class="muted">${escapeHtml(diagnoses)}</div>
+        </div>
+      </div>
+
+      <div class="snapshot-item">
         <div>
           <strong>Allergies</strong>
-          <div class="muted">${escapeHtml(allergies)}</div>
+          <div class="muted">${escapeHtml(child.allergies || "None listed")}</div>
         </div>
       </div>
-      <div class="list-item">
+
+      <div class="snapshot-item">
         <div>
-          <strong>Rescue / Emergency Notes</strong>
-          <div class="muted">${escapeHtml(carePlan.seizure_protocol || "No emergency protocol added yet.")}</div>
+          <strong>Rescue Medication</strong>
+          <div class="muted">${escapeHtml(joinParts([carePlan.rescue_med_name, carePlan.rescue_med_dose], " • ") || "—")}</div>
         </div>
       </div>
-      <div class="list-item">
+
+      <div class="snapshot-item">
         <div>
           <strong>When to Call EMS</strong>
           <div class="muted">${escapeHtml(carePlan.ems_when || "No EMS instructions added yet.")}</div>
@@ -341,64 +377,62 @@ document.addEventListener("DOMContentLoaded", async () => {
     if (!schoolEmergencyBody) return;
 
     if (!child) {
-      schoolEmergencyBody.innerHTML = `<div class="empty-state">No child selected.</div>`;
+      schoolEmergencyBody.innerHTML = `<div class="empty-box">No child selected.</div>`;
       return;
     }
 
     const carePlan = db.carePlans?.[child.id] || {};
-    const diagnoses = Array.isArray(child.diagnoses) && child.diagnoses.length
-      ? child.diagnoses.join(", ")
-      : "None listed";
+    const diagnoses = child.diagnoses?.length ? child.diagnoses.join(", ") : "None listed";
 
     schoolEmergencyBody.innerHTML = `
-      <div class="list-item"><div><strong>Name</strong><div class="muted">${escapeHtml(child.name || "—")}</div></div></div>
-      <div class="list-item"><div><strong>Diagnoses</strong><div class="muted">${escapeHtml(diagnoses)}</div></div></div>
-      <div class="list-item"><div><strong>Allergies</strong><div class="muted">${escapeHtml(child.allergies || "None listed")}</div></div></div>
-      <div class="list-item"><div><strong>Emergency Protocol</strong><div class="muted">${escapeHtml(carePlan.seizure_protocol || "No emergency protocol added yet.")}</div></div></div>
-      <div class="list-item"><div><strong>When to Call EMS</strong><div class="muted">${escapeHtml(carePlan.ems_when || "No EMS instructions added yet.")}</div></div></div>
+      <div class="snapshot-item"><div><strong>Name</strong><div class="muted">${escapeHtml(child.name || "—")}</div></div></div>
+      <div class="snapshot-item"><div><strong>Diagnoses</strong><div class="muted">${escapeHtml(diagnoses)}</div></div></div>
+      <div class="snapshot-item"><div><strong>Allergies</strong><div class="muted">${escapeHtml(child.allergies || "None listed")}</div></div></div>
+      <div class="snapshot-item"><div><strong>Rescue Medication</strong><div class="muted">${escapeHtml(joinParts([carePlan.rescue_med_name, carePlan.rescue_med_dose], " • ") || "—")}</div></div></div>
+      <div class="snapshot-item"><div><strong>Emergency Protocol</strong><div class="muted">${escapeHtml(carePlan.seizure_protocol || "No emergency protocol added yet.")}</div></div></div>
+      <div class="snapshot-item"><div><strong>When to Call EMS</strong><div class="muted">${escapeHtml(carePlan.ems_when || "No EMS instructions added yet.")}</div></div></div>
     `;
   }
 
   function openSchoolLogModal(type = "note") {
-    if (schoolLogCategory) schoolLogCategory.value = type;
-    if (schoolLogModalTitle) schoolLogModalTitle.textContent = `Add ${labelForCategory(type)}`;
-    if (schoolLogAuthor) schoolLogAuthor.value = "School Nurse";
-    if (schoolLogTitle) schoolLogTitle.value = "";
-    if (schoolLogNote) schoolLogNote.value = "";
+    schoolLogCategory.value = type;
+    schoolLogModalTitle.textContent = `Add ${labelForCategory(type)}`;
+    schoolLogAuthor.value = "School Nurse";
+    schoolLogTitle.value = "";
+    schoolLogNote.value = "";
 
     const now = new Date();
-    if (schoolLogDate) schoolLogDate.value = now.toISOString().slice(0, 10);
-    if (schoolLogTime) schoolLogTime.value = now.toTimeString().slice(0, 5);
+    schoolLogDate.value = now.toISOString().slice(0, 10);
+    schoolLogTime.value = now.toTimeString().slice(0, 5);
 
-    schoolLogModal?.classList.remove("hidden");
+    schoolLogModal.classList.remove("hidden");
   }
 
   function closeSchoolLogModal() {
-    schoolLogModal?.classList.add("hidden");
+    schoolLogModal.classList.add("hidden");
   }
 
   function saveSchoolLog() {
     const child = getActiveChild();
     if (!child) return;
 
-    const title = schoolLogTitle?.value.trim() || labelForCategory(schoolLogCategory?.value || "note");
-    const note = schoolLogNote?.value.trim() || "";
-    const author = schoolLogAuthor?.value.trim() || "School Nurse";
-    const category = schoolLogCategory?.value || "note";
-    const date = schoolLogDate?.value || todayYYYYMMDD();
-    const time = schoolLogTime?.value || "12:00";
+    const category = schoolLogCategory.value || "note";
+    const title = schoolLogTitle.value.trim() || labelForCategory(category);
+    const note = schoolLogNote.value.trim();
+    const author = schoolLogAuthor.value.trim() || "School Nurse";
+    const date = schoolLogDate.value || todayYYYYMMDD();
+    const time = schoolLogTime.value || "12:00";
 
     if (!note) {
       alert("Please enter details for this school log.");
       return;
     }
 
-    if (!Array.isArray(db.schoolLogs)) db.schoolLogs = [];
-
     db.schoolLogs.unshift({
       id: uid("schoollog"),
       childId: child.id,
       source: "school_nurse",
+      visibility: "parent_and_nurse",
       location: "school",
       category,
       title,
@@ -415,10 +449,9 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   function generateHandoffSummary() {
     const child = getActiveChild();
-    if (!child || !handoffSummary) return;
+    if (!child) return;
 
     const todayKey = todayYYYYMMDD();
-
     const entries = getSchoolLogsForActiveChild().filter((entry) => {
       const d = new Date(entry.createdAt);
       return !Number.isNaN(d.getTime()) && getDateKeyFromDate(d) === todayKey;
@@ -443,7 +476,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     let text = "";
     text += `School Day Summary\n`;
     text += `${child.name || "Child"} — ${new Date().toLocaleDateString()}\n\n`;
-
     text += buildSummarySection("Medications", grouped.med);
     text += buildSummarySection("Feeds", grouped.feed);
     text += buildSummarySection("Therapies", grouped.therapy);
@@ -519,8 +551,68 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
   }
 
+  function isSchoolRelevant(item) {
+    const category = String(item?.category || "").toLowerCase();
+    return ["medication", "feeding", "therapy", "symptom check", "appointment", "other"].includes(category);
+  }
+
+  function labelForCategory(cat) {
+    if (cat === "symptom") return "Symptom";
+    if (cat === "med") return "Medication";
+    if (cat === "feed") return "Feed";
+    if (cat === "therapy") return "Therapy";
+    if (cat === "bathroom") return "Bathroom / Output";
+    if (cat === "missed") return "Missed Task";
+    if (cat === "seizure") return "Seizure";
+    return "School Note";
+  }
+
+  function formatTimeFromStart(startAt, fallback) {
+    if (startAt) {
+      const d = new Date(startAt);
+      if (!Number.isNaN(d.getTime())) {
+        return d.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+      }
+    }
+    return fallback || "—";
+  }
+
+  function formatDateTime(value) {
+    if (!value) return "—";
+    const d = new Date(value);
+    if (Number.isNaN(d.getTime())) return value;
+    return d.toLocaleString([], {
+      month: "short",
+      day: "numeric",
+      hour: "numeric",
+      minute: "2-digit"
+    });
+  }
+
+  function formatTimeOnly(value) {
+    if (!value) return "—";
+    const d = new Date(value);
+    if (Number.isNaN(d.getTime())) return "—";
+    return d.toLocaleTimeString([], {
+      hour: "numeric",
+      minute: "2-digit"
+    });
+  }
+
+  function todayYYYYMMDD() {
+    return getDateKeyFromDate(new Date());
+  }
+
+  function getDateKeyFromDate(d) {
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  }
+
   function uid(prefix = "id") {
     return `${prefix}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+  }
+
+  function joinParts(parts, separator = " ") {
+    return (parts || []).filter(Boolean).join(separator).trim();
   }
 
   function normalizeDiagnoses(value) {
@@ -547,80 +639,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     return age;
   }
 
-  function todayYYYYMMDD() {
-    return getDateKeyFromDate(new Date());
-  }
-
-  function getDateKeyFromDate(d) {
-    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-  }
-
-  function formatDateTime(value) {
-    if (!value) return "—";
-    const d = new Date(value);
-    if (Number.isNaN(d.getTime())) return value;
-    return d.toLocaleString([], {
-      month: "short",
-      day: "numeric",
-      hour: "numeric",
-      minute: "2-digit"
-    });
-  }
-
-  function formatTimeOnly(value) {
-    if (!value) return "—";
-    const d = new Date(value);
-    if (Number.isNaN(d.getTime())) return "—";
-    return d.toLocaleTimeString([], {
-      hour: "numeric",
-      minute: "2-digit"
-    });
-  }
-
-  function formatTimeFromStart(startAt, fallback) {
-    if (startAt) {
-      const d = new Date(startAt);
-      if (!Number.isNaN(d.getTime())) {
-        return d.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
-      }
-    }
-    return fallback || "—";
-  }
-
-  function isSchoolRelevant(item) {
-    const category = String(item?.category || "").toLowerCase();
-    return [
-      "medication",
-      "feeding",
-      "therapy",
-      "symptom check",
-      "appointment",
-      "other"
-    ].includes(category);
-  }
-
-  function labelForCategory(cat) {
-    if (cat === "symptom") return "Symptom";
-    if (cat === "med") return "Medication";
-    if (cat === "feed") return "Feed";
-    if (cat === "therapy") return "Therapy";
-    if (cat === "bathroom") return "Bathroom / Output";
-    if (cat === "missed") return "Missed Task";
-    if (cat === "seizure") return "Seizure";
-    return "School Note";
-  }
-
-  function iconForCategory(cat) {
-    if (cat === "symptom") return "🩺";
-    if (cat === "med") return "💊";
-    if (cat === "feed") return "🍼";
-    if (cat === "therapy") return "🤸";
-    if (cat === "bathroom") return "🚻";
-    if (cat === "missed") return "⚠️";
-    if (cat === "seizure") return "🚨";
-    return "📝";
-  }
-
   function escapeHtml(value) {
     return String(value ?? "")
       .replace(/&/g, "&amp;")
@@ -628,5 +646,9 @@ document.addEventListener("DOMContentLoaded", async () => {
       .replace(/>/g, "&gt;")
       .replace(/"/g, "&quot;")
       .replace(/'/g, "&#39;");
+  }
+
+  function escapeAttr(value) {
+    return escapeHtml(value);
   }
 });
