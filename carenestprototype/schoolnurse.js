@@ -578,7 +578,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     return text;
   }
 
-  function saveHandoffToCareLog() {
+  async function saveHandoffToCareLog() {
     const child = getActiveChild();
     if (!child) return;
 
@@ -589,6 +589,29 @@ document.addEventListener("DOMContentLoaded", async () => {
     if (!lastGeneratedHandoff.trim()) {
       alert("No handoff summary available.");
       return;
+    }
+
+    const payload = {
+      child_id: child.id,
+      parent_id: currentUser?.id || null,
+      category: "note",
+      note: `School Day Handoff\n\n${lastGeneratedHandoff}`,
+      author: "School Nurse",
+      specialties: ["General"],
+      created_at: new Date().toISOString()
+    };
+
+    if (supabase && currentUser?.id) {
+      const { error } = await supabase
+        .from("care_logs")
+        .insert([payload]);
+
+      if (!error) {
+        alert("Handoff summary saved to Care Log.");
+        return;
+      }
+
+      console.warn("Could not save handoff to Supabase:", error.message);
     }
 
     if (!Array.isArray(db.careLogs)) db.careLogs = [];
@@ -605,7 +628,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     });
 
     saveDB(db);
-    alert("Handoff summary saved to Care Log.");
+    alert("Handoff saved locally only.");
   }
 
   function clearHandoff() {
