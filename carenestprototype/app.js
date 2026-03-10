@@ -1,6 +1,6 @@
 document.addEventListener("DOMContentLoaded", async () => {
-  const LOCAL_DB_KEY = "carenest_prototype_v1";
-  const ACTIVE_CHILD_KEY = "carenest_active_child_id";
+  let db = loadDB();
+  const supabase = window.supabaseClient || null;
 
   const childSwitcher = document.getElementById("childSwitcher");
   const logoutBtn = document.getElementById("logoutBtn");
@@ -118,7 +118,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       month: "short",
       day: "numeric",
       hour: "numeric",
-      minute: "2-digit",
+      minute: "2-digit"
     });
   }
 
@@ -128,7 +128,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     if (Number.isNaN(d.getTime())) return value;
     return d.toLocaleTimeString([], {
       hour: "numeric",
-      minute: "2-digit",
+      minute: "2-digit"
     });
   }
 
@@ -143,36 +143,33 @@ document.addEventListener("DOMContentLoaded", async () => {
     );
   }
 
-  function getLocalDB() {
-    try {
-      const raw = localStorage.getItem(LOCAL_DB_KEY);
-      return raw ? JSON.parse(raw) : {};
-    } catch (err) {
-      console.error("Failed to parse local DB:", err);
-      return {};
-    }
+  function capitalize(text = "") {
+    if (!text) return "";
+    return text.charAt(0).toUpperCase() + text.slice(1);
   }
 
-  function saveLocalDB(db) {
-    try {
-      localStorage.setItem(LOCAL_DB_KEY, JSON.stringify(db));
-    } catch (err) {
-      console.error("Failed to save local DB:", err);
-    }
+  function getChildrenSafe() {
+    return Array.isArray(db.children) ? db.children : [];
   }
 
   function setActiveChildId(id) {
-    localStorage.setItem(ACTIVE_CHILD_KEY, id);
+    db.activeChildId = id || null;
+    db.currentChildId = db.activeChildId;
+    db = ensureDB(db);
+    saveDB(db);
   }
 
-  function getActiveChildId() {
-    return localStorage.getItem(ACTIVE_CHILD_KEY);
-  }
+  function getActiveChildFromDB() {
+    const childrenList = getChildrenSafe();
+    if (!childrenList.length) return null;
 
-  function getSupabaseClient() {
-    if (window.supabaseClient) return window.supabaseClient;
-    if (window.supabase?.from) return window.supabase;
-    return null;
+    const preferredId = db.activeChildId || db.currentChildId || null;
+    if (preferredId) {
+      const match = childrenList.find((c) => String(c.id) === String(preferredId));
+      if (match) return match;
+    }
+
+    return childrenList[0] || null;
   }
 
   function getSelectedSpecialties() {
@@ -204,6 +201,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
   function openQuickLog(category = "note") {
+    if (!modal) return;
     if (categorySelect) categorySelect.value = category;
     if (noteInput) noteInput.value = "";
     show(modal);
@@ -214,6 +212,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
   function openVitalsModal(mode = "full") {
+    if (!vitalsModal) return;
     currentQuickVitalMode = mode;
     clearVitalsInputs();
     updateVitalFieldVisibility(mode);
@@ -241,7 +240,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       bp: ["wrapBpSys", "wrapBpDia"],
       hr: ["wrapHr"],
       rr: ["wrapRr"],
-      full: ["wrapO2", "wrapTemp", "wrapBpSys", "wrapBpDia", "wrapHr", "wrapRr"],
+      full: ["wrapO2", "wrapTemp", "wrapBpSys", "wrapBpDia", "wrapHr", "wrapRr"]
     };
 
     const visible = new Set(showMap[mode] || showMap.full);
@@ -252,11 +251,17 @@ document.addEventListener("DOMContentLoaded", async () => {
     });
   }
 
-  async function fetchUser() {
-    const supabase = getSupabaseClient();
-    if (!supabase?.auth) return null;
+  function getSupabaseClient() {
+    if (window.supabaseClient) return window.supabaseClient;
+    if (window.supabase?.from) return window.supabase;
+    return null;
+  }
 
-    const { data, error } = await supabase.auth.getUser();
+  async function fetchUser() {
+    const client = getSupabaseClient();
+    if (!client?.auth) return null;
+
+    const { data, error } = await client.auth.getUser();
     if (error) {
       console.error("Error getting user:", error);
       return null;
@@ -266,10 +271,10 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
   async function fetchChildren(userId) {
-    const supabase = getSupabaseClient();
-    if (!supabase || !userId) return [];
+    const client = getSupabaseClient();
+    if (!client || !userId) return [];
 
-    const { data, error } = await supabase
+    const { data, error } = await client
       .from("children")
       .select("*")
       .eq("parent_id", userId)
@@ -283,15 +288,15 @@ document.addEventListener("DOMContentLoaded", async () => {
     return (data || []).map((child) => ({
       ...child,
       diagnoses: normalizeDiagnoses(child.diagnoses),
-      age: child.age ?? getAgeFromBirthdate(child.birthdate),
+      age: child.age ?? getAgeFromBirthdate(child.birthdate)
     }));
   }
 
   async function fetchMedications(childId) {
-    const supabase = getSupabaseClient();
-    if (!supabase) return [];
+    const client = getSupabaseClient();
+    if (!client) return [];
 
-    const { data, error } = await supabase
+    const { data, error } = await client
       .from("medications")
       .select("*")
       .eq("child_id", childId)
@@ -306,10 +311,10 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
   async function fetchCareLogs(childId) {
-    const supabase = getSupabaseClient();
-    if (!supabase) return [];
+    const client = getSupabaseClient();
+    if (!client) return [];
 
-    const { data, error } = await supabase
+    const { data, error } = await client
       .from("care_logs")
       .select("*")
       .eq("child_id", childId)
@@ -325,10 +330,10 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
   async function fetchAllCareLogsForSymptom(childId) {
-    const supabase = getSupabaseClient();
-    if (!supabase) return [];
+    const client = getSupabaseClient();
+    if (!client) return [];
 
-    const { data, error } = await supabase
+    const { data, error } = await client
       .from("care_logs")
       .select("*")
       .eq("child_id", childId)
@@ -345,10 +350,10 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
   async function fetchVitals(childId) {
-    const supabase = getSupabaseClient();
-    if (!supabase) return [];
+    const client = getSupabaseClient();
+    if (!client) return [];
 
-    const { data, error } = await supabase
+    const { data, error } = await client
       .from("vitals")
       .select("*")
       .eq("child_id", childId)
@@ -364,10 +369,10 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
   async function fetchInventory(childId) {
-    const supabase = getSupabaseClient();
-    if (!supabase) return [];
+    const client = getSupabaseClient();
+    if (!client) return [];
 
-    const { data, error } = await supabase
+    const { data, error } = await client
       .from("inventory")
       .select("*")
       .eq("child_id", childId)
@@ -382,10 +387,10 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
   async function fetchSchedule(childId) {
-    const supabase = getSupabaseClient();
-    if (!supabase) return [];
+    const client = getSupabaseClient();
+    if (!client) return [];
 
-    let result = await supabase
+    let result = await client
       .from("schedule_items")
       .select("*")
       .eq("child_id", childId)
@@ -393,7 +398,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     if (!result.error) return result.data || [];
 
-    result = await supabase
+    result = await client
       .from("appointments")
       .select("*")
       .eq("child_id", childId)
@@ -406,10 +411,10 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
   async function fetchCarePlan(childId) {
-    const supabase = getSupabaseClient();
-    if (!supabase) return null;
+    const client = getSupabaseClient();
+    if (!client) return null;
 
-    const { data, error } = await supabase
+    const { data, error } = await client
       .from("care_plans")
       .select("*")
       .eq("child_id", childId)
@@ -605,7 +610,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     const lowItems = items.filter((item) => {
       const qty = Number(item.quantity ?? item.qty ?? 0);
-      const threshold = Number(item.low_threshold ?? item.threshold ?? 0);
+      const threshold = Number(item.low_threshold ?? item.threshold ?? item.low ?? 0);
       return threshold > 0 && qty <= threshold;
     });
 
@@ -628,7 +633,7 @@ document.addEventListener("DOMContentLoaded", async () => {
           <strong>${escapeHtml(item.name || "Supply")}</strong>
           <div class="muted">Qty: ${escapeHtml(item.quantity ?? item.qty ?? "—")}</div>
         </div>
-        <div class="muted">Low at ${escapeHtml(item.low_threshold ?? item.threshold ?? "—")}</div>
+        <div class="muted">Low at ${escapeHtml(item.low_threshold ?? item.threshold ?? item.low ?? "—")}</div>
       `;
       lowSupplyDashboardList.appendChild(div);
     });
@@ -658,17 +663,12 @@ document.addEventListener("DOMContentLoaded", async () => {
     show(lastSymptomCard);
   }
 
-  function capitalize(text = "") {
-    if (!text) return "";
-    return text.charAt(0).toUpperCase() + text.slice(1);
-  }
-
   function normalizeScheduleItems(items = []) {
     return items.map((item) => {
       const start = item.start_at || item.date || item.datetime || item.time;
       return {
         ...item,
-        timeLabel: start ? formatDateTime(start) : item.time || "—",
+        timeLabel: start ? formatDateTime(start) : item.time || "—"
       };
     });
   }
@@ -677,7 +677,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     return items.map((item) => ({
       ...item,
       categoryLabel: capitalize(item.category || "note"),
-      timeLabel: formatDateTime(item.created_at || item.logged_at || item.time),
+      timeLabel: formatDateTime(item.created_at || item.logged_at || item.time)
     }));
   }
 
@@ -775,68 +775,44 @@ document.addEventListener("DOMContentLoaded", async () => {
     `;
   }
 
-  function getLocalChildrenFallback() {
-    const db = getLocalDB();
-
-    if (Array.isArray(db.children) && db.children.length) {
-      return db.children.map((child) => ({
-        ...child,
-        diagnoses: normalizeDiagnoses(child.diagnoses),
-        age: child.age ?? getAgeFromBirthdate(child.birthdate),
+  function getLocalScheduleFallback(childId) {
+    return safeArray(generateMedicationScheduleItems?.(db, childId, new Date().toISOString().slice(0, 10)) || [])
+      .map((item) => ({
+        ...item,
+        start_at: item.date ? `${item.date}T${item.time || "00:00"}` : null
       }));
-    }
+  }
 
-    const child = db.child || null;
-    if (!child) return [];
-
-    return [
-      {
-        id: db.activeChildId || "local-child-1",
-        name: child.name || "Test Child",
-        age: child.age ?? "",
-        birthdate: child.birthdate || null,
-        diagnoses: normalizeDiagnoses(child.diagnoses),
-        allergies: child.allergies || "",
-        photo_url: child.photo_url || "",
-      },
+  function getLocalCareLogsFallback(childId) {
+    const logsByChild = safeArray(db.logs?.[childId]);
+    const careLogs = safeArray(db.careLogs);
+    const merged = [
+      ...careLogs.filter((x) => String(x.child_id || x.childId) === String(childId)),
+      ...logsByChild
     ];
-  }
 
-  function getLocalScheduleFallback() {
-    const db = getLocalDB();
-    return safeArray(db.today).map((item, index) => ({
-      id: `local-today-${index}`,
-      title: item.title,
-      location: item.location,
-      timeLabel: item.time || "—",
-      date: item.time,
-    }));
-  }
-
-  function getLocalCareLogsFallback() {
-    const db = getLocalDB();
-    return safeArray(db.careLogs || db.logs || []).map((item, index) => ({
-      id: `local-log-${index}`,
+    return merged.map((item, index) => ({
+      id: item.id || `local-log-${index}`,
       category: item.category || "note",
       note: item.note || "",
       author: item.author || "Parent",
-      created_at: item.created_at || item.time || new Date().toISOString(),
+      created_at: item.created_at || item.time || new Date().toISOString()
     }));
   }
 
-  function getLocalVitalsFallback() {
-    const db = getLocalDB();
-    const items = safeArray(db.vitals);
-    return items.length ? [items[items.length - 1]] : [];
+  function getLocalVitalsFallback(childId) {
+    const rows = safeArray(db.vitals?.[childId]);
+    if (!rows.length) return [];
+
+    const last = rows[rows.length - 1];
+    return [last];
   }
 
-  function getLocalInventoryFallback() {
-    const db = getLocalDB();
-    return safeArray(db.inventory);
+  function getLocalInventoryFallback(childId) {
+    return safeArray(db.inventory).filter((item) => String(item.childId) === String(childId));
   }
 
   function getLocalCarePlanFallback(childId) {
-    const db = getLocalDB();
     const plans = db.carePlans || {};
     return plans[childId] || null;
   }
@@ -847,14 +823,15 @@ document.addEventListener("DOMContentLoaded", async () => {
       return;
     }
 
-    const supabase = getSupabaseClient();
+    const client = getSupabaseClient();
     const payload = {
       child_id: activeChild.id,
+      parent_id: currentUser?.id || null,
       category: categorySelect?.value || "note",
       note: noteInput?.value.trim() || "",
       author: authorInput?.value.trim() || "Parent",
       specialties: getSelectedSpecialties(),
-      created_at: new Date().toISOString(),
+      created_at: new Date().toISOString()
     };
 
     if (!payload.note) {
@@ -864,8 +841,8 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     let saved = false;
 
-    if (supabase) {
-      const { error } = await supabase.from("care_logs").insert(payload);
+    if (client) {
+      const { error } = await client.from("care_logs").insert(payload);
       if (!error) {
         saved = true;
       } else {
@@ -874,10 +851,10 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
 
     if (!saved) {
-      const db = getLocalDB();
       if (!Array.isArray(db.careLogs)) db.careLogs = [];
       db.careLogs.unshift(payload);
-      saveLocalDB(db);
+      db = ensureDB(db);
+      saveDB(db);
     }
 
     closeQuickLog();
@@ -890,7 +867,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       return;
     }
 
-    const supabase = getSupabaseClient();
+    const client = getSupabaseClient();
 
     const payload = {
       child_id: activeChild.id,
@@ -901,7 +878,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       heart_rate: quickHr?.value ? Number(quickHr.value) : null,
       respiratory_rate: quickRr?.value ? Number(quickRr.value) : null,
       notes: quickVitalNotes?.value.trim() || "",
-      taken_at: new Date().toISOString(),
+      taken_at: new Date().toISOString()
     };
 
     const hasAnyValue =
@@ -920,8 +897,8 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     let saved = false;
 
-    if (supabase) {
-      const { error } = await supabase.from("vitals").insert(payload);
+    if (client) {
+      const { error } = await client.from("vitals").insert(payload);
       if (!error) {
         saved = true;
       } else {
@@ -930,10 +907,11 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
 
     if (!saved) {
-      const db = getLocalDB();
-      if (!Array.isArray(db.vitals)) db.vitals = [];
-      db.vitals.push(payload);
-      saveLocalDB(db);
+      if (!db.vitals || typeof db.vitals !== "object") db.vitals = {};
+      if (!Array.isArray(db.vitals[activeChild.id])) db.vitals[activeChild.id] = [];
+      db.vitals[activeChild.id].push(payload);
+      db = ensureDB(db);
+      saveDB(db);
     }
 
     closeVitalsModal();
@@ -941,6 +919,8 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
   async function loadDashboard() {
+    activeChild = getActiveChildFromDB();
+
     if (!activeChild) {
       renderChildSummaryCard(null);
       renderTodayList([]);
@@ -948,6 +928,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       hide(lastVitalsCard);
       hide(lowSupplyCard);
       hide(lastSymptomCard);
+      renderEmergencySheet(null, null, []);
       return;
     }
 
@@ -960,7 +941,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       vitalsRaw,
       inventoryRaw,
       medicationsRaw,
-      carePlan,
+      carePlan
     ] = await Promise.all([
       fetchSchedule(activeChild.id),
       fetchCareLogs(activeChild.id),
@@ -968,13 +949,13 @@ document.addEventListener("DOMContentLoaded", async () => {
       fetchVitals(activeChild.id),
       fetchInventory(activeChild.id),
       fetchMedications(activeChild.id),
-      fetchCarePlan(activeChild.id),
+      fetchCarePlan(activeChild.id)
     ]);
 
-    const localSchedule = getLocalScheduleFallback();
-    const localLogs = getLocalCareLogsFallback();
-    const localVitals = getLocalVitalsFallback();
-    const localInventory = getLocalInventoryFallback();
+    const localSchedule = getLocalScheduleFallback(activeChild.id);
+    const localLogs = getLocalCareLogsFallback(activeChild.id);
+    const localVitals = getLocalVitalsFallback(activeChild.id);
+    const localInventory = getLocalInventoryFallback(activeChild.id);
     const localCarePlan = getLocalCarePlanFallback(activeChild.id);
 
     const scheduleItems = normalizeScheduleItems(
@@ -1003,44 +984,47 @@ document.addEventListener("DOMContentLoaded", async () => {
     renderEmergencySheet(activeChild, carePlan || localCarePlan, medicationsRaw);
   }
 
-  async function init() {
-    const supabase = getSupabaseClient();
-
+  async function syncChildrenFromSupabase() {
     currentUser = await fetchUser();
 
-    const localDb = getLocalDB();
-    fillSpecialties(safeArray(localDb.specialties));
-
-    let loadedChildren = [];
     if (currentUser?.id) {
-      loadedChildren = await fetchChildren(currentUser.id);
+      const fetchedChildren = await fetchChildren(currentUser.id);
+      if (fetchedChildren.length) {
+        db.children = fetchedChildren;
+      } else {
+        db.children = [];
+      }
+    } else {
+      db.children = [];
     }
 
-    if (!loadedChildren.length) {
-      loadedChildren = getLocalChildrenFallback();
-    }
-
-    children = loadedChildren;
-
-    const savedId = getActiveChildId();
-    activeChild =
-      children.find((c) => String(c.id) === String(savedId)) ||
-      children[0] ||
+    const validActive =
+      db.children.find((c) => String(c.id) === String(db.activeChildId || db.currentChildId)) ||
+      db.children[0] ||
       null;
 
-    if (activeChild) {
-      setActiveChildId(activeChild.id);
-    }
+    db.activeChildId = validActive ? validActive.id : null;
+    db.currentChildId = db.activeChildId;
 
+    db = ensureDB(db);
+    saveDB(db);
+
+    children = getChildrenSafe();
+    activeChild = getActiveChildFromDB();
+  }
+
+  async function init() {
+    db = loadDB();
+    fillSpecialties(safeArray(db.specialties));
+
+    await syncChildrenFromSupabase();
     renderChildSwitcher();
     await loadDashboard();
 
     childSwitcher?.addEventListener("change", async (e) => {
-      const selectedId = e.target.value;
-      activeChild = children.find((c) => String(c.id) === String(selectedId)) || null;
-      if (activeChild) {
-        setActiveChildId(activeChild.id);
-      }
+      setActiveChildId(e.target.value);
+      activeChild = getActiveChildFromDB();
+      renderChildSwitcher();
       await loadDashboard();
     });
 
