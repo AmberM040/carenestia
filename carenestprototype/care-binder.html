@@ -1,158 +1,170 @@
 <!doctype html>
 <html lang="en">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Care Binder • CareNestia</title>
-<link rel="stylesheet" href="styles.css">
-
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Care Binder • CareNestia</title>
+  <link rel="stylesheet" href="styles.css">
 </head>
 
 <body class="binder-page">
-<div class="app-shell">
+  <div class="app-shell">
 
-  <aside class="app-sidebar">
-    <div class="sidebar-brand">
-      <img src="images/carenestia_logo_wordmark.png" class="sidebar-wordmark" alt="CareNestia">
-    </div>
+    <aside class="app-sidebar">
+      <div class="sidebar-brand">
+        <img src="images/carenestia_logo_wordmark.png" class="sidebar-wordmark" alt="CareNestia">
+      </div>
 
-    <nav class="sidebar-nav">
-      <a class="sidebar-link" href="index.html">Dashboard</a>
-      <a class="sidebar-link" href="schedule.html">Schedule</a>
-      <a class="sidebar-link" href="meds.html">Medications</a>
-      <a class="sidebar-link" href="carelog.html">Care Log</a>
-      <a class="sidebar-link" href="inventory.html">Inventory</a>
-      <a class="sidebar-link" href="schoolnurse.html">School Nurse</a>
-      <a class="sidebar-link active" href="more.html">More</a>
-    </nav>
-  </aside>
+      <nav class="sidebar-nav">
+        <a class="sidebar-link" href="index.html">Dashboard</a>
+        <a class="sidebar-link" href="schedule.html">Schedule</a>
+        <a class="sidebar-link" href="meds.html">Medications</a>
+        <a class="sidebar-link" href="carelog.html">Care Log</a>
+        <a class="sidebar-link" href="inventory.html">Inventory</a>
+        <a class="sidebar-link" href="schoolnurse.html">School Nurse</a>
+        <a class="sidebar-link active" href="more.html">More</a>
+      </nav>
+    </aside>
 
-  <div class="app-main">
+    <div class="app-main">
 
-    <header class="app-topbar">
-      <div class="topbar-child-card">
-        <div id="childAvatar" class="topbar-child-avatar"></div>
-        <div>
-          <select id="childSwitcher" class="topbar-child-select"></select>
-          <div id="childSummary" class="topbar-child-meta"></div>
+      <header class="app-topbar">
+        <div class="topbar-child-card">
+          <div id="childAvatar" class="topbar-child-avatar"></div>
+
+          <div class="topbar-child-copy">
+            <label for="childSwitcher" class="sr-only">Select child</label>
+            <select id="childSwitcher" class="topbar-child-select"></select>
+            <div id="childSummary" class="topbar-child-meta"></div>
+          </div>
         </div>
-      </div>
 
-      <button id="logoutBtn" class="btn btn-ghost" type="button">Log out</button>
-    </header>
+        <div class="topbar-actions">
+          <button id="logoutBtn" class="btn btn-ghost" type="button">Log out</button>
+        </div>
+      </header>
 
-    <main class="app-content">
-      <div class="binder-layout">
+      <main class="app-content">
+        <div class="binder-layout">
 
-        <aside class="binder-left">
-          <section class="card binder-profile">
-            <img id="binderPhoto" class="binder-photo" alt="Child photo">
-            <div class="binder-profile-body">
-              <h2 id="binderName" class="binder-name">Child Name</h2>
-              <div id="binderSub" class="muted">Age —</div>
-            </div>
+          <aside class="binder-left">
+            <section class="card binder-profile">
+              <img id="binderPhoto" class="binder-photo" alt="Child photo">
+              <div class="binder-profile-body">
+                <h2 id="binderName" class="binder-name">Child Name</h2>
+                <div id="binderSub" class="muted">Age —</div>
+              </div>
+            </section>
+
+            <section class="card">
+              <div class="section-head">
+                <h2>Binder Groups</h2>
+              </div>
+
+              <div id="binderGroupNav" class="binder-group-nav">
+                <button class="binder-group-btn active" data-group="overview" type="button">About Me</button>
+                <button class="binder-group-btn" data-group="medical" type="button">Medical</button>
+                <button class="binder-group-btn" data-group="dailyCare" type="button">Daily Care</button>
+                <button class="binder-group-btn" data-group="emergency" type="button">Emergency</button>
+                <button class="binder-group-btn" data-group="school" type="button">School</button>
+                <button class="binder-group-btn" data-group="contacts" type="button">Contacts</button>
+                <button class="binder-group-btn" data-group="documents" type="button">Documents</button>
+              </div>
+            </section>
+
+            <button id="manageSectionsBtn" class="btn" type="button">Manage Sections</button>
+          </aside>
+
+          <section class="binder-center">
+
+            <section class="card binder-header-card">
+              <div class="binder-header-top">
+                <div>
+                  <h1 id="sectionTitle" class="binder-page-title">Care Binder</h1>
+                  <p id="sectionDesc" class="muted binder-page-desc">Select a section from the binder.</p>
+                </div>
+
+                <div class="button-row">
+                  <button id="editSectionBtn" class="btn btn-soft" type="button">Edit Section</button>
+                </div>
+              </div>
+
+              <div class="binder-stats">
+                <div class="binder-stat">
+                  <div class="binder-stat-label">Diagnoses</div>
+                  <div id="binderStatDiagnoses" class="binder-stat-value">0</div>
+                </div>
+
+                <div class="binder-stat">
+                  <div class="binder-stat-label">Allergies</div>
+                  <div id="binderStatAllergies" class="binder-stat-value">0</div>
+                </div>
+
+                <div class="binder-stat">
+                  <div class="binder-stat-label">Medications</div>
+                  <div id="binderStatMeds" class="binder-stat-value">0</div>
+                </div>
+
+                <div class="binder-stat">
+                  <div class="binder-stat-label">Completed Sections</div>
+                  <div id="binderStatComplete" class="binder-stat-value">0</div>
+                </div>
+              </div>
+
+              <div id="binderSubnav" class="binder-subnav"></div>
+            </section>
+
+            <div id="binderSectionContent" class="binder-content"></div>
           </section>
 
-          <section class="card">
-            <div class="section-head">
-              <h2>Binder Groups</h2>
-            </div>
-            <div id="binderGroupNav" class="binder-group-nav">
-              <button class="binder-group-btn active" data-group="overview" type="button">About Me</button>
-              <button class="binder-group-btn" data-group="medical" type="button">Medical</button>
-              <button class="binder-group-btn" data-group="dailyCare" type="button">Daily Care</button>
-              <button class="binder-group-btn" data-group="emergency" type="button">Emergency</button>
-              <button class="binder-group-btn" data-group="school" type="button">School</button>
-              <button class="binder-group-btn" data-group="contacts" type="button">Contacts</button>
-              <button class="binder-group-btn" data-group="documents" type="button">Documents</button>
-            </div>
-          </section>
+          <aside class="binder-right">
+            <section class="card">
+              <div class="section-head">
+                <h2>Section Status</h2>
+              </div>
+              <div id="binderStatusList" class="binder-status-list"></div>
+            </section>
 
-          <button id="manageSectionsBtn" class="btn" type="button">Manage Sections</button>
-        </aside>
-
-        <section class="binder-center">
-
-          <section class="card binder-header-card">
-            <div class="binder-header-top">
-              <div>
-                <h1 id="sectionTitle" style="margin:0 0 6px;">Care Binder</h1>
-                <p id="sectionDesc" class="muted" style="margin:0;">Select a section from the binder.</p>
+            <section class="card">
+              <div class="section-head">
+                <h2>Quick Links</h2>
               </div>
 
-              <div class="button-row">
-                <button id="editSectionBtn" class="btn btn-soft" type="button">Edit Section</button>
+              <div class="stack-list">
+                <a class="list-item" href="careplan.html">Edit Child Profile</a>
+                <a class="list-item" href="meds.html">Open Medications</a>
+                <a class="list-item" href="carelog.html">Open Care Log</a>
+                <a class="list-item" href="inventory.html">Open Inventory</a>
+                <a class="list-item" href="emergency-sheet.html">Open Emergency Sheet</a>
               </div>
-            </div>
+            </section>
+          </aside>
 
-            <div class="binder-stats">
-              <div class="binder-stat">
-                <div class="binder-stat-label">Diagnoses</div>
-                <div id="binderStatDiagnoses" class="binder-stat-value">0</div>
-              </div>
-              <div class="binder-stat">
-                <div class="binder-stat-label">Allergies</div>
-                <div id="binderStatAllergies" class="binder-stat-value">0</div>
-              </div>
-              <div class="binder-stat">
-                <div class="binder-stat-label">Medications</div>
-                <div id="binderStatMeds" class="binder-stat-value">0</div>
-              </div>
-              <div class="binder-stat">
-                <div class="binder-stat-label">Completed Sections</div>
-                <div id="binderStatComplete" class="binder-stat-value">0</div>
-              </div>
-            </div>
+        </div>
+      </main>
 
-            <div id="binderSubnav" class="binder-subnav"></div>
-          </section>
-
-          <div id="binderSectionContent" class="binder-content"></div>
-        </section>
-
-        <aside class="binder-right">
-          <section class="card">
-            <div class="section-head">
-              <h2>Section Status</h2>
-            </div>
-            <div id="binderStatusList" class="binder-status-list"></div>
-          </section>
-
-          <section class="card">
-            <div class="section-head">
-              <h2>Quick Links</h2>
-            </div>
-            <div class="stack-list">
-              <a class="list-item" href="careplan.html">Edit Child Profile</a>
-              <a class="list-item" href="meds.html">Open Medications</a>
-              <a class="list-item" href="carelog.html">Open Care Log</a>
-              <a class="list-item" href="inventory.html">Open Inventory</a>
-            </div>
-          </section>
-        </aside>
-
-      </div>
-    </main>
-
-  </div>
-</div>
-
-<div id="editModal" class="modal-backdrop">
-  <div class="modal-card">
-    <h3 id="editTitle">Edit Section</h3>
-    <textarea id="editNotes" class="input" rows="6"></textarea>
-    <br><br>
-    <div class="button-row">
-      <button id="saveEditBtn" class="btn" type="button">Save</button>
-      <button id="cancelEditBtn" class="btn btn-ghost" type="button">Cancel</button>
     </div>
   </div>
-</div>
 
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="supabase.js"></script>
-<script src="storage.js"></script>
-<script src="auth.js"></script>
-<script src="care-binder.js"></script>
+  <div id="editModal" class="modal-backdrop">
+    <div class="modal-card binder-edit-modal">
+      <div class="section-head">
+        <h3 id="editTitle">Edit Section</h3>
+        <button id="cancelEditBtn" class="btn btn-ghost" type="button">Close</button>
+      </div>
+
+      <textarea id="editNotes" class="input" rows="6"></textarea>
+
+      <div class="modal-actions">
+        <button id="saveEditBtn" class="btn" type="button">Save</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="supabase.js"></script>
+  <script src="storage.js"></script>
+  <script src="auth.js"></script>
+  <script src="care-binder.js"></script>
 </body>
 </html>
