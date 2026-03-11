@@ -1236,3 +1236,30 @@ a.quick-btn span {
     grid-template-columns:1fr;
   }
 }
+
+/* Schedule segmented view tabs */
+
+.segmented {
+  display: inline-flex;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.segmented button {
+  border: none;
+  background: #f3f4f6;
+  padding: 8px 14px;
+  font-weight: 600;
+  cursor: pointer;
+  border-right: 1px solid var(--line);
+}
+
+.segmented button:last-child {
+  border-right: none;
+}
+
+.segmented button.active {
+  background: var(--primary);
+  color: white;
+}
