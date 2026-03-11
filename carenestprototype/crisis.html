@@ -3,130 +3,204 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Crisis Mode • CareNest</title>
+  <title>Crisis Mode • CareNestia</title>
   <link rel="stylesheet" href="styles.css" />
 </head>
-<body>
+<body class="crisis-page">
 
-  <header class="topbar">
-    <div class="container">
-      <div class="topbar-left">
-        <h1>CareNest</h1>
-        <p>Crisis Mode</p>
+  <div class="app-shell">
+
+    <aside class="app-sidebar">
+      <div class="sidebar-brand">
+        <img src="images/carenestia_logo_wordmark.png" class="sidebar-wordmark" alt="CareNestia" />
       </div>
 
-      <div class="topbar-right">
-        <select id="childSwitcher" class="child-switcher" style="max-width:220px;"></select>
-        <a class="btn btn-ghost" href="index.html">Back</a>
-        <button id="logoutBtn" class="btn btn-ghost" type="button">Log out</button>
+      <nav class="sidebar-nav">
+        <a class="sidebar-link" href="index.html">Dashboard</a>
+        <a class="sidebar-link" href="schedule.html">Schedule</a>
+        <a class="sidebar-link" href="meds.html">Medications</a>
+        <a class="sidebar-link" href="carelog.html">Care Log</a>
+        <a class="sidebar-link" href="inventory.html">Inventory</a>
+        <a class="sidebar-link" href="schoolnurse.html">School Nurse</a>
+        <a class="sidebar-link active" href="crisis.html">Crisis Mode</a>
+        <a class="sidebar-link" href="more.html">More</a>
+      </nav>
+
+      <div class="sidebar-actions-card">
+        <div class="sidebar-actions-title">Emergency Actions</div>
+
+        <div class="sidebar-actions-list">
+          <button id="btnStartCrisisSidebar" class="btn btn-primary btn-block" type="button">Start Crisis</button>
+          <button id="btnLogRescueMedSidebar" class="btn btn-ghost btn-block" type="button">Log Rescue Med</button>
+          <button id="btnLogCallEmsSidebar" class="btn btn-ghost btn-block" type="button">Log EMS Call</button>
+          <a class="btn btn-ghost btn-block" href="emergency-sheet.html">Open Emergency Sheet</a>
+        </div>
+      </div>
+    </aside>
+
+    <div class="app-main">
+
+      <header class="app-topbar">
+        <div class="topbar-child-card">
+          <div id="childAvatar" class="topbar-child-avatar"></div>
+
+          <div class="topbar-child-copy">
+            <label for="childSwitcher" class="sr-only">Select child</label>
+            <select id="childSwitcher" class="topbar-child-select"></select>
+            <div id="childSummary" class="topbar-child-meta">No child selected</div>
+          </div>
+        </div>
+
+        <div class="topbar-actions">
+          <a class="btn btn-ghost" href="index.html">Back</a>
+          <button id="logoutBtn" class="btn btn-ghost" type="button">Log out</button>
+        </div>
+      </header>
+
+      <main class="app-content">
+
+        <section class="main-column">
+
+          <section class="card crisis-hero-card">
+            <div class="section-head">
+              <div>
+                <h2>Crisis Mode</h2>
+                <p id="crisisStatus" class="muted">Crisis inactive</p>
+              </div>
+
+              <div class="button-row">
+                <button id="btnStartCrisis" class="btn" type="button">Start Crisis</button>
+                <button id="btnEndCrisis" class="btn btn-ghost" type="button">End Crisis</button>
+              </div>
+            </div>
+
+            <div class="crisis-hero-grid">
+              <div class="crisis-stat-box">
+                <div class="crisis-stat-label">Event Type</div>
+                <div id="activeCrisisType" class="crisis-stat-value">Not started</div>
+              </div>
+
+              <div class="crisis-stat-box">
+                <div class="crisis-stat-label">Start Time</div>
+                <div id="activeCrisisStart" class="crisis-stat-value">—</div>
+              </div>
+
+              <div class="crisis-stat-box crisis-stat-box-danger">
+                <div class="crisis-stat-label">Duration</div>
+                <div id="crisisTimer" class="crisis-stat-value">00:00</div>
+              </div>
+            </div>
+          </section>
+
+          <section class="card">
+            <div class="section-head">
+              <h2>Quick Actions</h2>
+            </div>
+
+            <div class="quick-actions">
+              <button id="btnLogSeizureStart" class="quick-btn quick-note" type="button">
+                <strong>Seizure Started</strong>
+                <span>Start the event timeline</span>
+              </button>
+
+              <button id="btnLogSeizureEnd" class="quick-btn quick-med" type="button">
+                <strong>Seizure Ended</strong>
+                <span>Mark stop time</span>
+              </button>
+
+              <button id="btnLogRescueMed" class="quick-btn quick-symptom" type="button">
+                <strong>Rescue Med Given</strong>
+                <span>Log medication timing</span>
+              </button>
+
+              <button id="btnLogOxygen" class="quick-btn quick-question" type="button">
+                <strong>Oxygen Started</strong>
+                <span>Log oxygen support</span>
+              </button>
+
+              <button id="btnLogCallEms" class="quick-btn quick-note" type="button">
+                <strong>Called EMS</strong>
+                <span>Mark emergency call time</span>
+              </button>
+
+              <button id="btnAddNote" class="quick-btn quick-med" type="button">
+                <strong>Add Note</strong>
+                <span>Log a custom crisis note</span>
+              </button>
+            </div>
+          </section>
+
+          <section class="card">
+            <div class="section-head">
+              <h2>Crisis Timeline</h2>
+              <button id="btnClearTimeline" class="btn btn-ghost" type="button">Clear</button>
+            </div>
+
+            <div id="timelineList" class="stack-list"></div>
+          </section>
+
+        </section>
+
+        <aside class="side-column">
+
+          <section class="card">
+            <div class="section-head">
+              <h2>Emergency Protocol</h2>
+            </div>
+            <div id="protocolBox" class="muted">No protocol loaded.</div>
+          </section>
+
+          <section class="card">
+            <div class="section-head">
+              <h2>Rescue Medication</h2>
+            </div>
+            <div id="rescueMedBox" class="muted">No rescue medication loaded.</div>
+          </section>
+
+          <section class="card">
+            <div class="section-head">
+              <h2>When to Call EMS</h2>
+            </div>
+            <div id="emsBox" class="muted">No EMS guidance loaded.</div>
+          </section>
+
+          <section class="card">
+            <div class="section-head">
+              <h2>Oxygen Guidance</h2>
+            </div>
+            <div id="oxygenBox" class="muted">No oxygen guidance loaded.</div>
+          </section>
+
+          <section class="card">
+            <div class="section-head">
+              <h2>Emergency Contacts</h2>
+            </div>
+            <div id="contactsBox" class="muted">No contacts loaded.</div>
+          </section>
+
+        </aside>
+
+      </main>
+    </div>
+  </div>
+
+  <div id="noteModal" class="modal hidden">
+    <div class="modal-card">
+      <div class="section-head">
+        <h2>Add Crisis Note</h2>
+        <button id="btnCloseNoteModal" class="btn btn-ghost" type="button">Close</button>
+      </div>
+
+      <div class="field">
+        <label for="crisisNoteInput">Note</label>
+        <textarea id="crisisNoteInput" class="input" rows="5" placeholder="Describe what happened..."></textarea>
+      </div>
+
+      <div class="modal-actions">
+        <button id="btnSaveNote" class="btn" type="button">Save Note</button>
       </div>
     </div>
-  </header>
-
-  <main class="page">
-
-    <section class="card">
-      <div class="section-head">
-        <div>
-          <h1 style="margin:0;">Crisis Mode</h1>
-          <p id="childSummary" class="muted" style="margin:6px 0 0;">No child selected</p>
-        </div>
-
-        <div style="display:flex; gap:8px; flex-wrap:wrap;">
-          <button id="btnStartCrisis" class="btn" type="button">Start Crisis</button>
-          <button id="btnEndCrisis" class="btn btn-ghost" type="button">End Crisis</button>
-        </div>
-      </div>
-
-      <p id="crisisStatus" class="muted" style="margin-top:10px;">Crisis inactive</p>
-    </section>
-
-    <div class="grid-2">
-      <section class="card">
-        <div class="section-head">
-          <h2>Emergency Protocol</h2>
-        </div>
-        <div id="protocolBox" class="muted">No protocol loaded.</div>
-      </section>
-
-      <section class="card">
-        <div class="section-head">
-          <h2>Rescue Medication</h2>
-        </div>
-        <div id="rescueMedBox" class="muted">No rescue medication loaded.</div>
-      </section>
-    </div>
-
-    <div class="grid-2">
-      <section class="card">
-        <div class="section-head">
-          <h2>When to Call EMS</h2>
-        </div>
-        <div id="emsBox" class="muted">No EMS guidance loaded.</div>
-      </section>
-
-      <section class="card">
-        <div class="section-head">
-          <h2>Oxygen Guidance</h2>
-        </div>
-        <div id="oxygenBox" class="muted">No oxygen guidance loaded.</div>
-      </section>
-    </div>
-
-    <section class="card">
-      <div class="section-head">
-        <h2>Quick Actions</h2>
-      </div>
-
-      <div class="quick-actions">
-        <button id="btnLogSeizureStart" class="quick-btn" type="button">
-          Seizure Started
-          <span>Start the event timeline</span>
-        </button>
-
-        <button id="btnLogSeizureEnd" class="quick-btn" type="button">
-          Seizure Ended
-          <span>Mark stop time</span>
-        </button>
-
-        <button id="btnLogRescueMed" class="quick-btn" type="button">
-          Rescue Med Given
-          <span>Log medication timing</span>
-        </button>
-
-        <button id="btnLogOxygen" class="quick-btn" type="button">
-          Oxygen Started
-          <span>Log oxygen support</span>
-        </button>
-
-        <button id="btnLogCallEms" class="quick-btn" type="button">
-          Called EMS
-          <span>Mark emergency call time</span>
-        </button>
-
-        <button id="btnAddNote" class="quick-btn" type="button">
-          Add Note
-          <span>Log a custom crisis note</span>
-        </button>
-      </div>
-    </section>
-
-    <section class="card">
-      <div class="section-head">
-        <h2>Emergency Contacts</h2>
-      </div>
-      <div id="contactsBox" class="muted">No contacts loaded.</div>
-    </section>
-
-    <section class="card">
-      <div class="section-head">
-        <h2>Crisis Timeline</h2>
-        <button id="btnClearTimeline" class="btn btn-ghost" type="button">Clear</button>
-      </div>
-      <div id="timelineList" class="list"></div>
-    </section>
-
-  </main>
+  </div>
 
   <nav class="bottom-nav">
     <div class="bottom-nav-inner">
@@ -134,13 +208,28 @@
       <a class="nav-link" href="carelog.html">Care Log</a>
       <a class="nav-link" href="meds.html">Meds</a>
       <a class="nav-link" href="schedule.html">Schedule</a>
-      <a class="nav-link active" href="more.html">More</a>
+      <a class="nav-link active" href="crisis.html">Crisis</a>
     </div>
   </nav>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="supabase.js"></script>
+  <script src="storage.js"></script>
   <script src="auth.js"></script>
   <script src="crisis.js"></script>
+
+  <script>
+    document.getElementById("btnStartCrisisSidebar")?.addEventListener("click", () => {
+      document.getElementById("btnStartCrisis")?.click();
+    });
+
+    document.getElementById("btnLogRescueMedSidebar")?.addEventListener("click", () => {
+      document.getElementById("btnLogRescueMed")?.click();
+    });
+
+    document.getElementById("btnLogCallEmsSidebar")?.addEventListener("click", () => {
+      document.getElementById("btnLogCallEms")?.click();
+    });
+  </script>
 </body>
 </html>
