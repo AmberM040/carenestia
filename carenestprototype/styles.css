@@ -1263,3 +1263,42 @@ a.quick-btn span {
   background: var(--primary);
   color: white;
 }
+
+/* Schedule tab buttons */
+#scheduleViewTabs {
+  display: inline-flex !important;
+  align-items: center;
+  gap: 0 !important;
+  border: 1px solid var(--border) !important;
+  border-radius: 12px !important;
+  overflow: hidden !important;
+  background: #eef3ff !important;
+}
+
+#scheduleViewTabs button {
+  appearance: none !important;
+  border: 0 !important;
+  border-right: 1px solid var(--border) !important;
+  background: transparent !important;
+  color: var(--text-soft) !important;
+  padding: 10px 16px !important;
+  margin: 0 !important;
+  min-height: 42px !important;
+  font-weight: 700 !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+}
+
+#scheduleViewTabs button:last-child {
+  border-right: 0 !important;
+}
+
+#scheduleViewTabs button.active {
+  background: var(--primary) !important;
+  color: #fff !important;
+}
+
+#scheduleViewTabs button:hover:not(.active) {
+  background: rgba(77, 141, 247, 0.08) !important;
+  color: var(--text) !important;
+}
