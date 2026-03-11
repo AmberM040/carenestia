@@ -1,279 +1,194 @@
 document.addEventListener("DOMContentLoaded", () => {
-  const db = ensureDB(loadDB());
-  const currentUser = typeof requireAuth === "function" ? requireAuth() : getCurrentUser();
-  if (!currentUser) return;
 
-  renderHeader();
-  renderSnapshot();
-  renderHistory();
-  bindForm();
-  bindFilters();
-  bindLogout();
+let db = ensureDB(loadDB())
+saveDB(db)
 
-  const takenAtInput = document.getElementById("takenAt");
-  if (takenAtInput && !takenAtInput.value) {
-    takenAtInput.value = toDatetimeLocal(new Date());
-  }
-});
+const childSwitcher = document.getElementById("childSwitcher")
+const childAvatar = document.getElementById("childAvatar")
+const childSummary = document.getElementById("childSummary")
 
-function renderHeader() {
-  const child = getCurrentChild();
-  const label = document.getElementById("vitalsChildLabel");
-  if (label && child) {
-    label.textContent = child.name;
-  }
+const vitalsList = document.getElementById("vitalsList")
+
+const btnAddVital = document.getElementById("btnAddVital")
+const vitalModal = document.getElementById("vitalModal")
+const btnCloseVitalModal = document.getElementById("btnCloseVitalModal")
+const btnSaveVital = document.getElementById("btnSaveVital")
+
+const vitalTemp = document.getElementById("vitalTemp")
+const vitalO2 = document.getElementById("vitalO2")
+const vitalHR = document.getElementById("vitalHR")
+const vitalRR = document.getElementById("vitalRR")
+const vitalBP = document.getElementById("vitalBP")
+const vitalNotes = document.getElementById("vitalNotes")
+
+init()
+
+function init(){
+
+if(!Array.isArray(db.vitals))
+db.vitals=[]
+
+renderChildSwitcher()
+renderHeader()
+renderVitals()
+
+wireEvents()
+
 }
 
-function renderSnapshot() {
-  const db = ensureDB(loadDB());
-  const child = getCurrentChild();
-  const grid = document.getElementById("snapshotGrid");
-  if (!grid || !child) return;
+function wireEvents(){
 
-  grid.innerHTML = "";
+childSwitcher.addEventListener("change",()=>{
+db.activeChildId=childSwitcher.value
+saveDB(db)
 
-  const snapshot = db.lastKnownVitals?.[child.id] || createEmptyVitalSnapshot();
-  const defs = [
-    { key: "temperature", label: "Temperature" },
-    { key: "heartRate", label: "Heart Rate" },
-    { key: "respiratoryRate", label: "Respiratory Rate" },
-    { key: "oxygenSaturation", label: "O₂ Saturation" },
-    { key: "bloodPressure", label: "Blood Pressure" },
-    { key: "weight", label: "Weight" }
-  ];
+renderHeader()
+renderVitals()
+})
 
-  defs.forEach(def => {
-    const item = snapshot[def.key];
-    const value = item ? `${item.value} ${item.unit}`.trim() : "—";
-    const time = item ? formatDateTime(item.takenAt) : "No reading yet";
+btnAddVital.addEventListener("click",()=>{
+vitalModal.classList.remove("hidden")
+})
 
-    const box = document.createElement("div");
-    box.className = "snapshot-box";
-    box.innerHTML = `
-      <h4>${def.label}</h4>
-      <div class="snapshot-value">${escapeHtml(value)}</div>
-      <div class="muted">${escapeHtml(time)}</div>
-    `;
-    grid.appendChild(box);
-  });
+btnCloseVitalModal.addEventListener("click",()=>{
+vitalModal.classList.add("hidden")
+})
+
+btnSaveVital.addEventListener("click",saveVitals)
+
 }
 
-function renderHistory() {
-  const db = ensureDB(loadDB());
-  const child = getCurrentChild();
-  const list = document.getElementById("historyList");
-  const filterType = document.getElementById("filterType")?.value || "all";
-  const filterDate = document.getElementById("filterDate")?.value || "";
-
-  if (!list || !child) return;
-
-  let items = (db.vitalsHistory || [])
-    .filter(entry => entry.childId === child.id)
-    .sort((a, b) => new Date(b.takenAt) - new Date(a.takenAt));
-
-  if (filterType !== "all") {
-    items = items.filter(entry => entry.type === filterType);
-  }
-
-  if (filterDate) {
-    items = items.filter(entry => {
-      const d = new Date(entry.takenAt);
-      const yyyy = d.getFullYear();
-      const mm = String(d.getMonth() + 1).padStart(2, "0");
-      const dd = String(d.getDate()).padStart(2, "0");
-      return `${yyyy}-${mm}-${dd}` === filterDate;
-    });
-  }
-
-  list.innerHTML = "";
-
-  if (!items.length) {
-    list.innerHTML = `<div class="muted">No vitals found for this filter.</div>`;
-    return;
-  }
-
-  items.forEach(entry => {
-    const row = document.createElement("div");
-    row.className = "history-item";
-    row.innerHTML = `
-      <div>
-        <strong>${escapeHtml(vitalLabel(entry.type))}</strong>
-        <div>${escapeHtml(`${entry.value} ${entry.unit}`.trim())}</div>
-        <div class="muted">${escapeHtml(formatDateTime(entry.takenAt))}</div>
-        ${entry.note ? `<div class="muted">Note: ${escapeHtml(entry.note)}</div>` : ""}
-      </div>
-      <div class="muted">${escapeHtml(capitalize(entry.source || "parent"))}</div>
-    `;
-    list.appendChild(row);
-  });
+function getChildren(){
+return Array.isArray(db.children)?db.children:[]
 }
 
-function bindForm() {
-  const form = document.getElementById("vitalsForm");
-  const clearBtn = document.getElementById("clearVitalsBtn");
+function getActiveChild(){
 
-  if (form) {
-    form.addEventListener("submit", e => {
-      e.preventDefault();
-      clearMessages();
+const children=getChildren()
 
-      const child = getCurrentChild();
-      if (!child) {
-        showError("No child selected.");
-        return;
-      }
+return children.find(c=>String(c.id)===String(db.activeChildId)) || children[0]
 
-      const takenAtRaw = document.getElementById("takenAt").value;
-      const source = document.getElementById("source").value || "parent";
-      const note = document.getElementById("vitalNote").value.trim();
-
-      const readings = [
-        { type: "temperature", value: document.getElementById("temperature").value.trim(), unit: "°F" },
-        { type: "heartRate", value: document.getElementById("heartRate").value.trim(), unit: "bpm" },
-        { type: "respiratoryRate", value: document.getElementById("respiratoryRate").value.trim(), unit: "/min" },
-        { type: "oxygenSaturation", value: document.getElementById("oxygenSaturation").value.trim(), unit: "%" },
-        { type: "bloodPressure", value: document.getElementById("bloodPressure").value.trim(), unit: "mmHg" },
-        { type: "weight", value: document.getElementById("weight").value.trim(), unit: "lb" }
-      ].filter(item => item.value !== "");
-
-      if (!readings.length) {
-        showError("Enter at least one vital before saving.");
-        return;
-      }
-
-      const takenAtIso = takenAtRaw ? new Date(takenAtRaw).toISOString() : new Date().toISOString();
-
-      readings.forEach(item => {
-        addVitalEntry({
-          childId: child.id,
-          type: item.type,
-          value: item.value,
-          unit: item.unit,
-          takenAt: takenAtIso,
-          source,
-          note
-        });
-      });
-
-      showSuccess("Vitals saved successfully.");
-      form.reset();
-
-      const takenAtInput = document.getElementById("takenAt");
-      if (takenAtInput) {
-        takenAtInput.value = toDatetimeLocal(new Date());
-      }
-
-      renderSnapshot();
-      renderHistory();
-    });
-  }
-
-  if (clearBtn) {
-    clearBtn.addEventListener("click", () => {
-      form.reset();
-      clearMessages();
-
-      const takenAtInput = document.getElementById("takenAt");
-      if (takenAtInput) {
-        takenAtInput.value = toDatetimeLocal(new Date());
-      }
-    });
-  }
 }
 
-function bindFilters() {
-  const filterType = document.getElementById("filterType");
-  const filterDate = document.getElementById("filterDate");
+function renderChildSwitcher(){
 
-  if (filterType) {
-    filterType.addEventListener("change", renderHistory);
-  }
+const children=getChildren()
 
-  if (filterDate) {
-    filterDate.addEventListener("change", renderHistory);
-  }
+childSwitcher.innerHTML=children.map(c=>
+`<option value="${c.id}" ${c.id===db.activeChildId?"selected":""}>${c.name}</option>`
+).join("")
+
 }
 
-function bindLogout() {
-  const logoutBtn = document.getElementById("logoutBtn");
-  if (!logoutBtn) return;
+function renderHeader(){
 
-  logoutBtn.addEventListener("click", () => {
-    const db = ensureDB(loadDB());
-    db.session = { userId: null };
-    saveDB(db);
-    window.location.href = "login.html";
-  });
+const child=getActiveChild()
+
+if(!child)return
+
+childSummary.textContent=`Age ${child.age || "—"}`
+childAvatar.innerHTML=child.photo_url?`<img src="${child.photo_url}">`:""
+
 }
 
-function showError(message) {
-  const box = document.getElementById("vitalError");
-  if (!box) return;
-  box.textContent = message;
-  box.style.display = "block";
+function renderVitals(){
+
+const child=getActiveChild()
+
+const list=db.vitals
+.filter(v=>String(v.childId)===String(child.id))
+.sort((a,b)=>new Date(b.date)-new Date(a.date))
+.slice(0,30)
+
+if(!list.length){
+vitalsList.innerHTML=`<div class="empty-box">No vitals logged yet.</div>`
+return
 }
 
-function showSuccess(message) {
-  const box = document.getElementById("vitalSuccess");
-  if (!box) return;
-  box.textContent = message;
-  box.style.display = "block";
+vitalsList.innerHTML=list.map(v=>`
+
+<div class="list-item">
+
+<div>
+<strong>${formatDateTime(v.date)}</strong>
+
+<div class="muted">
+
+${v.temp?`Temp ${v.temp}° • `:""}
+${v.o2?`O2 ${v.o2}% • `:""}
+${v.hr?`HR ${v.hr} • `:""}
+${v.rr?`RR ${v.rr} • `:""}
+${v.bp?`BP ${v.bp}`:""}
+
+</div>
+
+${v.notes?`<div class="muted">${v.notes}</div>`:""}
+
+</div>
+
+</div>
+
+`).join("")
+
 }
 
-function clearMessages() {
-  const error = document.getElementById("vitalError");
-  const success = document.getElementById("vitalSuccess");
-  if (error) {
-    error.textContent = "";
-    error.style.display = "none";
-  }
-  if (success) {
-    success.textContent = "";
-    success.style.display = "none";
-  }
+function saveVitals(){
+
+const child=getActiveChild()
+
+db.vitals.unshift({
+
+id:uid("vital"),
+childId:child.id,
+
+temp:vitalTemp.value.trim(),
+o2:vitalO2.value.trim(),
+hr:vitalHR.value.trim(),
+rr:vitalRR.value.trim(),
+bp:vitalBP.value.trim(),
+
+notes:vitalNotes.value.trim(),
+
+date:new Date().toISOString()
+
+})
+
+saveDB(db)
+
+vitalModal.classList.add("hidden")
+
+clearForm()
+
+renderVitals()
+
 }
 
-function vitalLabel(type) {
-  const map = {
-    temperature: "Temperature",
-    heartRate: "Heart Rate",
-    respiratoryRate: "Respiratory Rate",
-    oxygenSaturation: "O₂ Saturation",
-    bloodPressure: "Blood Pressure",
-    weight: "Weight"
-  };
-  return map[type] || type;
+function clearForm(){
+
+vitalTemp.value=""
+vitalO2.value=""
+vitalHR.value=""
+vitalRR.value=""
+vitalBP.value=""
+vitalNotes.value=""
+
 }
 
-function capitalize(value) {
-  const s = String(value || "");
-  return s.charAt(0).toUpperCase() + s.slice(1);
+function uid(prefix){
+return prefix+"_"+Date.now()+"_"+Math.random().toString(36).slice(2,6)
 }
 
-function formatDateTime(iso) {
-  if (!iso) return "—";
-  const date = new Date(iso);
-  if (Number.isNaN(date.getTime())) return "—";
+function formatDateTime(date){
 
-  return date.toLocaleString([], {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-    hour: "numeric",
-    minute: "2-digit"
-  });
+const d=new Date(date)
+
+return d.toLocaleString([],{
+month:"short",
+day:"numeric",
+hour:"numeric",
+minute:"2-digit"
+})
+
 }
 
-function toDatetimeLocal(date) {
-  const pad = n => String(n).padStart(2, "0");
-  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
-}
-
-function escapeHtml(value) {
-  return String(value ?? "")
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#39;");
-}
+})
