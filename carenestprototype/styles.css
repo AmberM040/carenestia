@@ -1302,3 +1302,17 @@ a.quick-btn span {
   background: rgba(77, 141, 247, 0.08) !important;
   color: var(--text) !important;
 }
+
+.binder-page-title{
+  margin:0 0 6px;
+}
+
+.binder-page-desc{
+  margin:0;
+}
+
+.binder-edit-modal{
+  max-width:820px;
+  max-height:85vh;
+  overflow-y:auto;
+}
